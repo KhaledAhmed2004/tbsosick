@@ -1,0 +1,65 @@
+import { Request, Response } from 'express';
+import { StatusCodes } from 'http-status-codes';
+import catchAsync from '../../../shared/catchAsync';
+import sendResponse from '../../../shared/sendResponse';
+import { NotificationService } from './notification.service';
+import { JwtPayload } from 'jsonwebtoken';
+
+const listMyNotifications = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const result = await NotificationService.listForUser((user as any).id);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Notifications fetched',
+    data: result,
+  });
+});
+
+const markAllRead = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const result = await NotificationService.markAllRead((user as any).id);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'All notifications marked read',
+    data: result,
+  });
+});
+
+const markRead = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const read = req.body?.read ?? true;
+  const result = await NotificationService.markRead(req.params.id, (user as any).id, read);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: read ? 'Notification marked read' : 'Notification marked unread',
+    data: result,
+  });
+});
+
+const deleteNotification = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const result = await NotificationService.deleteById(req.params.id, (user as any).id);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Notification deleted',
+    data: result,
+  });
+});
+
+export const NotificationController = {
+  listMyNotifications,
+  markAllRead,
+  markRead,
+  deleteNotification,
+  // Backward-compatible names expected by existing routes
+  getNotificationFromDB: listMyNotifications,
+  readNotification: markRead,
+  readAllNotifications: markAllRead,
+  adminNotificationFromDB: listMyNotifications,
+  adminMarkNotificationAsRead: markRead,
+  adminMarkAllNotificationsAsRead: markAllRead,
+};

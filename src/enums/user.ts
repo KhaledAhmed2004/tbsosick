@@ -1,0 +1,11 @@
+export enum USER_ROLES {
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  USER = 'USER',
+}
+
+export enum USER_STATUS {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+  RESTRICTED = 'RESTRICTED',
+  DELETE = 'DELETE',
+}

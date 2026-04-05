@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 8 bash:*)",
+      "Bash(curl:*)",
+      "Bash(/dev/null)",
+      "Bash(node scripts/postman/generate-all.js:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill //F //PID 40232)",
+      "Bash(timeout 3 bash:*)",
+      "Bash(node scripts/postman/analyze-routes.js:*)",
+      "Bash(node scripts/postman/generate-tests.js:*)",
+      "Bash(npm run compile:*)",
+      "Bash(node scripts/schema-diagram-generator/schema-diagram-generator.js:*)",
+      "Bash(cat:*)",
+      "Bash(time curl:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

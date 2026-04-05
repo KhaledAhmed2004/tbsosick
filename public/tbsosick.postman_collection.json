@@ -1,0 +1,2579 @@
+{
+  "info": {
+    "_postman_id": "8d774a15-6124-49b1-a4cb-3df1ab5010fe",
+    "name": "tbsosick",
+    "description": "Organized Postman collection grouped by modules with clear request docs. Base prefix: /api/v1.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "46502872",
+    "_collection_link": "https://go.postman.co/collection/46502872-8d774a15-6124-49b1-a4cb-3df1ab5010fe?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Auth Module",
+      "item": [
+        {
+          "name": "Google OAuth login",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/google",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "google"
+              ]
+            },
+            "description": "Start Google OAuth login.\n\nAuthentication: Public.\nBehavior: Redirects to Google consent screen with email/profile scopes.\nOn success: Google will call the callback endpoint to finalize login."
+          },
+          "response": []
+        },
+        {
+          "name": "Google OAuth callback",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/google/callback",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "google",
+                "callback"
+              ]
+            },
+            "description": "Handle Google OAuth callback and finalize sign‑in.\n\nAuthentication: Public; invoked by Google.\nBehavior: Exchanges Google code for tokens and creates/returns user session.\nSuccess 200: Returns accessToken, refreshToken, and user."
+          },
+          "response": []
+        },
+        {
+          "name": "User logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/logout",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Logout current user and invalidate tokens.\n\nAuthentication: Bearer token required.\nBehavior: Revokes active session (access/refresh tokens).\nSuccess 200: Confirmation message."
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test-jiggalala@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/forgot-password",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Request a password reset OTP via email.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → forgetPassword\n- Service: auth.service.ts → forgetPasswordToDB"
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test-jiggalala@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/verify-otp",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-otp"
+              ]
+            },
+            "description": "Verify OTP code sent to email.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → verifyEmail\n- Service: auth.service.ts → verifyEmailToDB"
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Reset Password",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"<reset-token>\",\n    \"newPassword\": \"NewSecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/reset-password",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Reset password using a valid reset token.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → resetPassword\n- Service: auth.service.ts → resetPasswordToDB"
+          },
+          "response": []
+        },
+        {
+          "name": "Change password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"OldPass123!\",\n  \"newPassword\": \"NewSecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/change-password",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Change current user password.\n\nAuthentication: Bearer token required.\nRequest Body:\n- oldPassword (string)\n- newPassword (string, must meet security rules)\nSuccess 200: Password changed; re‑authenticate recommended."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend verification email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/resend-verify-email",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "resend-verify-email"
+              ]
+            },
+            "description": "Resend email verification message.\n\nAuthentication: Public.\nRequest Body: email (string).\nSuccess 200: Verification email queued if account needs verification."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/auth/refresh-token",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh-token"
+              ]
+            },
+            "description": "Exchange refresh token for a new access token.\n\nAuthentication: Refresh token (cookie/body).\nSuccess 200: Returns fresh accessToken.\nNotes: If refresh token is invalid/expired, returns 401."
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints including login, OAuth, logout, and token flows."
+    },
+    {
+      "name": "User Module",
+      "item": [
+        {
+          "name": "Fetch own profile details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/user/profile",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "profile"
+              ]
+            },
+            "description": "Get the currently authenticated user’s profile.\n\nAuthentication: Bearer token required (any role).\nSuccess 200: Returns user details and settings."
+          },
+          "response": []
+        },
+        {
+          "name": "Update own profile",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"phone\": \"+8801812345678\",\r\n  \"hospital\": \"Square Hospital\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/user/profile",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                "profile"
+              ]
+            },
+            "description": "Update current user profile and optional file uploads.\n\nAuthentication: Bearer token required.\nContent‑Type: multipart/form‑data (for files).\nEditable fields may include name, avatar, preferences.\nSuccess 200: Returns updated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get specific user details by ID (super admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/user/:id",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                ":id"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            },
+            "description": "Get a specific user by ID (admin).\n\nAuthentication: SUPER_ADMIN required.\nPath: :id — target user ID.\nSuccess 200: Returns user details."
+          },
+          "response": []
+        },
+        {
+          "name": "Public user details (guest allowed) — rate limited",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/user/:id/user",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user",
+                ":id",
+                "user"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            },
+            "description": "Fetch public‑safe details for a user by ID.\n\nAuthentication: Guest allowed.\nPath: :id — target user ID.\nRate limiting: Enabled.\nSuccess 200: Returns non‑sensitive profile fields."
+          },
+          "response": []
+        }
+      ],
+      "description": "User profile and admin user management endpoints."
+    },
+    {
+      "name": "Notification Module",
+      "item": [
+        {
+          "name": "Notification list + unread count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/notifications/",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                ""
+              ]
+            },
+            "description": "Purpose: List notifications\nMethod: GET\nURL: {{BASE_URL}}/api/v1/notifications/\nNotes: POSTER/TASKER roles."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark notification as read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/notifications/:id/read",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                ":id",
+                "read"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            },
+            "description": "Purpose: Read notification\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/notifications/:id/read\nNotes: POSTER/TASKER roles."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark all notifications as read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/notifications/read-all",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": "Purpose: Read all notifications\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/notifications/read-all\nNotes: POSTER/TASKER roles."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin notifications list + unread",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/notifications/admin",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "admin"
+              ]
+            },
+            "description": "Purpose: Admin notifications\nMethod: GET\nURL: {{BASE_URL}}/api/v1/notifications/admin\nNotes: SUPER_ADMIN only."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin mark specific notification read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/notifications/admin/:id/read",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "admin",
+                ":id",
+                "read"
+              ],
+              "variable": [
+                {
+                  "key": "id"
+                }
+              ]
+            },
+            "description": "Purpose: Admin read notification\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/notifications/admin/:id/read\nNotes: SUPER_ADMIN only."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin mark all notifications read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/api/v1/notifications/admin/read-all",
+              "host": [
+                "{{BASE_URL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "admin",
+                "read-all"
+              ]
+            },
+            "description": "Purpose: Admin read all\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/notifications/admin/read-all\nNotes: SUPER_ADMIN only."
+          },
+          "response": []
+        }
+      ],
+      "description": "User and admin notifications."
+    },
+    {
+      "name": "Admin APIs",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "1.1 Login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "let response = pm.response.json();\r",
+                      "\r",
+                      "if (response.success && response.data.accessToken) {\r",
+                      "    // Store in collection variable\r",
+                      "    pm.collectionVariables.set(\"AdminAccessToken\", response.data.accessToken);\r",
+                      "} else {\r",
+                      "    console.warn(\"Login failed or accessToken not found!\");\r",
+                      "}\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"StrongPassword123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/auth/login",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Admin email ebong password input kore submit button e tap kore.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → loginUser\n- Service: auth.service.ts → loginUserFromDB"
+              },
+              "response": []
+            },
+            {
+              "name": "1.2 Forgot Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@example.com\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/auth/forgot-password",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "forgot-password"
+                  ]
+                },
+                "description": "Email input kore OTP request pathay.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → forgetPassword\n- Service: auth.service.ts → forgetPasswordToDB"
+              },
+              "response": []
+            },
+            {
+              "name": "1.3 Verify OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"otp\": \"123456\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/auth/verify-otp",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "verify-otp"
+                  ]
+                },
+                "description": "Email e jawa OTP input kore submit kore.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → verifyEmail\n- Service: auth.service.ts → verifyEmailToDB"
+              },
+              "response": []
+            },
+            {
+              "name": "1.4 Reset Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"token\": \"<reset-token>\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/auth/reset-password",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "reset-password"
+                  ]
+                },
+                "description": "New password input kore confirm kore.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → resetPassword\n- Service: auth.service.ts → resetPasswordToDB"
+              },
+              "response": []
+            },
+            {
+              "name": "1.5 Refresh Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/auth/refresh-token",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "refresh-token"
+                  ]
+                },
+                "description": "Exchange refresh token for a new access token.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → refreshToken\n- Service: auth.service.ts → refreshToken"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Overview Page",
+          "item": [
+            {
+              "name": "2.1 Growth Metrics (Stats)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/growth-metrics",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "growth-metrics"
+                  ]
+                },
+                "description": "Overall dashboard stats.\n\nImplementation:\n- Route: src/app/modules/admin/admin.route.ts\n- Controller: src/app/modules/admin/admin.controller.ts — getDashboardStats\n- Service: src/app/modules/admin/admin.service.ts — getAdminDashboardStats"
+              },
+              "response": []
+            },
+            {
+              "name": "2.2 Monthly Preference Cards Trend",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/preference-cards/monthly",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "preference-cards",
+                    "monthly"
+                  ]
+                },
+                "description": "Monthly preferences trend data.\n\nImplementation:\n- Route: src/app/modules/admin/admin.route.ts\n- Controller: src/app/modules/admin/admin.controller.ts — getPreferenceCardMonthly\n- Service: src/app/modules/admin/admin.service.ts — getPreferenceCardMonthlyTrend"
+              },
+              "response": []
+            },
+            {
+              "name": "2.3 Monthly Active Subscriptions Trend",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/admin/subscriptions/active/monthly",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "admin",
+                    "subscriptions",
+                    "active",
+                    "monthly"
+                  ]
+                },
+                "description": "Monthly subscriptions trend data.\n\nImplementation:\n- Route: src/app/modules/admin/admin.route.ts\n- Controller: src/app/modules/admin/admin.controller.ts — getActiveSubscriptionMonthly\n- Service: src/app/modules/admin/admin.service.ts — getActiveSubscriptionMonthlyTrend"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Doctors Page",
+          "item": [
+            {
+              "name": "3.1 Get/Search Doctors",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/doctors",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "doctors"
+                  ]
+                },
+                "description": "List/Search with pagination.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — getDoctors\n- Service: src/app/modules/doctor/doctor.service.ts — searchDoctors"
+              },
+              "response": []
+            },
+            {
+              "name": "3.2 Create Doctor",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Dr. Jane Smith\",\n  \"email\": \"dr.jane@example.com\",\n  \"password\": \"Password123!\",\n  \"specialization\": \"Dermatology\",\n  \"phone\": \"+123456789\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/doctors",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "doctors"
+                  ]
+                },
+                "description": "New doctor registration.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — createDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — createDoctor"
+              },
+              "response": []
+            },
+            {
+              "name": "3.3 Update Doctor",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Dr. Jane Updated\",\n  \"specialization\": \"Oncology\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/doctors/:id",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "doctors",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "664a1b2c3d4e5f6a7b8c9d0f"
+                    }
+                  ]
+                },
+                "description": "Update doctor details.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — updateDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — updateDoctorProfile"
+              },
+              "response": []
+            },
+            {
+              "name": "3.4 Block Doctor",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/doctors/:id/block",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "doctors",
+                    ":id",
+                    "block"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "664a1b2c3d4e5f6a7b8c9d0e"
+                    }
+                  ]
+                },
+                "description": "Block access.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — blockDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — blockDoctor"
+              },
+              "response": []
+            },
+            {
+              "name": "3.5 Unblock Doctor",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/doctors/:id/unblock",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "doctors",
+                    ":id",
+                    "unblock"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "664a1b2c3d4e5f6a7b8c9d0e"
+                    }
+                  ]
+                },
+                "description": "Restore access.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — unblockDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — unblockDoctor"
+              },
+              "response": []
+            },
+            {
+              "name": "3.6 Delete Doctor",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/doctors/:id",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "doctors",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "664a1b2c3d4e5f6a7b8c9d0e"
+                    }
+                  ]
+                },
+                "description": "Hard/Soft delete.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — deleteDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — deleteDoctor"
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Sutures",
+          "item": [
+            {
+              "name": "Create Sutures",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Gloves sutures\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/sutures",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "sutures"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List Sutures",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/sutures",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "sutures"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Sutures",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Surgical Gloves\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/sutures/{{sutures_id}}",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "sutures",
+                    "{{sutures_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Sutures",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/sutures/{{sutures_id}}",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "sutures",
+                    "{{sutures_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Bulk Create Sutures",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"items\": [\n        {\n            \"name\": \"Scalpel\"\n        },\n        {\n            \"name\": \"Syringe\"\n        },\n        {\n            \"name\": \"Gloves\"\n        }\n    ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/sutures/bulk",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "sutures",
+                    "bulk"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Supplies",
+          "item": [
+            {
+              "name": "Create Supply",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Gloves Single\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/supplies",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "supplies"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List Supplies",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/supplies",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "supplies"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update Supply",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Surgical Gloves\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/supplies/{{supply_id}}",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "supplies",
+                    "{{supply_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Supply",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{token}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/supplies/{{supply_id}}",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "supplies",
+                    "{{supply_id}}"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Bulk Create Supplies",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"items\": [\n        {\n            \"name\": \"Scalpel\"\n        },\n        {\n            \"name\": \"Syringe\"\n        },\n        {\n            \"name\": \"Gloves\"\n        }\n    ]\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/supplies/bulk",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "supplies",
+                    "bulk"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Preference Cards Page",
+          "item": [
+            {
+              "name": "list all cards",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/public",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    "public"
+                  ]
+                },
+                "description": "Purpose: Admin list all cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/admin\nNotes: SUPER_ADMIN only."
+              },
+              "response": []
+            },
+            {
+              "name": "Get preference card details by ID",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "698504e8154744318b2ee268"
+                    }
+                  ]
+                },
+                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Approve preference card",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/approve",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    ":id",
+                    "approve"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6982881cff2e9e7a2354a74e"
+                    }
+                  ]
+                },
+                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Reject preference card",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/reject",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    ":id",
+                    "reject"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6982881cff2e9e7a2354a74e"
+                    }
+                  ]
+                },
+                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "legal",
+          "item": [
+            {
+              "name": "Create a new legal page",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"title\": \"Terms & Conditions\",\r\n    \"content\": \"<h1>Terms</h1><p>Your full terms content here...</p>\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/legal",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "legal"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Update legal page",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{AdminAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"title\": \"Terms & Conditions\",\r\n    \"content\": \"<h1>Terms</h1><p>Your full terms content here...</p>\"\r\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/legal",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "legal"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Get single legal page by id",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/legal/699b638c10dc89fb9c195a68",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "legal",
+                    "699b638c10dc89fb9c195a68"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "list all legal pages",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/legal/699b638c10dc89fb9c195a68",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "legal",
+                    "699b638c10dc89fb9c195a68"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "Admin dashboard stats and counts."
+    },
+    {
+      "name": "App APIs",
+      "item": [
+        {
+          "name": "Auth Screen",
+          "item": [
+            {
+              "name": "Create new user",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"test-jiggalala@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+8801712345678\",\n  \"country\": \"Bangladesh\"\n}\n"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/user",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "user"
+                  ]
+                },
+                "description": "Register a new user account.  \nRequest Body: name, email, password.  \nValidation: Email uniqueness; password strength policy.  \nRate limiting: Enabled to prevent abuse.  \nSuccess 201: Returns created user (without password)."
+              },
+              "response": []
+            },
+            {
+              "name": "User login",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "let response = pm.response.json();\r",
+                      "\r",
+                      "if (response.success && response.data.accessToken) {\r",
+                      "    // Store in collection variable\r",
+                      "    pm.collectionVariables.set(\"UserAccessToken\", response.data.accessToken);\r",
+                      "} else {\r",
+                      "    console.warn(\"Login failed or accessToken not found!\");\r",
+                      "}\r",
+                      ""
+                    ],
+                    "type": "text/javascript",
+                    "packages": {},
+                    "requests": {}
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"email\": \"mdbayazid131@gmail.com\",\n    \"password\": \"12Ab....@\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/auth/login",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Login a user and issue tokens.\n\nAuthentication: Public (no token required).\n\nRequest Body:\n\n- email (string, required)\n    \n- password (string, required)\n    \n\nSuccess 200: Returns accessToken, refreshToken, and user profile.  \nErrors: 400 invalid credentials, 429 too many attempts."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Home Screen",
+          "item": [
+            {
+              "name": "Cards count: public cards and user's own cards",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/count",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    "count"
+                  ]
+                },
+                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Card details by ID",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "698511d61628e7ac5c59e620"
+                    }
+                  ]
+                },
+                "description": "Purpose: Get card by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/:id\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Create preference card public",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"cardTitle\": \"General Surgery Preference Card\",\n    \"surgeon\": {\n        \"fullName\": \"Dr. John Doe\",\n        \"handPreference\": \"Right\",\n        \"specialty\": \"General Surgery\",\n        \"contactNumber\": \"0123456789\",\n        \"musicPreference\": \"Soft Music\"\n    },\n    \"medication\": \"Standard anesthesia\",\n    \"supplies\": [\n        { \"name\": \"6983a0caa236145d67735403\", \"quantity\": 5 },\n        { \"name\": \"Sterile Gauze Pads\", \"quantity\": 10 }\n    ],\n    \"sutures\": [\n        { \"name\": \"697be9a9757b11947477e9ad\", \"quantity\": 3 },\n        { \"name\": \"3-0 Vicryl\", \"quantity\": 2 }\n    ],\n    \"instruments\": \"Standard surgical instrument set\",\n    \"positioningEquipment\": \"Supine position\",\n    \"prepping\": \"Betadine skin preparation\",\n    \"workflow\": \"Standard surgical workflow followed\",\n    \"keyNotes\": \"Ensure all sterile protocols are maintained\",\n    \"photoLibrary\": [],\n    \"published\": true\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card"
+                  ]
+                },
+                "description": "Purpose: Create card\nMethod: POST\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Create preference card private",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"cardTitle\": \"General Surgery Preference Card\",\n    \"surgeon\": {\n        \"fullName\": \"Md bayzid hosen\",\n        \"handPreference\": \"Right\",\n        \"specialty\": \"General Surgery\",\n        \"contactNumber\": \"0123456789\",\n        \"musicPreference\": \"Soft Music\"\n    },\n    \"medication\": \"Standard anesthesia\",\n    \"supplies\": [\n        { \"name\": \"697be6221c5624691bc89e38\", \"quantity\": 5 },\n        { \"name\": \"697be60a1c5624691bc89e30\", \"quantity\": 3 },\n        { \"name\": \"Surgical Tape\", \"quantity\": 8 }\n    ],\n    \"sutures\": [\n        { \"name\": \"697be9a9757b11947477e9ad\", \"quantity\": 4 }\n    ],\n    \"instruments\": \"Standard surgical instrument set\",\n    \"positioningEquipment\": \"Supine position\",\n    \"prepping\": \"Betadine skin preparation\",\n    \"workflow\": \"Standard surgical workflow followed\",\n    \"keyNotes\": \"Ensure all sterile protocols are maintained\",\n    \"photoLibrary\": [],\n    \"published\": false\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/private",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    "private"
+                  ]
+                },
+                "description": "Purpose: Create card\nMethod: POST\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "List Sutures",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/sutures",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "sutures"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "List Supplies",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/supplies",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "supplies"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Increment download count",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/download",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    ":id",
+                    "download"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6983a0f7a236145d67735409"
+                    }
+                  ]
+                },
+                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "List all favorite cards for the authenticated user",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/favorites",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    "favorites"
+                  ]
+                },
+                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Library screen",
+          "item": [
+            {
+              "name": "Get all public cards",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/public",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    "public"
+                  ],
+                  "query": [
+                    {
+                      "key": "searchTerm",
+                      "value": "General Surgery Preference Card",
+                      "disabled": true
+                    },
+                    {
+                      "key": "verificationStatus",
+                      "value": "VERIFIED",
+                      "type": "text",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Get user own created privet cards",
+              "protocolProfileBehavior": {
+                "disableBodyPruning": true
+              },
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/private?searchTerm=General Surgery Preference Card&verificationStatus=UNVERIFIED",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    "private"
+                  ],
+                  "query": [
+                    {
+                      "key": "searchTerm",
+                      "value": "General Surgery Preference Card"
+                    },
+                    {
+                      "key": "verificationStatus",
+                      "value": "UNVERIFIED"
+                    }
+                  ]
+                },
+                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Card details by ID",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "698647b5ea96e311416673e9"
+                    }
+                  ]
+                },
+                "description": "Purpose: Get card by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/:id\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Favorite create",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/favorite",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    ":id",
+                    "favorite"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "69949d7eb3dcf145cdf02495"
+                    }
+                  ]
+                },
+                "description": "Purpose: Get card by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/:id\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Remove Favorite",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/favorite",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "preference-card",
+                    ":id",
+                    "favorite"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "69949d7eb3dcf145cdf02495"
+                    }
+                  ]
+                },
+                "description": "Purpose: Get card by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/:id\nNotes: Auth required."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Event Screen",
+          "item": [
+            {
+              "name": "Create event",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n    \"title\": \"Surgery\",\n    \"date\": \"2024-02-10\",\n    \"time\": \"10:30\",\n    \"durationHours\": 2,\n    \"eventType\": \"SURGERY\",\n    \"location\": \"OR-1\",\n    \"notes\": \"Patient must be fasting for 8 hours\",\n    \"preferenceCard\":\"6994ec39b3dcf145cdf0252a\",\n    \"personnel\": {\n        \"leadSurgeon\": \"Dr. Ahmed\",\n        \"surgicalTeam\": [\n            \"Dr. Rahman\",\n            \"Nurse Fatima\",\n            \"Anesthetist Karim\"\n        ]\n    }\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/events",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "events"
+                  ]
+                },
+                "description": "Purpose: Create event\nMethod: POST\nURL: {{BASE_URL}}/api/v1/events/\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete event",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/events/:id",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "events",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "69864afaea96e311416673f1"
+                    }
+                  ]
+                },
+                "description": "Purpose: Delete event\nMethod: DELETE\nURL: {{BASE_URL}}/api/v1/events/:id\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "List my events",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/events",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "events"
+                  ]
+                },
+                "description": "Purpose: List my events\nMethod: GET\nURL: {{BASE_URL}}/api/v1/events/\nNotes: Auth required; supports filters."
+              },
+              "response": []
+            },
+            {
+              "name": "Event details",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/events/:id",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "events",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "6995f7578e9f27652e427011"
+                    }
+                  ]
+                },
+                "description": "Purpose: Get event by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/events/:id\nNotes: Auth required."
+              },
+              "response": []
+            },
+            {
+              "name": "Update event",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Updated Title\"\n}"
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/events/:id",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "events",
+                    ":id"
+                  ],
+                  "variable": [
+                    {
+                      "key": "id",
+                      "value": "698650ce82f65364edfe4496"
+                    }
+                  ]
+                },
+                "description": "Purpose: Update event\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/events/:id\nNotes: Auth required."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Profile Screen",
+          "item": [
+            {
+              "name": "Fetch Own Profile (My Profile)",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/user/profile",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Edit Own Profile",
+              "request": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{UserAccessToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "PATCH",
+                "header": [],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\r\n    \"name\": \"Update Name\",\r\n    \"phone\": \"+8801700000000\",\r\n    \"location\": \"Dhaka\",\r\n    \"gender\": \"female\",\r\n    \"specialty\": \"Cardiology\",\r\n    \"hospital\": \"City Hospital\",\r\n    \"email\":\"mdbayazid131@gmail.com\"\r\n}\r\n",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                },
+                "url": {
+                  "raw": "{{BASE_URL}}/api/v1/user/profile",
+                  "host": [
+                    "{{BASE_URL}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "user",
+                    "profile"
+                  ]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "UserAccessToken",
+      "value": ""
+    },
+    {
+      "key": "AdminAccessToken",
+      "value": ""
+    }
+  ]
+}
