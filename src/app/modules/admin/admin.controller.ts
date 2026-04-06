@@ -14,7 +14,7 @@ export const AdminController = {
     sendResponse(res, {
       success: true,
       statusCode: StatusCodes.OK,
-      message: 'Admin dashboard stats',
+      message: 'Admin dashboard metrics',
       data: result,
     });
   }),
@@ -29,15 +29,14 @@ export const AdminController = {
     });
   }),
 
-  getActiveSubscriptionMonthly: catchAsync(
-    async (_req: Request, res: Response) => {
-      const result = await getActiveSubscriptionMonthlyTrend();
-      sendResponse(res, {
-        success: true,
-        statusCode: StatusCodes.OK,
-        message: 'Active subscription monthly trend',
-        data: result,
-      });
-    },
-  ),
+  getActiveSubscriptionMonthly: catchAsync(async (_req: Request, res: Response) => {
+    const result = await getActiveSubscriptionMonthlyTrend();
+    const currentYear = new Date().getFullYear();
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: `Monthly analytics for ${currentYear} retrieved successfully.`,
+      data: result,
+    });
+  }),
 };

@@ -168,6 +168,7 @@ const deleteUserPermanently = async (id: string) => {
     .select('-password -authentication');
   return deletedUser;
 };
+
 const updateUserByAdmin = async (id: string, payload: Partial<IUser>) => {
   const user = await User.findById(id).select('+password');
   if (!user) {

@@ -19,9 +19,15 @@
 2. Email input kore OTP request pathay → `POST /auth/forgot-password` (→ 1.2)
 3. Success message ashe (even if email exists na — enumeration prevention) → OTP verify screen e navigate kore
 4. Email e jawa OTP input kore submit kore → `POST /auth/verify-otp` (→ 1.3)
-5. Success hole → short-lived `resetToken` ashe (auto-login hoy na)
-6. New password input kore confirm kore → `POST /auth/reset-password` (→ 1.4) — reset token pathay
-7. Success hole → Login screen e redirect hoye jay
+5. OTP na pele → "Resend OTP" button e click kore → `POST /auth/resend-verify-email` (→ 1.8)
+6. Success hole → short-lived `resetToken` ashe (auto-login hoy na verified user-er jonno)
+7. New password input kore confirm kore → `POST /auth/reset-password` (→ 1.4) — headers e `resetToken` pathay
+8. Success hole → Login screen e redirect hoye jay
+
+### Logout Flow
+1. Admin sidebar ba profile dropdown theke "Logout" e click kore
+2. Logout → `POST /auth/logout` (→ 1.6) — `deviceToken` pathay push notifications clean korar jonno
+3. Success → Local state clear hoy ebong Login screen e navigate kore
 
 ### Token Refresh (Background / Silent)
 1. Kono API call 401 (access token expired) return korle
@@ -35,11 +41,12 @@
 
 | Scenario | Behavior |
 | :--- | :--- |
-| **Non-existent email (forgot-password)** | Silent success — identity reveal kore na. |
+| **Non-existent email (forgot-password)** | Silent success — identity reveal kore na (Enumeration prevention). |
 | **Double-submit OTP** | Atomic update logic use kora hoyeche, tai shudhu prothom request ta valid hobe. |
-| **Parallel Password Reset** | Sob tokens invalidated hoye jay ekbar reset successful hole. |
+| **Parallel Password Reset** | Sob tokens invalidated hoye jay ekbar reset successful hole (tokenVersion increment). |
 | **Simultaneous Refresh** | Token Versioning (Rotation) logic use kora hoyeche — reuse hole immediate logout force kore. |
-| **Deleted / Inactive Account** | Generic 403 Forbidden error message ashe. |
+| **Deleted / Inactive Account** | Generic 403 Forbidden error message ashe login attempt korle. |
+| **New User Verification** | Verification successful hole auto-login hoy ebong tokens return kore (Dashboard-e kom use hoy). |
 
 ---
 
@@ -64,7 +71,8 @@ Auth: None
 ```json
 {
   "email": "admin@example.com",
-  "password": "StrongPassword123!"
+  "password": "StrongPassword123!",
+  "deviceToken": "fcm-token-xyz"  // optional
 }
 ```
 
@@ -109,6 +117,11 @@ Content-Type: application/json
 Auth: None
 ```
 
+**Implementation:**
+- **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
+- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `forgetPassword`
+- **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `forgetPasswordToDB`
+
 **Request Body:**
 ```json
 {
@@ -138,6 +151,11 @@ Content-Type: application/json
 Auth: None
 ```
 
+**Implementation:**
+- **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
+- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `verifyEmail`
+- **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `verifyEmailToDB`
+
 **Request Body:**
 ```json
 {
@@ -148,7 +166,7 @@ Auth: None
 
 #### Responses
 
-- **Scenario: Success (200)**
+- **Scenario: Success (200) - Forgot Password Flow**
   ```json
   {
     "success": true,
@@ -159,12 +177,59 @@ Auth: None
     }
   }
   ```
+
+- **Scenario: Success (200) - New User Auto-login**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Email verify successfully",
+    "data": {
+      "accessToken": "eyJhbGciOi...",
+      "refreshToken": "eyJhbGciOi..."
+    }
+  }
+  ```
+
 - **Scenario: Invalid/Expired OTP (400)**
   ```json
   {
     "success": false,
     "statusCode": 400,
     "message": "Invalid or expired verification code"
+  }
+  ```
+
+---
+
+### 1.4 Reset Password
+
+```
+POST /auth/reset-password
+Content-Type: application/json
+Auth: Bearer {{resetToken}}
+```
+
+**Implementation:**
+- **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
+- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `resetPassword`
+- **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `resetPasswordToDB`
+
+**Request Body:**
+```json
+{
+  "newPassword": "StrongPassword123!"
+}
+```
+
+#### Responses
+
+- **Scenario: Success (200)**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Your password has been successfully reset."
   }
   ```
 
@@ -177,6 +242,11 @@ POST /auth/refresh-token
 Content-Type: application/json
 Auth: None (Uses refreshToken from cookie or body)
 ```
+
+**Implementation:**
+- **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
+- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `refreshToken`
+- **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `refreshTokenToDB`
 
 #### Responses
 
@@ -204,12 +274,115 @@ Auth: None (Uses refreshToken from cookie or body)
 
 ---
 
+### 1.6 Logout
+
+```
+POST /auth/logout
+Content-Type: application/json
+Auth: Bearer {{accessToken}}
+```
+
+**Implementation:**
+- **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
+- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `logoutUser`
+- **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `logoutUserFromDB`
+
+**Request Body:**
+```json
+{
+  "deviceToken": "fcm-token-xyz"
+}
+```
+
+#### Responses
+
+- **Scenario: Success (200)**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "User logged out successfully."
+  }
+  ```
+
+---
+
+### 1.7 Change Password
+
+```
+POST /auth/change-password
+Content-Type: application/json
+Auth: Bearer {{accessToken}}
+```
+
+**Implementation:**
+- **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
+- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `changePassword`
+- **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `changePasswordToDB`
+
+**Request Body:**
+```json
+{
+  "currentPassword": "OldPassword123!",
+  "newPassword": "NewStrongPassword123!"
+}
+```
+
+#### Responses
+
+- **Scenario: Success (200)**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Your password has been successfully changed"
+  }
+  ```
+
+---
+
+### 1.8 Resend OTP
+
+```
+POST /auth/resend-verify-email
+Content-Type: application/json
+Auth: None
+```
+
+**Implementation:**
+- **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
+- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `resendVerifyEmail`
+- **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `resendVerifyEmailToDB`
+
+**Request Body:**
+```json
+{
+  "email": "admin@example.com"
+}
+```
+
+#### Responses
+
+- **Scenario: Success (200)**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Verification code has been resent to your email."
+  }
+  ```
+
+---
+
 ## API Status
 
 | # | Endpoint | Status | Notes |
 |---|----------|:------:|-------|
-| 1.1 | `POST /auth/login` | ✅ Done | Generic errors + status checks added |
-| 1.2 | `POST /forgot-password` | ✅ Done | Silent success added |
-| 1.3 | `POST /verify-otp` | ✅ Done | Atomic update for double-submit fix |
-| 1.4 | `POST /reset-password` | ✅ Done | Token rotation (tokenVersion) added |
-| 1.5 | `POST /refresh-token` | ✅ Done | Rotation with reuse detection implemented |
+| 1.1 | `POST /auth/login` | ✅ Done | Status checks (RESTRICTED, INACTIVE) added |
+| 1.2 | `POST /auth/forgot-password` | ✅ Done | Silent success for enumeration prevention |
+| 1.3 | `POST /auth/verify-otp` | ✅ Done | Auto-login vs Reset Token logic included |
+| 1.4 | `POST /auth/reset-password` | ✅ Done | tokenVersion incremented to invalidate all sessions |
+| 1.5 | `POST /auth/refresh-token` | ✅ Done | Token rotation with reuse detection |
+| 1.6 | `POST /auth/logout` | ✅ Done | Device token removal included |
+| 1.7 | `POST /auth/change-password` | ✅ Done | Auth required, current password validation |
+| 1.8 | `POST /auth/resend-verify-email` | ✅ Done | Standard OTP resend logic |
