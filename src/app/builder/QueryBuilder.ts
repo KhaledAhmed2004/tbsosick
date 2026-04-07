@@ -360,7 +360,7 @@ class QueryBuilder<T> {
 
   // 📄 Pagination
   paginate() {
-    let limit = Number(this?.query?.limit) || 10;
+    let limit = Math.min(Number(this?.query?.limit) || 10, 50); // Enforce max limit of 50
     let page = Number(this?.query?.page) || 1;
     let skip = (page - 1) * limit;
 
@@ -461,20 +461,22 @@ class QueryBuilder<T> {
 
     // Calculate pagination based on filtered results
     const total = filteredResults.length;
-    const limit = Number(this?.query?.limit) || 10;
+    const limit = Math.min(Number(this?.query?.limit) || 10, 50);
     const page = Number(this?.query?.page) || 1;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
-    const pagination = {
+    const meta = {
       total,
       limit,
       page,
-      totalPage,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
     };
 
     return {
       data: filteredResults,
-      pagination,
+      meta,
     };
   }
 
@@ -487,15 +489,17 @@ class QueryBuilder<T> {
     const dur = Date.now() - _start;
     const modelName = (this.modelQuery.model as any)?.modelName || (this.modelQuery.model as any)?.collection?.name;
     recordDbQuery(dur, { model: modelName, operation: 'countDocuments', cacheHit: false });
-    const limit = Number(this?.query?.limit) || 10;
+    const limit = Math.min(Number(this?.query?.limit) || 10, 50);
     const page = Number(this?.query?.page) || 1;
-    const totalPage = Math.ceil(total / limit);
+    const totalPages = Math.ceil(total / limit);
 
     return {
       total,
       limit,
       page,
-      totalPage,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
     };
   }
 }

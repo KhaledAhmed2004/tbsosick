@@ -15,7 +15,7 @@ const router = express.Router();
 
 const apiRoutes = [
   {
-    path: '/user',
+    path: '/users',
     route: UserRoutes,
   },
   {
@@ -35,7 +35,7 @@ const apiRoutes = [
     route: EventRoutes,
   },
   {
-    path: '/preference-card',
+    path: '/preference-cards',
     route: PreferenceCardRoutes,
   },
   {

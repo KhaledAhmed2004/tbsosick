@@ -3,9 +3,9 @@
 > **Section**: App APIs (Student-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Profile](./02-profile.md) (change password, logout)
+> **Related screens**: [Profile](./06-profile.md) (change password, logout)
 
-## UX Flow
+## UX Flow     
 
 ### Registration Flow
 1. User "Create Account" e tap kore
@@ -15,7 +15,7 @@
 5. Email na pele → "Resend" button → `POST /auth/resend-verify-email` (→ 1.8)
 6. OTP input kore submit → `POST /auth/verify-otp` (→ 1.3)
 7. Verification success hole → auto-login hoy → tokens receive kore → Welcome/Onboarding screen e navigate kore
-
+ 
 ### Login Flow
 1. User email + password input kore submit e tap kore
 2. Submit → `POST /auth/login` (→ 1.2) — optionally `deviceToken` for push notifications

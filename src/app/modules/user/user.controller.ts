@@ -5,6 +5,7 @@ import sendResponse from '../../../shared/sendResponse';
 import { UserService } from './user.service';
 import { USER_STATUS } from '../../../enums/user';
 import { JwtPayload } from 'jsonwebtoken';
+import { PreferenceCardService } from '../preference-card/preference-card.service';
 
 const createUser = catchAsync(async (req: Request, res: Response) => {
   const { ...userData } = req.body;
@@ -30,6 +31,42 @@ const getUserProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getFavoriteCards = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  
+  const result = await PreferenceCardService.listFavoritePreferenceCardsForUserFromDB(
+    (user as any).id,
+    req.query,
+  );
+
+  const favoriteCardIds = await PreferenceCardService.getFavoriteCardIdsForUser((user as any).id);
+  const favoriteSet = new Set(
+    (favoriteCardIds as string[]).map(id => id.toString()),
+  );
+
+  const summarized = (result.data as any[]).map((doc: any) => ({
+    id: doc.id || doc._id,
+    cardTitle: doc.cardTitle,
+    surgeon: {
+      name: doc.surgeon?.fullName,
+      specialty: doc.surgeon?.specialty,
+    },
+    verificationStatus: doc.verificationStatus,
+    isFavorited: favoriteSet.has((doc.id || doc._id).toString()),
+    downloadCount: doc.downloadCount || 0,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  }));
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: result.data.length > 0 ? 'Favorite preference cards retrieved successfully' : 'No favorite cards found.',
+    meta: result.meta,
+    data: summarized,
+  });
+});
+
 const updateProfile = catchAsync(async (req: Request, res: Response) => {
   const user = req.user;
 
@@ -50,10 +87,10 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
   const { status } = req.body as { status: USER_STATUS };
 
-  const result = await UserService.updateUserStatus(id, status);
+  const result = await UserService.updateUserStatus(userId, status);
 
   sendResponse(res, {
     success: true,
@@ -64,9 +101,9 @@ const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
 });
 
 const adminUpdateUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
   const payload = { ...req.body };
-  const result = await UserService.updateUserByAdmin(id, payload);
+  const result = await UserService.updateUserByAdmin(userId, payload);
 
   sendResponse(res, {
     success: true,
@@ -77,8 +114,8 @@ const adminUpdateUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await UserService.deleteUserPermanently(id);
+  const { userId } = req.params;
+  const result = await UserService.deleteUserPermanently(userId);
 
   sendResponse(res, {
     success: true,
@@ -95,14 +132,14 @@ const getAllUserRoles = catchAsync(async (req: Request, res: Response) => {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'User roles retrieved successfully',
-    pagination: result.pagination,
+    meta: result.meta,
     data: result.data,
   });
 });
 
 const blockUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await UserService.updateUserStatus(id, USER_STATUS.RESTRICTED);
+  const { userId } = req.params;
+  const result = await UserService.updateUserStatus(userId, USER_STATUS.RESTRICTED);
 
   sendResponse(res, {
     success: true,
@@ -113,8 +150,8 @@ const blockUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const unblockUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await UserService.updateUserStatus(id, USER_STATUS.ACTIVE);
+  const { userId } = req.params;
+  const result = await UserService.updateUserStatus(userId, USER_STATUS.ACTIVE);
 
   sendResponse(res, {
     success: true,
@@ -125,9 +162,9 @@ const unblockUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getUserById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
 
-  const result = await UserService.getUserById(id);
+  const result = await UserService.getUserById(userId);
 
   sendResponse(res, {
     success: true,
@@ -138,9 +175,9 @@ const getUserById = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getUserDetailsById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
 
-  const result = await UserService.getUserDetailsById(id);
+  const result = await UserService.getUserDetailsById(userId);
 
   sendResponse(res, {
     success: true,
@@ -153,6 +190,7 @@ const getUserDetailsById = catchAsync(async (req: Request, res: Response) => {
 export const UserController = {
   createUser,
   getUserProfile,
+  getFavoriteCards,
   updateProfile,
   getAllUserRoles,
   updateUserStatus,

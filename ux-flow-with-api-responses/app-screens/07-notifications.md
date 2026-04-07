@@ -1,24 +1,24 @@
-# Screen 5: Notifications
+# Screen 7: Notifications
 
 > **Section**: App APIs (Student-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Home](./03-home.md) (Access via bell icon), [Preference Card Details](./04-preference-card-details.md) (Navigation from notification)
+> **Related screens**: [Home](./02-home.md) (Access via bell icon), [Preference Card Details](./03-preference-card-details.md) (Navigation from notification)
 
 ## UX Flow
 
 ### Notification List Load
 1. User app-er header-e thaka notification (bell) icon-e tap kore.
-2. Page load-e user-er shob notifications fetch hoy → `GET /notifications` (→ 5.1).
+2. Page load-e user-er shob notifications fetch hoy → `GET /notifications` (→ 7.1).
 3. Screen render hoy:
    - Notification cards (Title, Subtitle/Text, Icon, Time).
    - Unread notifications highlight hoye thake.
    - List khali thakle "No notifications yet" message dekhay.
 
 ### Notification Interactions
-1. **Mark as Read**: User kono notification-e tap korle details-e navigate korar age oita read mark hoy → `PATCH /notifications/:id/read` (→ 5.2).
-2. **Mark All Read**: User "Mark All as Read" button-e tap korle shob notification ekshathe read mark hoy → `PATCH /notifications/read-all` (→ 5.3).
-3. **Delete**: Notification swipe korle ba delete icon-e tap korle oita remove hoy → `DELETE /notifications/:id` (→ 5.4).
+1. **Mark as Read**: User kono notification-e tap korle details-e navigate korar age oita read mark hoy → `PATCH /notifications/:id/read` (→ 7.2).
+2. **Mark All Read**: User "Mark All as Read" button-e tap korle shob notification ekshathe read mark hoy → `PATCH /notifications/read-all` (→ 7.3).
+3. **Delete**: Notification swipe korle ba delete icon-e tap korle oita remove hoy → `DELETE /notifications/:id` (→ 7.4).
 4. **Navigation**: 
    - Notification card-e tap korle corresponding resource-e (e.g., Preference Card details) navigate kore based on `resourceType` and `resourceId`.
 
@@ -36,7 +36,7 @@
 <!--           NOTIFICATION LIST              -->
 <!-- ══════════════════════════════════════ -->
 
-### 5.1 List My Notifications
+### 7.1 List My Notifications
 
 ```
 GET /notifications
@@ -76,7 +76,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.2 Mark Notification as Read
+### 7.2 Mark Notification as Read
 
 ```
 PATCH /notifications/:id/read
@@ -115,7 +115,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.3 Mark All Notifications as Read
+### 7.3 Mark All Notifications as Read
 
 ```
 PATCH /notifications/read-all
@@ -145,7 +145,7 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 5.4 Delete Notification
+### 7.4 Delete Notification
 
 ```
 DELETE /notifications/:id
@@ -179,7 +179,7 @@ Auth: Bearer {{accessToken}}
 
 | # | Endpoint | Method | Auth | Status | Notes |
 |---|---|---|---|:---:|---|
-| 5.1 | `/notifications` | `GET` | Bearer | ✅ Done | List all notifications |
-| 5.2 | `/notifications/:id/read` | `PATCH` | Bearer | ✅ Done | Mark single notification as read |
-| 5.3 | `/notifications/read-all` | `PATCH` | Bearer | ✅ Done | Mark all as read |
-| 5.4 | `/notifications/:id` | `DELETE` | Bearer | ✅ Done | Delete notification |
+| 7.1 | `/notifications` | `GET` | Bearer | ✅ Done | List all notifications |
+| 7.2 | `/notifications/:id/read` | `PATCH` | Bearer | ✅ Done | Mark single notification as read |
+| 7.3 | `/notifications/read-all` | `PATCH` | Bearer | ✅ Done | Mark all as read |
+| 7.4 | `/notifications/:id` | `DELETE` | Bearer | ✅ Done | Delete notification |

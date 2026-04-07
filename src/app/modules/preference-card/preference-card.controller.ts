@@ -22,18 +22,88 @@ export const PreferenceCardController = {
     });
   }),
 
-  listMyCards: catchAsync(async (req: Request, res: Response) => {
+  // Unified list/search method (Step 4 & 7)
+  getCards: catchAsync(async (req: Request, res: Response) => {
     const user = req.user as JwtPayload;
+    const { visibility } = req.query;
 
-    const result = await PreferenceCardService.listPreferenceCardsForUserFromDB(
-      (user as any).id,
+    let result;
+    if (visibility === 'private') {
+      result = await PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(
+        (user as any).id,
+        req.query,
+      );
+    } else {
+      // Default to public
+      result = await PreferenceCardService.listPublicPreferenceCardsFromDB(req.query);
+    }
+
+    const [favoriteCardIds] = await Promise.all([
+      PreferenceCardService.getFavoriteCardIdsForUser((user as any).id),
+    ]);
+    
+    const favoriteSet = new Set(
+      (favoriteCardIds as string[]).map(id => id.toString()),
     );
+
+    const summarized = (result.data as any[]).map((doc: any) => ({
+      id: doc.id || doc._id,
+      cardTitle: doc.cardTitle,
+      surgeon: {
+        name: doc.surgeon?.fullName,
+        specialty: doc.surgeon?.specialty,
+      },
+      verificationStatus: doc.verificationStatus,
+      isFavorited: favoriteSet.has((doc.id || doc._id).toString()),
+      downloadCount: doc.downloadCount || 0,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    }));
 
     sendResponse(res, {
       success: true,
       statusCode: StatusCodes.OK,
-      message: 'Preference cards fetched',
-      data: result,
+      message: `${visibility === 'private' ? 'Private' : 'Public'} preference cards fetched successfully`,
+      meta: result.meta,
+      data: summarized,
+    });
+  }),
+
+  listPrivateCards: catchAsync(async (req: Request, res: Response) => {
+    const user = req.user as JwtPayload;
+    const result = await PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(
+      (user as any).id,
+      req.query,
+    );
+
+    const [favoriteCardIds] = await Promise.all([
+      PreferenceCardService.getFavoriteCardIdsForUser((user as any).id),
+    ]);
+
+    const favoriteSet = new Set(
+      (favoriteCardIds as string[]).map(id => id.toString()),
+    );
+
+    const summarized = (result.data as any[]).map((doc: any) => ({
+      id: doc.id || doc._id,
+      cardTitle: doc.cardTitle,
+      surgeon: {
+        name: doc.surgeon?.fullName,
+        specialty: doc.surgeon?.specialty,
+      },
+      verificationStatus: doc.verificationStatus,
+      isFavorited: favoriteSet.has((doc.id || doc._id).toString()),
+      downloadCount: doc.downloadCount || 0,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    }));
+
+    sendResponse(res, {
+      success: true,
+      statusCode: StatusCodes.OK,
+      message: 'Private preference cards fetched successfully',
+      meta: result.meta,
+      data: summarized,
     });
   }),
 
@@ -41,7 +111,7 @@ export const PreferenceCardController = {
     const user = req.user as JwtPayload;
 
     const result = await PreferenceCardService.getPreferenceCardByIdFromDB(
-      req.params.id,
+      req.params.cardId,
       (user as any).id,
       (user as any).role,
     );
@@ -58,7 +128,7 @@ export const PreferenceCardController = {
     const user = req.user as JwtPayload;
 
     const result = await PreferenceCardService.updatePreferenceCardInDB(
-      req.params.id,
+      req.params.cardId,
       (user as any).id,
       (user as any).role,
       req.body,
@@ -76,7 +146,7 @@ export const PreferenceCardController = {
     const user = req.user as JwtPayload;
 
     const result = await PreferenceCardService.deletePreferenceCardFromDB(
-      req.params.id,
+      req.params.cardId,
       (user as any).id,
       (user as any).role,
     );
@@ -93,7 +163,7 @@ export const PreferenceCardController = {
     const user = req.user as JwtPayload;
 
     const result = await PreferenceCardService.incrementDownloadCountInDB(
-      req.params.id,
+      req.params.cardId,
       (user as any).id,
       (user as any).role,
     );
@@ -110,7 +180,7 @@ export const PreferenceCardController = {
     const user = req.user as JwtPayload;
 
     const result = await PreferenceCardService.favoritePreferenceCardInDB(
-      req.params.id,
+      req.params.cardId,
       (user as any).id,
     );
 
@@ -126,7 +196,7 @@ export const PreferenceCardController = {
     const user = req.user as JwtPayload;
 
     const result = await PreferenceCardService.unfavoritePreferenceCardInDB(
-      req.params.id,
+      req.params.cardId,
       (user as any).id,
     );
 
@@ -138,121 +208,37 @@ export const PreferenceCardController = {
     });
   }),
 
-  listPublicCards: catchAsync(async (req: Request, res: Response) => {
+  getStats: catchAsync(async (req: Request, res: Response) => {
     const user = req.user as JwtPayload;
-    const [cards, favoriteCardIds] = await Promise.all([
-      PreferenceCardService.listPublicPreferenceCardsFromDB(req.query),
-      PreferenceCardService.getFavoriteCardIdsForUser((user as any).id),
-    ]);
-    const favoriteSet = new Set(
-      (favoriteCardIds as string[]).map(id => id.toString()),
-    );
-    const summarized = (cards.data as any[]).map((doc: any) => ({
-      _id: doc._id,
-      cardTitle: doc.cardTitle,
-      surgeonName: doc.surgeon?.fullName,
-      surgeonSpecialty: doc.surgeon?.specialty,
-      isVerified: doc.verificationStatus === 'VERIFIED',
-      isFavorite: favoriteSet.has(doc._id.toString()),
-      totalDownloads: doc.downloadCount || 0,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
-    }));
+    // BOLA Mitigation: derive userId from token, not query params
+    const result = await PreferenceCardService.getCountsForCards((user as any).id);
+
     sendResponse(res, {
       success: true,
       statusCode: StatusCodes.OK,
-      message: 'Public cards fetched successfully',
-      pagination: cards.pagination,
-      data: summarized,
+      message: 'Card statistics retrieved successfully',
+      data: {
+        publicCards: result.AllCardsCount,
+        myCards: result.myCardsCount,
+      },
     });
   }),
-  listPrivateCards: catchAsync(async (req: Request, res: Response) => {
-    const user = req.user as JwtPayload;
-    const [cards, favoriteCardIds] =
-      await Promise.all([
-        PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(
-          (user as any).id,
-          req.query,
-        ),
-        PreferenceCardService.getFavoriteCardIdsForUser((user as any).id),
-      ]);
 
-    const favoriteSet = new Set(
-      (favoriteCardIds as string[]).map(id => id.toString()),
-    );
-
-    const summarized = (cards.data as any[]).map((doc: any) => ({
-      _id: doc._id,
-      cardTitle: doc.cardTitle,
-      surgeonName: doc.surgeon?.fullName,
-      surgeonSpecialty: doc.surgeon?.specialty,
-      isVerified: doc.verificationStatus === 'VERIFIED',
-      isFavorite: favoriteSet.has(doc._id.toString()),
-      totalDownloads: doc.downloadCount || 0,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
-    }));
+  getSpecialties: catchAsync(async (req: Request, res: Response) => {
+    const result = await PreferenceCardService.getDistinctSpecialtiesFromDB();
 
     sendResponse(res, {
       success: true,
       statusCode: StatusCodes.OK,
-      message: 'Private cards fetched successfully',
-      pagination: cards.pagination,
-      data: summarized,
-    });
-  }),
-  listFavoriteCards: catchAsync(async (req: Request, res: Response) => {
-    const user = req.user as JwtPayload;
-    const [cards, favoriteCardIds] =
-      await Promise.all([
-        PreferenceCardService.listFavoritePreferenceCardsForUserFromDB(
-          (user as any).id,
-          req.query,
-        ),
-        PreferenceCardService.getFavoriteCardIdsForUser((user as any).id),
-      ]);
-
-    const favoriteSet = new Set(
-      (favoriteCardIds as string[]).map(id => id.toString()),
-    );
-
-    const summarized = (cards.data as any[]).map((doc: any) => ({
-      _id: doc._id,
-      cardTitle: doc.cardTitle,
-      surgeonName: doc.surgeon?.fullName,
-      surgeonSpecialty: doc.surgeon?.specialty,
-      isVerified: doc.verificationStatus === 'VERIFIED',
-      isFavorite: favoriteSet.has(doc._id.toString()),
-      totalDownloads: doc.downloadCount || 0,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt,
-    }));
-
-    sendResponse(res, {
-      success: true,
-      statusCode: StatusCodes.OK,
-      message: 'Favorite cards fetched successfully',
-      pagination: cards.pagination,
-      data: summarized,
-    });
-  }),
-  countCards: catchAsync(async (req: Request, res: Response) => {
-    const user = req.user as JwtPayload;
-    const result = await PreferenceCardService.getCountsForCards(
-      (user as any).id,
-    );
-
-    sendResponse(res, {
-      success: true,
-      statusCode: StatusCodes.OK,
-      message: 'Card counts fetched successfully',
+      message: 'Specialties retrieved successfully',
       data: result,
     });
   }),
+
   approveCard: catchAsync(async (req: Request, res: Response) => {
     const user = req.user as JwtPayload;
     const result = await PreferenceCardService.updateVerificationStatusInDB(
-      req.params.id,
+      req.params.cardId,
       (user as any).role,
       'VERIFIED',
     );
@@ -268,7 +254,7 @@ export const PreferenceCardController = {
   rejectCard: catchAsync(async (req: Request, res: Response) => {
     const user = req.user as JwtPayload;
     const result = await PreferenceCardService.updateVerificationStatusInDB(
-      req.params.id,
+      req.params.cardId,
       (user as any).role,
       'UNVERIFIED',
     );

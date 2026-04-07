@@ -23,6 +23,13 @@ router.get(
   UserController.getUserProfile,
 );
 
+// Get current user's favorite cards
+router.get(
+  '/me/favorites',
+  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  UserController.getFavoriteCards,
+);
+
 // Update own profile
 router.patch(
   '/profile',
@@ -37,18 +44,18 @@ router.get('/', auth(USER_ROLES.SUPER_ADMIN), UserController.getAllUserRoles);
 
 // Admin: Update any user
 router.patch(
-  '/:id',
+  '/:userId',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(UserValidation.adminUpdateUserZodSchema),
   UserController.adminUpdateUser,
 );
 
 // Admin: Delete user permanently
-router.delete('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.deleteUser);
+router.delete('/:userId', auth(USER_ROLES.SUPER_ADMIN), UserController.deleteUser);
 
 // Update user status (ACTIVE | RESTRICTED)
 router.patch(
-  '/:id/status',
+  '/:userId/status',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(UserValidation.updateUserStatusZodSchema),
   UserController.updateUserStatus,
@@ -56,24 +63,24 @@ router.patch(
 
 // Block user
 router.patch(
-  '/:id/block',
+  '/:userId/block',
   auth(USER_ROLES.SUPER_ADMIN),
   UserController.blockUser,
 );
 
 // Unblock user — super admin
 router.patch(
-  '/:id/unblock',
+  '/:userId/unblock',
   auth(USER_ROLES.SUPER_ADMIN),
   UserController.unblockUser,
 );
 
 // Get specific user details by ID (super admin)
-router.get('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
+router.get('/:userId', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
 
 // Public user details (guest allowed) — rate limited
 router.get(
-  '/:id/user',
+  '/:userId/user',
   auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
   rateLimitMiddleware({
     windowMs: 60_000,

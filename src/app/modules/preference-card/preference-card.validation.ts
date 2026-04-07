@@ -84,8 +84,30 @@ export const paramIdSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
 });
   
+// Search Preference Cards Schema
+export const searchCardsSchema = z.object({
+  query: z.object({
+    searchTerm: z.string().trim().max(100).optional(),
+    visibility: z.enum(['public', 'private']).default('public'),
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+    sort: z
+      .string()
+      .regex(/^-?(createdAt|cardTitle)$/)
+      .optional(),
+  }),
+});
+
 // Publish Preference Card Schema
-export const publishPreferenceCardSchema = z.object({
+const publishPreferenceCardSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
   body: z.object({ published: z.boolean() }),
 });
+
+export const PreferenceCardValidation = {
+  createPreferenceCardSchema,
+  updatePreferenceCardSchema,
+  paramIdSchema,
+  searchCardsSchema,
+  publishPreferenceCardSchema,
+};

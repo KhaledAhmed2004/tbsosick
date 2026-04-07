@@ -73,7 +73,7 @@ const getAllUsers = async (query: Record<string, unknown>) => {
   const paginationInfo = await userQuery.getPaginationInfo();
 
   return {
-    pagination: paginationInfo,
+    meta: paginationInfo,
     data: users,
   };
 };
@@ -138,7 +138,7 @@ const getAllUserRoles = async (query: Record<string, unknown>) => {
   });
 
   return {
-    pagination: paginationInfo,
+    meta: paginationInfo,
     data,
   };
 };

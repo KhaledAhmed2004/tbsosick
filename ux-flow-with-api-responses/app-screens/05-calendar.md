@@ -1,15 +1,15 @@
-# Screen 6: Calendar
+# Screen 5: Calendar
 
 > **Section**: App APIs (Student-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Home](./03-home.md) (Quick access)
+> **Related screens**: [Home](./02-home.md) (Quick access)
 
 ## UX Flow
 
 ### Calendar Initial Load
 1. User bottom navigation bar theke "Calendar" icon-e tap kore.
-2. Page load-e current month-er events fetch hoy → `GET /events` (→ 6.1).
+2. Page load-e current month-er events fetch hoy → `GET /events` (→ 5.1).
 3. Screen render hoy:
    - Top-e ekta Interactive Calendar thake.
    - Kono date-e event thakle dot ba indicator dekhay.
@@ -19,13 +19,13 @@
 ### Create Event Flow
 1. User "Create Event" button-e tap kore.
 2. Ekta modal/bottom-sheet open hoy jekhane title, date, time, ebong description input deya jay.
-3. Submit → `POST /events` (→ 6.2).
+3. Submit → `POST /events` (→ 5.2).
 4. Success hole list update hoy ebong success message dekhay.
 
 ### Event Management (View & Update)
 1. User "Upcoming Events" list theke kono event-e tap kore.
-2. Event details fetch hoy → `GET /events/:id` (→ 6.3).
-3. Details modal-e user data dekhte pare ebong "Edit" icon-e tap kore update korte pare → `PATCH /events/:id` (→ 6.4).
+2. Event details fetch hoy → `GET /events/:id` (→ 5.3).
+3. Details modal-e user data dekhte pare ebong "Edit" icon-e tap kore update korte pare → `PATCH /events/:id` (→ 5.4).
 4. Success hole calendar refresh hoy.
 
 ---
@@ -42,7 +42,7 @@
 <!--              EVENT LIST                  -->
 <!-- ══════════════════════════════════════ -->
 
-### 6.1 List My Events
+### 5.1 List My Events
 
 ```
 GET /events?from=2026-04-01&to=2026-04-30
@@ -87,7 +87,7 @@ Auth: Bearer {{accessToken}}
 <!--             CREATE EVENT                 -->
 <!-- ══════════════════════════════════════ -->
 
-### 6.2 Create Event
+### 5.2 Create Event
 
 ```
 POST /events
@@ -129,7 +129,7 @@ Auth: Bearer {{accessToken}}
 <!--             EVENT DETAILS                -->
 <!-- ══════════════════════════════════════ -->
 
-### 6.3 Get Event Details
+### 5.3 Get Event Details
 
 ```
 GET /events/:id
@@ -167,7 +167,7 @@ Auth: Bearer {{accessToken}}
 <!--             UPDATE EVENT                 -->
 <!-- ══════════════════════════════════════ -->
 
-### 6.4 Update Event
+### 5.4 Update Event
 
 ```
 PATCH /events/:id
@@ -205,8 +205,8 @@ Auth: Bearer {{accessToken}}
 
 | # | Endpoint | Method | Auth | Status | Notes |
 |---|---|---|---|:---:|---|
-| 6.1 | `/events` | `GET` | Bearer | ✅ Done | List own events with date range |
-| 6.2 | `/events` | `POST` | Bearer | ✅ Done | Create event with auto reminders |
-| 6.3 | `/events/:id` | `GET` | Bearer | ✅ Done | Get specific event details |
-| 6.4 | `/events/:id` | `PATCH` | Bearer | ✅ Done | Update event info |
-| 6.5 | `/events/:id` | `DELETE` | Bearer | ✅ Done | Remove event |
+| 5.1 | `/events` | `GET` | Bearer | ✅ Done | List own events with date range |
+| 5.2 | `/events` | `POST` | Bearer | ✅ Done | Create event with auto reminders |
+| 5.3 | `/events/:id` | `GET` | Bearer | ✅ Done | Get specific event details |
+| 5.4 | `/events/:id` | `PATCH` | Bearer | ✅ Done | Update event info |
+| 5.5 | `/events/:id` | `DELETE` | Bearer | ✅ Done | Remove event |

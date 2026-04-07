@@ -1,6 +1,6 @@
 # UX Flow with API Responses
 
-Screen-by-screen API flow — **Admin Dashboard** dutor jonno documentation. 
+Screen-by-screen API flow — **Student App** ebong **Admin Dashboard** dutor jonno documentation. 
 Each screen e APIs called, method/URL, auth requirement, ebong expected response shape ache.
 
 > Base URL: `{{baseUrl}}` = `http://localhost:5000/api/v1`
@@ -32,12 +32,12 @@ Shob API ei format follow kore:
 | # | Screen | Description |
 |---|--------|-------------|
 | 1 | [Auth](./app-screens/01-auth.md) | Register, login, OTP verify, password reset, refresh token |
-| 2 | [Profile](./app-screens/02-profile.md) | User data, edit profile, change password |
-| 3 | [Home](./app-screens/03-home.md) | Search public cards, stats, favorite cards list |
-| 4 | [Preference Card Details](./app-screens/04-preference-card-details.md) | Card details, share, download actions |
-| 5 | [Notifications](./app-screens/05-notifications.md) | User's notifications list, mark as read, delete |
-| 6 | [Calendar](./app-screens/06-calendar.md) | Calendar view, create event, and upcoming events |
-| 7 | [Library](./app-screens/07-library.md) | Public vs Private cards list with filtering and search |
+| 2 | [Home](./app-screens/02-home.md) | Search public cards, stats, favorite cards list |
+| 3 | [Preference Card Details](./app-screens/03-preference-card-details.md) | Card details, share, download actions |
+| 4 | [Library](./app-screens/04-library.md) | Public vs Private cards list with filtering and search |
+| 5 | [Calendar](./app-screens/05-calendar.md) | Calendar view, create event, and upcoming events |
+| 6 | [Profile](./app-screens/06-profile.md) | User data, edit profile, subscription, legal pages |
+| 7 | [Notifications](./app-screens/07-notifications.md) | User's notifications list, mark as read, delete |
 
 ---
 

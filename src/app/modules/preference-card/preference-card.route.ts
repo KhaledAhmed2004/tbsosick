@@ -1,14 +1,17 @@
 import express, { NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
 import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { USER_ROLES } from '../../../enums/user';
 import { PreferenceCardController } from './preference-card.controller';
 import {
+  PreferenceCardValidation,
   createPreferenceCardSchema,
   updatePreferenceCardSchema,
-  paramIdSchema,
 } from './preference-card.validation';
 import { fileHandler } from '../../middlewares/fileHandler';
+
+import { rateLimitMiddleware } from '../../middlewares/rateLimit';
 
 const router = express.Router();
 
@@ -55,19 +58,19 @@ router.post(
   PreferenceCardController.createCard,
 );
 
-// List all own cards
+// Search/List cards (Public by default)
 router.get(
   '/',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  PreferenceCardController.listMyCards,
+  rateLimitMiddleware({
+    windowMs: 60_000,
+    max: 60,
+    routeName: 'search-preference-cards',
+  }),
+  validateRequest(PreferenceCardValidation.searchCardsSchema),
+  PreferenceCardController.getCards,
 );
 
-// List all public cards
-router.get(
-  '/public',
-  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  PreferenceCardController.listPublicCards,
-);
 // List all private cards for the authenticated user
 router.get(
   '/private',
@@ -75,31 +78,31 @@ router.get(
   PreferenceCardController.listPrivateCards,
 );
 
-// List all favorite cards for the authenticated user
+// Cards count (Stats): public cards and user's own cards
 router.get(
-  '/favorites',
+  '/stats',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  PreferenceCardController.listFavoriteCards,
+  PreferenceCardController.getStats,
 );
 
-// Cards count: public cards and user's own cards
+// Fetch distinct specialties
 router.get(
-  '/count',
+  '/specialties',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  PreferenceCardController.countCards,
+  PreferenceCardController.getSpecialties,
 );
 
 // Card details view by ID
 router.get(
-  '/:id',
+  '/:cardId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(z.object({ params: z.object({ cardId: z.string() }) })),
   PreferenceCardController.getById,
 );
 
 // Update card by ID
 router.patch(
-  '/:id',
+  '/:cardId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   fileHandler([{ name: 'photoLibrary', maxCount: 5 }]),
   parseBody,
@@ -109,49 +112,49 @@ router.patch(
 
 // Delete card by ID
 router.delete(
-  '/:id',
+  '/:cardId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.deleteCard,
 );
 
 // Increment download count
 router.post(
-  '/:id/download',
+  '/:cardId/download',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.incrementDownloadCount,
 );
 
 // Favorite preference card
 router.post(
-  '/:id/favorite',
+  '/:cardId/favorite',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.favoriteCard,
 );
 
 // Unfavorite preference card
 router.delete(
-  '/:id/favorite',
+  '/:cardId/favorite',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.unfavoriteCard,
 );
 
 // Approve preference card (set verificationStatus = VERIFIED) — super admin only
 router.patch(
-  '/:id/approve',
+  '/:cardId/approve',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.approveCard,
 );
 
 // Reject preference card (set verificationStatus = UNVERIFIED) — super admin only
 router.patch(
-  '/:id/reject',
+  '/:cardId/reject',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.rejectCard,
 );
 

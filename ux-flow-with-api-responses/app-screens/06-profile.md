@@ -1,4 +1,4 @@
-# Screen 2: Profile (Mobile)
+# Screen 6: Profile (Mobile)
 
 > **Section**: App APIs (Student-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
@@ -12,14 +12,14 @@
 ### Profile Load & View
 1. User app-er bottom navigation theke "Profile" tab-e click kore.
 2. Page load-e parallel API calls chole:
-   - User basic info → `GET /users/profile` (→ 2.1)
-   - Subscription status → `GET /subscriptions/me` (→ 2.3)
+   - User basic info → `GET /users/profile` (→ 6.1)
+   - Subscription status → `GET /subscriptions/me` (→ 6.3)
 3. Profile screen render hoy: Profile picture, Name, Email, Hospital, Specialty, ebong current Subscription Plan dekhay.
 
 ### Profile Edit Flow
 1. User "Edit Profile" button-e click kore.
 2. Form-e field gulo pre-filled thake. User info change kore (e.g., Hospital, Specialty, Profile Picture).
-3. Submit → `PATCH /users/profile` (→ 2.2)
+3. Submit → `PATCH /users/profile` (→ 6.2)
 4. Success hole updated fields show kore ebong profile re-render hoy.
 
 ### Subscription Management
@@ -30,8 +30,8 @@
 
 ### Legal Pages (Terms & Conditions)
 1. User profile menu theke "Terms and Conditions" ba "Privacy Policy"-te click kore.
-2. Initial load-e sob legal page-er list fetch hoy → `GET /legal` (→ 2.4)
-3. List theke specific page (e.g., `terms-and-conditions`) select korle slug diye content fetch kore → `GET /legal/:slug` (→ 2.5)
+2. Initial load-e sob legal page-er list fetch hoy → `GET /legal` (→ 6.4)
+3. List theke specific page (e.g., `terms-and-conditions`) select korle slug diye content fetch kore → `GET /legal/:slug` (→ 6.5)
 4. Full content render hoy screen-e.
 
 ### Logout Flow
@@ -54,7 +54,7 @@
 <!--              PROFILE FLOW              -->
 <!-- ══════════════════════════════════════ -->
 
-## 2.1 Get Profile
+## 6.1 Get Profile
 
 ```
 GET /users/profile
@@ -98,18 +98,9 @@ Auth: Bearer {{accessToken}}
 }
 ```
 
-**500 — Internal Server Error**
-```json
-{
-  "success": false,
-  "statusCode": 500,
-  "message": "Internal server error"
-}
-```
-
 ---
 
-## 2.2 Update Profile
+## 6.2 Update Profile
 
 ```
 PATCH /users/profile
@@ -153,44 +144,13 @@ Auth: Bearer {{accessToken}}
 }
 ```
 
-**401 — Unauthorized** *(token missing or expired)*
-```json
-{
-  "success": false,
-  "statusCode": 401,
-  "message": "Unauthorized"
-}
-```
-
-**422 — Validation Error**
-```json
-{
-  "success": false,
-  "statusCode": 422,
-  "message": "Validation failed",
-  "errors": [
-    { "field": "name", "message": "Name must be at least 2 characters" },
-    { "field": "profilePicture", "message": "Only JPEG and PNG files are allowed" }
-  ]
-}
-```
-
-**500 — Internal Server Error**
-```json
-{
-  "success": false,
-  "statusCode": 500,
-  "message": "Internal server error"
-}
-```
-
 ---
 
 <!-- ══════════════════════════════════════ -->
 <!--           SUBSCRIPTION FLOW            -->
 <!-- ══════════════════════════════════════ -->
 
-## 2.3 Get My Subscription
+## 6.3 Get My Subscription
 
 ```
 GET /subscriptions/me
@@ -201,56 +161,24 @@ Auth: Bearer {{accessToken}}
 
 **Implementation:**
 - **Route**: [subscription.route.ts](file:///src/app/modules/subscription/subscription.route.ts)
-- **Controller**: [subscription.controller.ts](file:///src/app/modules/subscription/subscription.controller.ts) — `getMySubscriptionController`
-- **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `getMySubscription`
+- **Controller**: [subscription.controller.ts](file:///src/app/modules/subscription/subscription.controller.ts) — `getMySubscription`
+- **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `getSubscriptionByUserIdFromDB`
 
 ### Responses
 
-**200 — Success (Premium user)**
+**200 — Success**
 ```json
 {
   "success": true,
   "statusCode": 200,
-  "message": "Subscription retrieved successfully",
+  "message": "Subscription fetched successfully",
   "data": {
+    "_id": "664a1b2c3d4e5f6a7b8c9d0f",
     "userId": "664a1b2c3d4e5f6a7b8c9d0e",
     "plan": "PREMIUM",
-    "status": "active",
-    "currentPeriodEnd": "2026-05-15T10:30:00.000Z"
+    "status": "ACTIVE",
+    "expiresAt": "2027-04-07T10:30:00.000Z"
   }
-}
-```
-
-**200 — Success (Free user)**
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Subscription retrieved successfully",
-  "data": {
-    "userId": "664a1b2c3d4e5f6a7b8c9d0e",
-    "plan": "FREE",
-    "status": "active",
-    "currentPeriodEnd": null
-  }
-}
-```
-
-**401 — Unauthorized** *(token missing or expired)*
-```json
-{
-  "success": false,
-  "statusCode": 401,
-  "message": "Unauthorized"
-}
-```
-
-**500 — Internal Server Error**
-```json
-{
-  "success": false,
-  "statusCode": 500,
-  "message": "Internal server error"
 }
 ```
 
@@ -260,19 +188,19 @@ Auth: Bearer {{accessToken}}
 <!--              LEGAL FLOW                -->
 <!-- ══════════════════════════════════════ -->
 
-## 2.4 List Legal Pages
+## 6.4 List Legal Pages
 
 ```
 GET /legal
 Auth: None
 ```
 
-> Sob legal page-er list (slug ebong title) fetch korar jonno. Jodi kono page na thake, empty array return hoy.
+> Shob available legal pages (Terms, Privacy, etc.) er title ebong slug list fetch korar jonno.
 
 **Implementation:**
 - **Route**: [legal.route.ts](file:///src/app/modules/legal/legal.route.ts)
-- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `getAll`
-- **Service**: [legal.service.ts](file:///src/app/modules/legal/legal.service.ts) — `getAll`
+- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `getLegalPages`
+- **Service**: [legal.service.ts](file:///src/app/modules/legal/legal.service.ts) — `getLegalPagesFromDB`
 
 ### Responses
 
@@ -283,58 +211,27 @@ Auth: None
   "statusCode": 200,
   "message": "Legal pages retrieved successfully",
   "data": [
-    {
-      "slug": "terms-and-conditions",
-      "title": "Terms and Conditions"
-    },
-    {
-      "slug": "privacy-policy",
-      "title": "Privacy Policy"
-    }
+    { "_id": "664a1b2c3d4e5f6a7b8c9d10", "title": "Terms and Conditions", "slug": "terms-and-conditions" },
+    { "_id": "664a1b2c3d4e5f6a7b8c9d11", "title": "Privacy Policy", "slug": "privacy-policy" }
   ]
-}
-```
-
-**200 — Success (no pages exist)**
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Legal pages retrieved successfully",
-  "data": []
-}
-```
-
-**500 — Internal Server Error**
-```json
-{
-  "success": false,
-  "statusCode": 500,
-  "message": "Internal server error"
 }
 ```
 
 ---
 
-## 2.5 Get Legal Page by Slug
+## 6.5 Get Legal Page by Slug
 
 ```
 GET /legal/:slug
 Auth: None
 ```
 
-> Specific slug (e.g., `terms-and-conditions`) diye full content fetch korar jonno.
+> Slug diye specific legal page-er full HTML/Markdown content fetch korar jonno.
 
 **Implementation:**
 - **Route**: [legal.route.ts](file:///src/app/modules/legal/legal.route.ts)
-- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `getBySlug`
-- **Service**: [legal.service.ts](file:///src/app/modules/legal/legal.service.ts) — `getBySlug`
-
-### Path Parameters
-
-| Parameter | Type | Description |
-|---|---|---|
-| `slug` | `string` | Legal page identifier (e.g., `terms-and-conditions`) |
+- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `getLegalPageBySlug`
+- **Service**: [legal.service.ts](file:///src/app/modules/legal/legal.service.ts) — `getLegalPageBySlugFromDB`
 
 ### Responses
 
@@ -343,30 +240,13 @@ Auth: None
 {
   "success": true,
   "statusCode": 200,
-  "message": "Legal page retrieved successfully",
+  "message": "Legal page content retrieved successfully",
   "data": {
-    "slug": "terms-and-conditions",
+    "_id": "664a1b2c3d4e5f6a7b8c9d10",
     "title": "Terms and Conditions",
-    "content": "<h1>Terms...</h1><p>Full legal text here...</p>"
+    "slug": "terms-and-conditions",
+    "content": "<h1>Terms and Conditions</h1><p>Welcome to our application...</p>"
   }
-}
-```
-
-**404 — Not Found**
-```json
-{
-  "success": false,
-  "statusCode": 404,
-  "message": "Legal page not found"
-}
-```
-
-**500 — Internal Server Error**
-```json
-{
-  "success": false,
-  "statusCode": 500,
-  "message": "Internal server error"
 }
 ```
 
@@ -374,10 +254,10 @@ Auth: None
 
 ## API Status
 
-| # | Endpoint | Method | Auth | Status | Notes |
-|---|---|---|---|:---:|---|
-| 2.1 | `/users/profile` | `GET` | Bearer | ✅ Done | Returns full profile |
-| 2.2 | `/users/profile` | `PATCH` | Bearer | ✅ Done | `multipart/form-data`; returns partial (updated fields only) |
-| 2.3 | `/subscriptions/me` | `GET` | Bearer | ✅ Done | Always returns plan object; `FREE` plan has `currentPeriodEnd: null` |
-| 2.4 | `/legal` | `GET` | None | ✅ Done | Public; returns empty array if no pages exist |
-| 2.5 | `/legal/:slug` | `GET` | None | ✅ Done | Public; returns 404 if slug not found |
+| # | Endpoint | Status | Notes |
+|---|---|:---:|---|
+| 6.1 | `GET /users/profile` | ✅ Done | Profile load |
+| 6.2 | `PATCH /users/profile` | ✅ Done | Profile update + image upload |
+| 6.3 | `GET /subscriptions/me` | ✅ Done | Plan status check |
+| 6.4 | `GET /legal` | ✅ Done | List of legal titles |
+| 6.5 | `GET /legal/:slug` | ✅ Done | Full page content |

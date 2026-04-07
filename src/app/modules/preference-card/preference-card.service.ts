@@ -97,6 +97,10 @@ export const PreferenceCardService = {
     ]);
     return { AllCardsCount, myCardsCount };
   },
+  getDistinctSpecialtiesFromDB: async () => {
+    const specialties = await PreferenceCardModel.distinct('surgeon.specialty', { published: true });
+    return specialties.filter(Boolean).sort();
+  },
   getFavoriteCardIdsForUser: async (userId: string) => {
     const user = await User.findById(userId).select('favoriteCards');
     if (!user || !Array.isArray(user.favoriteCards)) {
@@ -176,10 +180,10 @@ export const PreferenceCardService = {
       });
 
     const docs = await qb.modelQuery;
-    const paginationInfo = await qb.getPaginationInfo();
+    const meta = await qb.getPaginationInfo();
 
     return {
-      pagination: paginationInfo,
+      meta,
       data: flattenCards(docs),
     };
   },
@@ -314,10 +318,10 @@ export const PreferenceCardService = {
       });
 
     const cards = await qb.modelQuery;
-    const paginationInfo = await qb.getPaginationInfo();
+    const meta = await qb.getPaginationInfo();
 
     return {
-      pagination: paginationInfo,
+      meta,
       data: flattenCards(cards),
     };
   },
@@ -326,13 +330,19 @@ export const PreferenceCardService = {
     query?: Record<string, any>,
   ) => {
     const user = await User.findById(userId).select('favoriteCards');
-    if (!user || !Array.isArray(user.favoriteCards) || user.favoriteCards.length === 0) {
+    if (
+      !user ||
+      !Array.isArray(user.favoriteCards) ||
+      user.favoriteCards.length === 0
+    ) {
       return {
-        pagination: {
+        meta: {
           total: 0,
-          limit: Number(query?.limit) || 10,
+          limit: Math.min(Number(query?.limit) || 10, 50),
           page: Number(query?.page) || 1,
-          totalPage: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
         },
         data: [],
       };
@@ -355,10 +365,10 @@ export const PreferenceCardService = {
       });
 
     const docs = await qb.modelQuery;
-    const paginationInfo = await qb.getPaginationInfo();
+    const meta = await qb.getPaginationInfo();
 
     return {
-      pagination: paginationInfo,
+      meta,
       data: flattenCards(docs),
     };
   },
