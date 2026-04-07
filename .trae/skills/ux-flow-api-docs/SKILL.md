@@ -62,6 +62,7 @@ Failure to verify against the source code will result in "Broken" or "Review" st
 ```
 ux-flow-with-api-responses/
 ├── README.md
+├── api-inventory.md          ← Central tracker for all APIs & implementations
 ├── app-screens/
 │   ├── 01-auth.md
 │   ├── 02-welcome-onboarding.md
@@ -274,6 +275,22 @@ Auth: None
 - Always show the full envelope: `success`, `message`, and `data`
 - List endpoints must include `pagination` field
 
+### Response Scenarios (MANDATORY for multiple outcomes)
+If an endpoint has different success/error outcomes, group them under a `#### Responses` heading using the scenario format:
+
+```markdown
+#### Responses
+
+- **Scenario: Success (200)**
+  ```json
+  { ... }
+  ```
+- **Scenario: Error Name (4XX)**
+  ```json
+  { ... }
+  ```
+```
+
 ### Data Formatting
 ```
 Token:    "eyJhbGciOi..."                  ← always truncate
@@ -409,13 +426,16 @@ Middleware chain order: `auth() → validateRequest() → fileHandler() → rate
 4. Group endpoints by flow, in flow order (e.g. Registration → Login → Forgot → Background)
 5. Write endpoint specs with section dividers between groups
 6. **Update Postman Collection**: Update or add the corresponding requests in `public/tbsosick.postman_collection.json`. Ensure names, methods, URLs, headers, and body shapes match the documentation exactly.
-7. Add API Status table at the end
-8. Self-check: numbering consistent? Full envelope everywhere? Banglish throughout? Postman updated?
+7. **Update API Inventory**: Add the new endpoints to `ux-flow-with-api-responses/api-inventory.md`. Include roles/access (e.g., Public, SUPER_ADMIN, Reset Token) and links to the "Implementation" section line ranges in the newly created markdown file (e.g., `[NN-name.md:L100-104](./path/to/NN-name.md#L100-104)`).
+8. Add API Status table at the end
+9. Self-check: numbering consistent? Full envelope everywhere? Banglish throughout? Postman updated? Inventory updated with Roles?
 
 ### Updating an existing doc
 1. Only touch changed sections. Leave everything else as-is.
 2. Update the API Status table row for any changed endpoint.
 3. **Sync Postman**: Immediately reflect the changes in `public/tbsosick.postman_collection.json`.
+4. **Sync API Inventory**: If implementation details or endpoint paths changed, update the corresponding row in `ux-flow-with-api-responses/api-inventory.md`. Ensure the line range links are still accurate.
+5. **Sync Database Design**: If a schema change or relationship update was part of the task, update `ux-flow-with-api-responses/database-design.md` following the Banglish documentation style.
 
 ---
 

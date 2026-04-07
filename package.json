@@ -117,6 +117,7 @@
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "qrcode": "^1.5.4",
     "sharp": "^0.34.4",
+    "slugify": "^1.6.9",
     "socket.io": "^4.7.5",
     "stripe": "^18.5.0",
     "swagger-ui-express": "^5.0.1",

@@ -47,6 +47,15 @@ Refer to [codebase-blueprint.md](file:///.claude/rules/codebase-blueprint.md#L2)
 - **Fields**: camelCase (e.g., `firstName`, `createdAt`).
 - **Models**: PascalCase, singular (e.g., `User`, `Order`).
 
+### 4. Documentation Standard (MANDATORY)
+
+Every database structural change (schema update, new model, relationship change) MUST be reflected in `ux-flow-with-api-responses/database-design.md`.
+
+- **Style**: Use Banglish for narrative explanations.
+- **ER Diagram**: Update the Mermaid diagram if relationships change.
+- **Tables**: Update field tables with `Required (✅)` or `Optional (❌)` marks.
+- **Enums**: Document state/status changes (e.g., `USER_STATUS`).
+
 ## Query & Aggregation Builders
 
 This project uses custom builders to handle search, filter, sort, and pagination metadata.

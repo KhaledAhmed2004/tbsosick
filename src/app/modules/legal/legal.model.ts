@@ -1,12 +1,29 @@
-import { Schema, model } from 'mongoose';
-import { LegalPage } from './legal.interface';
+import { model, Schema } from 'mongoose';
+import { ILegalPage, LegalPageModel } from './legal.interface';
 
-const LegalPageSchema = new Schema<LegalPage>(
+const legalPageSchema = new Schema<ILegalPage, LegalPageModel>(
   {
-    title: { type: String, required: true, trim: true },
-    content: { type: String, required: true },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    content: {
+      type: String,
+      default: '',
+    },
   },
   { timestamps: true },
 );
 
-export const LegalPageModel = model<LegalPage>('LegalPage', LegalPageSchema);
+export const LegalPage = model<ILegalPage, LegalPageModel>(
+  'LegalPage',
+  legalPageSchema,
+);

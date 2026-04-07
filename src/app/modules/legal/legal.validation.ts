@@ -1,20 +1,26 @@
 import { z } from 'zod';
 
-export const createLegalPageSchema = z.object({
+const createLegalPage = z.object({
   body: z.object({
-    title: z.string().min(1),
-    content: z.string().min(1),
+    title: z.string({ required_error: 'Title is required' }).min(1).max(200),
+    content: z.string().optional(),
   }),
 });
 
-export const updateLegalPageSchema = z.object({
-  params: z.object({ id: z.string().min(1) }),
+const updateLegalPage = z.object({
+  params: z.object({
+    slug: z.string({ required_error: 'Slug is required' }),
+  }),
   body: z.object({
-    title: z.string().min(1).optional(),
+    title: z.string().min(1).max(200).optional(),
     content: z.string().min(1).optional(),
   }),
 });
 
-export const paramIdSchema = z.object({
-  params: z.object({ id: z.string().min(1) }),
+const deleteLegalPage = z.object({
+  params: z.object({
+    slug: z.string({ required_error: 'Slug is required' }),
+  }),
 });
+
+export const LegalValidation = { createLegalPage, updateLegalPage, deleteLegalPage };

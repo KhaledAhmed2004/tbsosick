@@ -1,53 +1,40 @@
-// Routes for managing legal pages (Terms, Privacy Policy, etc.)
 import express from 'express';
+import { USER_ROLES } from '../../../enums/user';
 import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
-import { USER_ROLES } from '../../../enums/user';
 import { LegalController } from './legal.controller';
-import {
-  createLegalPageSchema,
-  updateLegalPageSchema,
-  paramIdSchema,
-} from './legal.validation';
+import { LegalValidation } from './legal.validation';
 
 const router = express.Router();
 
-// Create a new legal page (SUPER_ADMIN only)
+// Get all legal pages
+router.get('/', LegalController.getAll);
 
+// Get a legal page by slug
+router.get('/:slug', LegalController.getBySlug);
+
+// Create a new legal page
 router.post(
   '/',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(createLegalPageSchema),
+  validateRequest(LegalValidation.createLegalPage),
   LegalController.createLegalPage,
 );
 
-// Public: list all legal pages
-router.get(
-  '/',
-  LegalController.listLegalPages,
-);
-
-// Public: get single legal page by id
-router.get(
-  '/:id',
-  validateRequest(paramIdSchema),
-  LegalController.getLegalPageById,
-);
-
-// Update legal page (SUPER_ADMIN only)
+// Update a legal page by slug
 router.patch(
-  '/:id',
+  '/:slug',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(updateLegalPageSchema),
-  LegalController.updateLegalPage,
+  validateRequest(LegalValidation.updateLegalPage),
+  LegalController.updateBySlug,
 );
 
-// Delete legal page (SUPER_ADMIN only)
+// Delete a legal page by slug
 router.delete(
-  '/:id',
+  '/:slug',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
-  LegalController.deleteLegalPage,
+  validateRequest(LegalValidation.deleteLegalPage),
+  LegalController.deleteBySlug,
 );
 
 export const LegalRoutes = router;
