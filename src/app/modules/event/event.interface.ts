@@ -13,7 +13,7 @@ export interface IPersonnel {
 }
 
 export interface IEvent extends Document {
-  userId: string;
+  userId: Types.ObjectId;
   title: string;
   date: Date;
   time: string;

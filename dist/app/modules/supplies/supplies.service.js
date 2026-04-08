@@ -46,7 +46,7 @@ exports.SuppliesService = {
         // Find existing to avoid duplicates
         const existingDocs = yield supplies_model_1.SupplyModel.find({
             name: { $in: names },
-        }).select('name');
+        }).select('name').lean();
         const existingSet = new Set(existingDocs.map(d => d.name));
         const toInsert = normalized.filter(i => !existingSet.has(i.name));
         const duplicates = normalized
@@ -68,7 +68,7 @@ exports.SuppliesService = {
             .sort()
             .paginate()
             .fields();
-        const docs = yield qb.modelQuery;
+        const docs = yield qb.modelQuery.lean();
         const paginationInfo = yield qb.getPaginationInfo();
         return {
             pagination: paginationInfo,

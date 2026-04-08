@@ -6,7 +6,7 @@ import { LegalPage } from './legal.model';
 
 const generateSlug = async (title: string): Promise<string> => {
   const slug = slugify(title, { lower: true, strict: true });
-  const existing = await LegalPage.findOne({ slug });
+  const existing = await LegalPage.findOne({ slug }).lean();
   if (existing) {
     throw new ApiError(
       StatusCodes.CONFLICT,
@@ -26,21 +26,22 @@ const createLegalPage = async (
   await LegalPage.create({ ...payload, slug });
   const result = await LegalPage.findOne({ slug }).select(
     'slug title content createdAt',
-  );
+  ).lean();
   return result as ILegalPage;
 };
 
 const getAll = async (): Promise<ILegalPage[]> => {
   const result = await LegalPage.find()
     .select('-_id slug title')
-    .sort({ title: 1 });
+    .sort({ title: 1 })
+    .lean();
   return result;
 };
 
 const getBySlug = async (slug: string): Promise<ILegalPage> => {
   const result = await LegalPage.findOne({ slug }).select(
     '-_id slug title content updatedAt',
-  );
+  ).lean();
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
   }
@@ -72,7 +73,7 @@ const updateBySlug = async (
 };
 
 const deleteBySlug = async (slug: string): Promise<void> => {
-  const existing = await LegalPage.findOne({ slug });
+  const existing = await LegalPage.findOne({ slug }).lean();
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
   }

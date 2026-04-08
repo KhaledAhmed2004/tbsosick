@@ -320,7 +320,7 @@ class QueryBuilder {
     // 📄 Pagination
     paginate() {
         var _a, _b;
-        let limit = Number((_a = this === null || this === void 0 ? void 0 : this.query) === null || _a === void 0 ? void 0 : _a.limit) || 10;
+        let limit = Math.min(Number((_a = this === null || this === void 0 ? void 0 : this.query) === null || _a === void 0 ? void 0 : _a.limit) || 10, 50); // Enforce max limit of 50
         let page = Number((_b = this === null || this === void 0 ? void 0 : this.query) === null || _b === void 0 ? void 0 : _b.page) || 1;
         let skip = (page - 1) * limit;
         this.modelQuery = this.modelQuery.skip(skip).limit(limit);
@@ -403,18 +403,20 @@ class QueryBuilder {
             });
             // Calculate pagination based on filtered results
             const total = filteredResults.length;
-            const limit = Number((_a = this === null || this === void 0 ? void 0 : this.query) === null || _a === void 0 ? void 0 : _a.limit) || 10;
+            const limit = Math.min(Number((_a = this === null || this === void 0 ? void 0 : this.query) === null || _a === void 0 ? void 0 : _a.limit) || 10, 50);
             const page = Number((_b = this === null || this === void 0 ? void 0 : this.query) === null || _b === void 0 ? void 0 : _b.page) || 1;
-            const totalPage = Math.ceil(total / limit);
-            const pagination = {
+            const totalPages = Math.ceil(total / limit);
+            const meta = {
                 total,
                 limit,
                 page,
-                totalPage,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
             };
             return {
                 data: filteredResults,
-                pagination,
+                meta,
             };
         });
     }
@@ -427,14 +429,16 @@ class QueryBuilder {
             const dur = Date.now() - _start;
             const modelName = ((_a = this.modelQuery.model) === null || _a === void 0 ? void 0 : _a.modelName) || ((_c = (_b = this.modelQuery.model) === null || _b === void 0 ? void 0 : _b.collection) === null || _c === void 0 ? void 0 : _c.name);
             (0, requestContext_1.recordDbQuery)(dur, { model: modelName, operation: 'countDocuments', cacheHit: false });
-            const limit = Number((_d = this === null || this === void 0 ? void 0 : this.query) === null || _d === void 0 ? void 0 : _d.limit) || 10;
+            const limit = Math.min(Number((_d = this === null || this === void 0 ? void 0 : this.query) === null || _d === void 0 ? void 0 : _d.limit) || 10, 50);
             const page = Number((_e = this === null || this === void 0 ? void 0 : this.query) === null || _e === void 0 ? void 0 : _e.page) || 1;
-            const totalPage = Math.ceil(total / limit);
+            const totalPages = Math.ceil(total / limit);
             return {
                 total,
                 limit,
                 page,
-                totalPage,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
             };
         });
     }

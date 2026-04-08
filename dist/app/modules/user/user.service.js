@@ -66,7 +66,7 @@ const getAllUsers = (query) => __awaiter(void 0, void 0, void 0, function* () {
     const users = yield userQuery.modelQuery;
     const paginationInfo = yield userQuery.getPaginationInfo();
     return {
-        pagination: paginationInfo,
+        meta: paginationInfo,
         data: users,
     };
 });
@@ -125,7 +125,7 @@ const getAllUserRoles = (query) => __awaiter(void 0, void 0, void 0, function* (
         };
     });
     return {
-        pagination: paginationInfo,
+        meta: paginationInfo,
         data,
     };
 });

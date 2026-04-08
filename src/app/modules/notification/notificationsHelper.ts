@@ -6,7 +6,7 @@ import { pushNotificationHelper } from './pushNotificationHelper';
 export const sendNotifications = async (data: any): Promise<INotification> => {
   const result = await Notification.create(data);
 
-  const user = await User.findById(data?.receiver);
+  const user = await User.findById(data?.userId);
 
   // Check if user has device tokens and the array is not empty
   if (
@@ -18,7 +18,7 @@ export const sendNotifications = async (data: any): Promise<INotification> => {
       notification: {
         // title: 'New Notification Received',
         title: data?.title || 'Task Titans Notification',
-        body: data?.text,
+        body: data?.subtitle || data?.title,
       },
       tokens: user.deviceTokens,
     };
@@ -35,7 +35,7 @@ export const sendNotifications = async (data: any): Promise<INotification> => {
   const socketIo = global.io;
 
   if (socketIo) {
-    socketIo.emit(`get-notification::${data?.receiver}`, result);
+    socketIo.emit(`get-notification::${data?.userId}`, result);
   }
 
   return result;

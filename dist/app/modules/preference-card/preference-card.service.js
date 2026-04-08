@@ -57,7 +57,7 @@ const resolveMixedItemsWithQuantity = (items, refField, ItemModel) => __awaiter(
     const uniqueNames = [...new Set(customNameItems.map(item => item.name))];
     const existingDocs = yield ItemModel.find({
         name: { $in: uniqueNames },
-    }).select('_id name');
+    }).select('_id name').lean();
     const nameToIdMap = new Map(existingDocs.map((doc) => [doc.name, doc._id.toString()]));
     const toCreate = uniqueNames
         .filter(name => !nameToIdMap.has(name))
@@ -110,8 +110,12 @@ exports.PreferenceCardService = {
         ]);
         return { AllCardsCount, myCardsCount };
     }),
+    getDistinctSpecialtiesFromDB: () => __awaiter(void 0, void 0, void 0, function* () {
+        const specialties = yield preference_card_model_1.PreferenceCardModel.distinct('surgeon.specialty', { published: true });
+        return specialties.filter(Boolean).sort();
+    }),
     getFavoriteCardIdsForUser: (userId) => __awaiter(void 0, void 0, void 0, function* () {
-        const user = yield user_model_1.User.findById(userId).select('favoriteCards');
+        const user = yield user_model_1.User.findById(userId).select('favoriteCards').lean();
         if (!user || !Array.isArray(user.favoriteCards)) {
             return [];
         }
@@ -149,7 +153,8 @@ exports.PreferenceCardService = {
             .populate('sutures.name', 'name -_id')
             .sort({
             updatedAt: -1,
-        });
+        })
+            .lean();
         return flattenCards(docs);
     }),
     listPrivatePreferenceCardsForUserFromDB: (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
@@ -167,16 +172,17 @@ exports.PreferenceCardService = {
             'sutures.name': 'name -_id',
         });
         const docs = yield qb.modelQuery;
-        const paginationInfo = yield qb.getPaginationInfo();
+        const meta = yield qb.getPaginationInfo();
         return {
-            pagination: paginationInfo,
+            meta,
             data: flattenCards(docs),
         };
     }),
     getPreferenceCardByIdFromDB: (id, userId, role) => __awaiter(void 0, void 0, void 0, function* () {
         const doc = yield preference_card_model_1.PreferenceCardModel.findById(id)
             .populate('supplies.name', 'name -_id')
-            .populate('sutures.name', 'name -_id');
+            .populate('sutures.name', 'name -_id')
+            .lean();
         if (!doc) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Preference card not found');
         }
@@ -189,7 +195,7 @@ exports.PreferenceCardService = {
     }),
     updatePreferenceCardInDB: (id, userId, role, payload) => __awaiter(void 0, void 0, void 0, function* () {
         // Check if the card exists and get its creator
-        const existingCard = yield preference_card_model_1.PreferenceCardModel.findById(id).select('createdBy');
+        const existingCard = yield preference_card_model_1.PreferenceCardModel.findById(id).select('createdBy').lean();
         if (!existingCard) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Preference card not found');
         }
@@ -252,21 +258,25 @@ exports.PreferenceCardService = {
             'sutures.name': 'name -_id',
         });
         const cards = yield qb.modelQuery;
-        const paginationInfo = yield qb.getPaginationInfo();
+        const meta = yield qb.getPaginationInfo();
         return {
-            pagination: paginationInfo,
+            meta,
             data: flattenCards(cards),
         };
     }),
     listFavoritePreferenceCardsForUserFromDB: (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
-        const user = yield user_model_1.User.findById(userId).select('favoriteCards');
-        if (!user || !Array.isArray(user.favoriteCards) || user.favoriteCards.length === 0) {
+        const user = yield user_model_1.User.findById(userId).select('favoriteCards').lean();
+        if (!user ||
+            !Array.isArray(user.favoriteCards) ||
+            user.favoriteCards.length === 0) {
             return {
-                pagination: {
+                meta: {
                     total: 0,
-                    limit: Number(query === null || query === void 0 ? void 0 : query.limit) || 10,
+                    limit: Math.min(Number(query === null || query === void 0 ? void 0 : query.limit) || 10, 50),
                     page: Number(query === null || query === void 0 ? void 0 : query.page) || 1,
-                    totalPage: 0,
+                    totalPages: 0,
+                    hasNext: false,
+                    hasPrev: false,
                 },
                 data: [],
             };
@@ -284,9 +294,9 @@ exports.PreferenceCardService = {
             'sutures.name': 'name -_id',
         });
         const docs = yield qb.modelQuery;
-        const paginationInfo = yield qb.getPaginationInfo();
+        const meta = yield qb.getPaginationInfo();
         return {
-            pagination: paginationInfo,
+            meta,
             data: flattenCards(docs),
         };
     }),

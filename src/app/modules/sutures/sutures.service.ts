@@ -35,7 +35,7 @@ export const SuturesService = {
 
     const existingDocs = await SutureModel.find({
       name: { $in: names },
-    }).select('name');
+    }).select('name').lean();
     const existingSet = new Set(existingDocs.map(d => d.name));
 
     const toInsert = normalized.filter(i => !existingSet.has(i.name));
@@ -63,7 +63,7 @@ export const SuturesService = {
       .paginate()
       .fields();
 
-    const docs = await qb.modelQuery;
+    const docs = await qb.modelQuery.lean();
     const paginationInfo = await qb.getPaginationInfo();
 
     return {

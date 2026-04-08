@@ -19,7 +19,7 @@ export type SutureItem = {
 };
 
 export type PreferenceCard = {
-  createdBy: string;
+  createdBy: Types.ObjectId;
   cardTitle: string;
   surgeon: SurgeonInfo;
   medication: string;

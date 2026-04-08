@@ -41,7 +41,7 @@ const resolveMixedItemsWithQuantity = async (
 
   const existingDocs = await ItemModel.find({
     name: { $in: uniqueNames },
-  }).select('_id name');
+  }).select('_id name').lean();
 
   const nameToIdMap = new Map(
     existingDocs.map((doc: any) => [doc.name, doc._id.toString()]),
@@ -102,7 +102,7 @@ export const PreferenceCardService = {
     return specialties.filter(Boolean).sort();
   },
   getFavoriteCardIdsForUser: async (userId: string) => {
-    const user = await User.findById(userId).select('favoriteCards');
+    const user = await User.findById(userId).select('favoriteCards').lean();
     if (!user || !Array.isArray(user.favoriteCards)) {
       return [];
     }
@@ -154,7 +154,8 @@ export const PreferenceCardService = {
       .populate('sutures.name', 'name -_id')
       .sort({
         updatedAt: -1,
-      });
+      })
+      .lean();
 
     return flattenCards(docs);
   },
@@ -194,7 +195,8 @@ export const PreferenceCardService = {
   ) => {
     const doc = await PreferenceCardModel.findById(id)
       .populate('supplies.name', 'name -_id')
-      .populate('sutures.name', 'name -_id');
+      .populate('sutures.name', 'name -_id')
+      .lean();
 
     if (!doc) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
@@ -220,7 +222,7 @@ export const PreferenceCardService = {
   ) => {
     // Check if the card exists and get its creator
     const existingCard =
-      await PreferenceCardModel.findById(id).select('createdBy');
+      await PreferenceCardModel.findById(id).select('createdBy').lean();
     if (!existingCard) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
     }
@@ -329,7 +331,7 @@ export const PreferenceCardService = {
     userId: string,
     query?: Record<string, any>,
   ) => {
-    const user = await User.findById(userId).select('favoriteCards');
+    const user = await User.findById(userId).select('favoriteCards').lean();
     if (
       !user ||
       !Array.isArray(user.favoriteCards) ||

@@ -98,6 +98,16 @@ const globalErrorHandler = (error, req, res, next) => {
             message,
             errorMessages,
         };
+        if (statusCode === http_status_codes_1.StatusCodes.UNAUTHORIZED) {
+            return res.status(statusCode).json({
+                type: 'https://api.tbsosick.com/problems/unauthorized',
+                title: 'Unauthorized',
+                status: 401,
+                detail: message || 'Access token is missing or invalid',
+                code: 'UNAUTHORIZED',
+                request_id: req.headers['x-request-id'] || 'req-' + Math.random().toString(36).substr(2, 9),
+            });
+        }
         res.status(statusCode).json({
             success: false,
             message,

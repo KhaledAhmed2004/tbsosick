@@ -7,7 +7,7 @@ const PersonnelSchema = new mongoose_1.Schema({
     surgicalTeam: { type: [String], required: true },
 }, { _id: false });
 const EventSchema = new mongoose_1.Schema({
-    userId: { type: String, required: true },
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
     date: { type: Date, required: true },
     time: { type: String, required: true },
@@ -24,5 +24,6 @@ const EventSchema = new mongoose_1.Schema({
 }, {
     timestamps: true,
 });
+EventSchema.index({ userId: 1, date: -1 });
 const EventModel = (0, mongoose_1.model)('Event', EventSchema);
 exports.default = EventModel;

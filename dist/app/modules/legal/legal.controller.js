@@ -17,50 +17,54 @@ const http_status_codes_1 = require("http-status-codes");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const legal_service_1 = require("./legal.service");
+const createLegalPage = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield legal_service_1.LegalService.createLegalPage(req.body);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.CREATED,
+        message: 'Legal page created successfully',
+        data: result,
+    });
+}));
+const getAll = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield legal_service_1.LegalService.getAll();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Legal pages retrieved successfully',
+        data: result,
+    });
+}));
+const getBySlug = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield legal_service_1.LegalService.getBySlug(req.params.slug);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Legal page retrieved successfully',
+        data: result,
+    });
+}));
+const updateBySlug = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield legal_service_1.LegalService.updateBySlug(req.params.slug, req.body);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Legal page updated successfully',
+        data: result,
+    });
+}));
+const deleteBySlug = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    yield legal_service_1.LegalService.deleteBySlug(req.params.slug);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Legal page deleted successfully',
+    });
+}));
 exports.LegalController = {
-    createLegalPage: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield legal_service_1.LegalService.createLegalPageInDB(req.body);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.CREATED,
-            message: 'Legal page created',
-            data: result,
-        });
-    })),
-    updateLegalPage: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield legal_service_1.LegalService.updateLegalPageInDB(req.params.id, req.body);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Legal page updated',
-            data: result,
-        });
-    })),
-    deleteLegalPage: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield legal_service_1.LegalService.deleteLegalPageFromDB(req.params.id);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Legal page deleted',
-            data: result,
-        });
-    })),
-    listLegalPages: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield legal_service_1.LegalService.listLegalPagesFromDB();
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Legal pages fetched',
-            data: result,
-        });
-    })),
-    getLegalPageById: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield legal_service_1.LegalService.getLegalPageByIdFromDB(req.params.id);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Legal page fetched',
-            data: result,
-        });
-    })),
+    createLegalPage,
+    getAll,
+    getBySlug,
+    updateBySlug,
+    deleteBySlug,
 };

@@ -37,7 +37,7 @@ export const SuppliesService = {
     // Find existing to avoid duplicates
     const existingDocs = await SupplyModel.find({
       name: { $in: names },
-    }).select('name');
+    }).select('name').lean();
     const existingSet = new Set(existingDocs.map(d => d.name));
 
     const toInsert = normalized.filter(i => !existingSet.has(i.name));
@@ -65,7 +65,7 @@ export const SuppliesService = {
       .paginate()
       .fields();
 
-    const docs = await qb.modelQuery;
+    const docs = await qb.modelQuery.lean();
     const paginationInfo = await qb.getPaginationInfo();
 
     return {

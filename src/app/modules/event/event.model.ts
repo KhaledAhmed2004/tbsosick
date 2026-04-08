@@ -11,7 +11,7 @@ const PersonnelSchema = new Schema<IPersonnel>(
 
 const EventSchema = new Schema<IEvent>(
   {
-    userId: { type: String, required: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
     date: { type: Date, required: true },
     time: { type: String, required: true },
@@ -30,6 +30,8 @@ const EventSchema = new Schema<IEvent>(
     timestamps: true,
   },
 );
+
+EventSchema.index({ userId: 1, date: -1 });
 
 const EventModel = model<IEvent>('Event', EventSchema);
 

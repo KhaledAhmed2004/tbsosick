@@ -22,8 +22,7 @@ const SutureItemSchema = new mongoose_1.Schema({
 }, { _id: false });
 // Main PreferenceCard schema
 const PreferenceCardSchema = new mongoose_1.Schema({
-    // Creator user id stored as string (aligns with aggregation lookups)
-    createdBy: { type: String, required: true, index: true },
+    createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     cardTitle: { type: String, required: true, trim: true },
     surgeon: { type: SurgeonSchema, required: true },
     medication: { type: String, required: true },

@@ -18,7 +18,7 @@ const legal_route_1 = require("../app/modules/legal/legal.route");
 const router = express_1.default.Router();
 const apiRoutes = [
     {
-        path: '/user',
+        path: '/users',
         route: user_route_1.UserRoutes,
     },
     {
@@ -38,7 +38,7 @@ const apiRoutes = [
         route: event_route_1.EventRoutes,
     },
     {
-        path: '/preference-card',
+        path: '/preference-cards',
         route: preference_card_route_1.PreferenceCardRoutes,
     },
     {

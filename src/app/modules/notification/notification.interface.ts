@@ -5,18 +5,11 @@ export type NotificationLink = {
   url: string;
 };
 
-// Unified notification interface to support both legacy and new schema usages
 export type INotification = {
-  // Common/legacy fields
   _id?: Types.ObjectId;
-  text?: string;
-  receiver?: Types.ObjectId; // legacy target user
+  userId: Types.ObjectId;
   referenceId?: Types.ObjectId;
   metadata?: Record<string, unknown> | undefined;
-  isRead?: boolean;
-
-  // New medical UI fields
-  userId?: string; // target user
   type?:
     | 'PREFERENCE_CARD_CREATED'
     | 'EVENT_SCHEDULED'

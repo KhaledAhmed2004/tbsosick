@@ -3,7 +3,7 @@ import ApiError from '../../../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
 
 const listForUser = async (userId: string) => {
-  return NotificationModel.find({ userId }).sort({ createdAt: -1 });
+  return NotificationModel.find({ userId }).sort({ createdAt: -1 }).lean();
 };
 
 const markAllRead = async (userId: string) => {
@@ -14,7 +14,7 @@ const markAllRead = async (userId: string) => {
 const markRead = async (id: string, userId: string, read = true) => {
   const doc = await NotificationModel.findById(id);
   if (!doc) throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
-  if (doc.userId !== userId) throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
+  if (doc.userId?.toString() !== userId) throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
   doc.read = read;
   await doc.save();
   return doc;
@@ -23,7 +23,7 @@ const markRead = async (id: string, userId: string, read = true) => {
 const deleteById = async (id: string, userId: string) => {
   const doc = await NotificationModel.findById(id);
   if (!doc) throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
-  if (doc.userId !== userId) throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
+  if (doc.userId?.toString() !== userId) throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
   await NotificationModel.findByIdAndDelete(id);
   return { deleted: true };
 };

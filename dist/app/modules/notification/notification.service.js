@@ -17,27 +17,29 @@ const notification_model_1 = require("./notification.model");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const http_status_codes_1 = require("http-status-codes");
 const listForUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return notification_model_1.NotificationModel.find({ userId }).sort({ createdAt: -1 });
+    return notification_model_1.NotificationModel.find({ userId }).sort({ createdAt: -1 }).lean();
 });
 const markAllRead = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     yield notification_model_1.NotificationModel.updateMany({ userId, read: false }, { $set: { read: true } });
     return { updated: true };
 });
 const markRead = (id_1, userId_1, ...args_1) => __awaiter(void 0, [id_1, userId_1, ...args_1], void 0, function* (id, userId, read = true) {
+    var _a;
     const doc = yield notification_model_1.NotificationModel.findById(id);
     if (!doc)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Notification not found');
-    if (doc.userId !== userId)
+    if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized');
     doc.read = read;
     yield doc.save();
     return doc;
 });
 const deleteById = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const doc = yield notification_model_1.NotificationModel.findById(id);
     if (!doc)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Notification not found');
-    if (doc.userId !== userId)
+    if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized');
     yield notification_model_1.NotificationModel.findByIdAndDelete(id);
     return { deleted: true };

@@ -34,8 +34,7 @@ const SutureItemSchema = new Schema(
 // Main PreferenceCard schema
 const PreferenceCardSchema = new Schema<PreferenceCard>(
   {
-    // Creator user id stored as string (aligns with aggregation lookups)
-    createdBy: { type: String, required: true, index: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     cardTitle: { type: String, required: true, trim: true },
     surgeon: { type: SurgeonSchema, required: true },
     medication: { type: String, required: true },

@@ -99,7 +99,7 @@ export const EventService = {
 
     return EventModel.find(filter).select(
       'title eventType date time durationHours location notes personnel preferenceCard',
-    );
+    ).lean();
   },
 
   getEventByIdFromDB: async (
@@ -109,9 +109,9 @@ export const EventService = {
     const event = await EventModel.findById(id).populate(
       'preferenceCard',
       'cardTitle',
-    );
+    ).lean();
     if (!event) return null;
-    if (event.userId !== requester.id && requester.role !== 'SUPER_ADMIN') {
+    if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
         'Not allowed to view this event',
@@ -132,7 +132,7 @@ export const EventService = {
     }
 
     // Check authorization: either the owner or a SUPER_ADMIN can update
-    if (event.userId !== user.id && user.role !== 'SUPER_ADMIN') {
+    if (event.userId.toString() !== user.id && user.role !== 'SUPER_ADMIN') {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
         'Not authorized to update this event',
@@ -156,7 +156,7 @@ export const EventService = {
     if (!event) {
       throw new ApiError(StatusCodes.NOT_FOUND, 'Event not found');
     }
-    if (event.userId !== requester.id && requester.role !== 'SUPER_ADMIN') {
+    if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
       throw new ApiError(
         StatusCodes.FORBIDDEN,
         'Not allowed to delete this event',

@@ -29,6 +29,7 @@ const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const user_service_1 = require("./user.service");
 const user_1 = require("../../../enums/user");
+const preference_card_service_1 = require("../preference-card/preference-card.service");
 const createUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userData = __rest(req.body, []);
     const result = yield user_service_1.UserService.createUserToDB(userData);
@@ -49,6 +50,35 @@ const getUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
         data: result,
     });
 }));
+const getFavoriteCards = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = req.user;
+    const result = yield preference_card_service_1.PreferenceCardService.listFavoritePreferenceCardsForUserFromDB(user.id, req.query);
+    const favoriteCardIds = yield preference_card_service_1.PreferenceCardService.getFavoriteCardIdsForUser(user.id);
+    const favoriteSet = new Set(favoriteCardIds.map(id => id.toString()));
+    const summarized = result.data.map((doc) => {
+        var _a, _b;
+        return ({
+            id: doc.id || doc._id,
+            cardTitle: doc.cardTitle,
+            surgeon: {
+                name: (_a = doc.surgeon) === null || _a === void 0 ? void 0 : _a.fullName,
+                specialty: (_b = doc.surgeon) === null || _b === void 0 ? void 0 : _b.specialty,
+            },
+            verificationStatus: doc.verificationStatus,
+            isFavorited: favoriteSet.has((doc.id || doc._id).toString()),
+            downloadCount: doc.downloadCount || 0,
+            createdAt: doc.createdAt,
+            updatedAt: doc.updatedAt,
+        });
+    });
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: result.data.length > 0 ? 'Favorite preference cards retrieved successfully' : 'No favorite cards found.',
+        meta: result.meta,
+        data: summarized,
+    });
+}));
 const updateProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
     // All files + text data are in req.body
@@ -62,9 +92,9 @@ const updateProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
     });
 }));
 const updateUserStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
+    const { userId } = req.params;
     const { status } = req.body;
-    const result = yield user_service_1.UserService.updateUserStatus(id, status);
+    const result = yield user_service_1.UserService.updateUserStatus(userId, status);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -73,9 +103,9 @@ const updateUserStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 
     });
 }));
 const adminUpdateUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
+    const { userId } = req.params;
     const payload = Object.assign({}, req.body);
-    const result = yield user_service_1.UserService.updateUserByAdmin(id, payload);
+    const result = yield user_service_1.UserService.updateUserByAdmin(userId, payload);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -84,8 +114,8 @@ const adminUpdateUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0
     });
 }));
 const deleteUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const result = yield user_service_1.UserService.deleteUserPermanently(id);
+    const { userId } = req.params;
+    const result = yield user_service_1.UserService.deleteUserPermanently(userId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -99,13 +129,13 @@ const getAllUserRoles = (0, catchAsync_1.default)((req, res) => __awaiter(void 0
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'User roles retrieved successfully',
-        pagination: result.pagination,
+        meta: result.meta,
         data: result.data,
     });
 }));
 const blockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const result = yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.RESTRICTED);
+    const { userId } = req.params;
+    const result = yield user_service_1.UserService.updateUserStatus(userId, user_1.USER_STATUS.RESTRICTED);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -114,8 +144,8 @@ const blockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void
     });
 }));
 const unblockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const result = yield user_service_1.UserService.updateUserStatus(id, user_1.USER_STATUS.ACTIVE);
+    const { userId } = req.params;
+    const result = yield user_service_1.UserService.updateUserStatus(userId, user_1.USER_STATUS.ACTIVE);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -124,8 +154,8 @@ const unblockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
     });
 }));
 const getUserById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const result = yield user_service_1.UserService.getUserById(id);
+    const { userId } = req.params;
+    const result = yield user_service_1.UserService.getUserById(userId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -134,8 +164,8 @@ const getUserById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
     });
 }));
 const getUserDetailsById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params;
-    const result = yield user_service_1.UserService.getUserDetailsById(id);
+    const { userId } = req.params;
+    const result = yield user_service_1.UserService.getUserDetailsById(userId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -146,6 +176,7 @@ const getUserDetailsById = (0, catchAsync_1.default)((req, res) => __awaiter(voi
 exports.UserController = {
     createUser,
     getUserProfile,
+    getFavoriteCards,
     updateProfile,
     getAllUserRoles,
     updateUserStatus,

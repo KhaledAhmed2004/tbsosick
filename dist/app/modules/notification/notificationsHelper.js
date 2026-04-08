@@ -15,7 +15,7 @@ const user_model_1 = require("../user/user.model");
 const pushNotificationHelper_1 = require("./pushNotificationHelper");
 const sendNotifications = (data) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield notification_model_1.Notification.create(data);
-    const user = yield user_model_1.User.findById(data === null || data === void 0 ? void 0 : data.receiver);
+    const user = yield user_model_1.User.findById(data === null || data === void 0 ? void 0 : data.userId);
     // Check if user has device tokens and the array is not empty
     if ((user === null || user === void 0 ? void 0 : user.deviceTokens) &&
         Array.isArray(user.deviceTokens) &&
@@ -24,7 +24,7 @@ const sendNotifications = (data) => __awaiter(void 0, void 0, void 0, function* 
             notification: {
                 // title: 'New Notification Received',
                 title: (data === null || data === void 0 ? void 0 : data.title) || 'Task Titans Notification',
-                body: data === null || data === void 0 ? void 0 : data.text,
+                body: (data === null || data === void 0 ? void 0 : data.subtitle) || (data === null || data === void 0 ? void 0 : data.title),
             },
             tokens: user.deviceTokens,
         };
@@ -40,7 +40,7 @@ const sendNotifications = (data) => __awaiter(void 0, void 0, void 0, function* 
     //@ts-ignore
     const socketIo = global.io;
     if (socketIo) {
-        socketIo.emit(`get-notification::${data === null || data === void 0 ? void 0 : data.receiver}`, result);
+        socketIo.emit(`get-notification::${data === null || data === void 0 ? void 0 : data.userId}`, result);
     }
     return result;
 });

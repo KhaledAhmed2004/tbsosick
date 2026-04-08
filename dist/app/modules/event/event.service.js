@@ -16,7 +16,6 @@ exports.EventService = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const event_model_1 = __importDefault(require("./event.model"));
-const notification_service_1 = require("../notification/notification.service");
 const NotificationBuilder_1 = require("../../builder/NotificationBuilder");
 const buildEventStartDate = (date, time) => {
     return new Date(`${date}T${time}:00.000Z`);
@@ -62,15 +61,8 @@ exports.EventService = {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid time');
         }
         const event = yield event_model_1.default.create(Object.assign(Object.assign({ userId }, payload), { date: new Date(`${payload.date}T00:00:00.000Z`) }));
-        const eventStart = buildEventStartDate(payload.date, payload.time);
         const eventId = event._id.toString();
-        const whenText = `${payload.date} at ${payload.time}`;
-        notification_service_1.NotificationService.createForEventScheduled({
-            userId,
-            eventId,
-            title: payload.title,
-            whenText,
-        }).catch(() => { });
+        const eventStart = buildEventStartDate(payload.date, payload.time);
         yield scheduleEventReminders(userId, eventId, payload.title, eventStart);
         return event;
     }),
@@ -85,13 +77,13 @@ exports.EventService = {
                 filter.date.$lte = new Date(`${query.to}T00:00:00.000Z`);
             }
         }
-        return event_model_1.default.find(filter).select('title eventType date time durationHours location notes');
+        return event_model_1.default.find(filter).select('title eventType date time durationHours location notes personnel preferenceCard').lean();
     }),
     getEventByIdFromDB: (id, requester) => __awaiter(void 0, void 0, void 0, function* () {
-        const event = yield event_model_1.default.findById(id).populate('preferenceCard', 'cardTitle');
+        const event = yield event_model_1.default.findById(id).populate('preferenceCard', 'cardTitle').lean();
         if (!event)
             return null;
-        if (event.userId !== requester.id && requester.role !== 'SUPER_ADMIN') {
+        if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed to view this event');
         }
         return event;
@@ -103,7 +95,7 @@ exports.EventService = {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Event not found');
         }
         // Check authorization: either the owner or a SUPER_ADMIN can update
-        if (event.userId !== user.id && user.role !== 'SUPER_ADMIN') {
+        if (event.userId.toString() !== user.id && user.role !== 'SUPER_ADMIN') {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to update this event');
         }
         // Update the event with new data
@@ -117,7 +109,7 @@ exports.EventService = {
         if (!event) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Event not found');
         }
-        if (event.userId !== requester.id && requester.role !== 'SUPER_ADMIN') {
+        if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed to delete this event');
         }
         const deleted = yield event_model_1.default.findByIdAndDelete(id);

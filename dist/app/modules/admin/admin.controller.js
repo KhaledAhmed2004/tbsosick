@@ -23,7 +23,7 @@ exports.AdminController = {
         (0, sendResponse_1.default)(res, {
             success: true,
             statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Admin dashboard stats',
+            message: 'Admin dashboard metrics',
             data: result,
         });
     })),
@@ -38,10 +38,11 @@ exports.AdminController = {
     })),
     getActiveSubscriptionMonthly: (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const result = yield (0, admin_service_1.getActiveSubscriptionMonthlyTrend)();
+        const currentYear = new Date().getFullYear();
         (0, sendResponse_1.default)(res, {
             success: true,
             statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Active subscription monthly trend',
+            message: `Monthly analytics for ${currentYear} retrieved successfully.`,
             data: result,
         });
     })),

@@ -4,22 +4,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LegalRoutes = void 0;
-// Routes for managing legal pages (Terms, Privacy Policy, etc.)
 const express_1 = __importDefault(require("express"));
+const user_1 = require("../../../enums/user");
 const auth_1 = __importDefault(require("../../middlewares/auth"));
 const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
-const user_1 = require("../../../enums/user");
 const legal_controller_1 = require("./legal.controller");
 const legal_validation_1 = require("./legal.validation");
 const router = express_1.default.Router();
-// Create a new legal page (SUPER_ADMIN only)
-router.post('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(legal_validation_1.createLegalPageSchema), legal_controller_1.LegalController.createLegalPage);
-// Public: list all legal pages
-router.get('/', legal_controller_1.LegalController.listLegalPages);
-// Public: get single legal page by id
-router.get('/:id', (0, validateRequest_1.default)(legal_validation_1.paramIdSchema), legal_controller_1.LegalController.getLegalPageById);
-// Update legal page (SUPER_ADMIN only)
-router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(legal_validation_1.updateLegalPageSchema), legal_controller_1.LegalController.updateLegalPage);
-// Delete legal page (SUPER_ADMIN only)
-router.delete('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(legal_validation_1.paramIdSchema), legal_controller_1.LegalController.deleteLegalPage);
+// Get all legal pages
+router.get('/', legal_controller_1.LegalController.getAll);
+// Get a legal page by slug
+router.get('/:slug', legal_controller_1.LegalController.getBySlug);
+// Create a new legal page
+router.post('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(legal_validation_1.LegalValidation.createLegalPage), legal_controller_1.LegalController.createLegalPage);
+// Update a legal page by slug
+router.patch('/:slug', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(legal_validation_1.LegalValidation.updateLegalPage), legal_controller_1.LegalController.updateBySlug);
+// Delete a legal page by slug
+router.delete('/:slug', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(legal_validation_1.LegalValidation.deleteLegalPage), legal_controller_1.LegalController.deleteBySlug);
 exports.LegalRoutes = router;

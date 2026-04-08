@@ -44,7 +44,7 @@ exports.SuturesService = {
         const names = normalized.map(i => i.name);
         const existingDocs = yield sutures_model_1.SutureModel.find({
             name: { $in: names },
-        }).select('name');
+        }).select('name').lean();
         const existingSet = new Set(existingDocs.map(d => d.name));
         const toInsert = normalized.filter(i => !existingSet.has(i.name));
         const duplicates = normalized
@@ -66,7 +66,7 @@ exports.SuturesService = {
             .sort()
             .paginate()
             .fields();
-        const docs = yield qb.modelQuery;
+        const docs = yield qb.modelQuery.lean();
         const paginationInfo = yield qb.getPaginationInfo();
         return {
             pagination: paginationInfo,
