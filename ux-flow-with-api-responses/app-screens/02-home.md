@@ -67,6 +67,13 @@ Auth: Bearer {{accessToken}}
 - **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `getCards`
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `listPublicPreferenceCardsFromDB`
 
+**Business Logic (`listPublicPreferenceCardsFromDB`):**
+- `QueryBuilder` use kore search, filter, sort, ebong pagination handle kora hoy.
+- Shudhu matro `published: true` cards fetch kora hoy jate public items-i dekha jay.
+- Input query parameter theke `specialty` ba `surgeonSpecialty` check kora hoy ebong regex insensitive search logic apply kora hoy.
+- `cardTitle`, `surgeon.fullName`, ebong `medication` field-er upore default matching logic apply kora hoy.
+- Card details-er shathe `supplies` ebong `sutures` populate kora hoy ebong return-er age data flatten kora hoy.
+
 #### Responses
 
 - **Scenario: Success (200)**
@@ -115,6 +122,11 @@ Auth: Bearer {{accessToken}}
 - **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `getStats`
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `getCountsForCards`
 
+**Business Logic (`getCountsForCards`):**
+- `Promise.all` use kore parallel-vabe database query run kora hoy.
+- Total published cards-er count (`AllCardsCount`) ebong current user-er create kora cards-er count (`myCardsCount`) calculate kora hoy.
+- Accurate counts return kora hoy jate dashboard stats update thake.
+
 #### Responses
 
 - **Scenario: Success (200)**
@@ -149,6 +161,12 @@ Auth: Bearer {{accessToken}}
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getFavoriteCards`
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `listFavoritePreferenceCardsForUserFromDB`
+
+**Business Logic (`listFavoritePreferenceCardsForUserFromDB`):**
+- Prothome user profile theke `favoriteCards` (ObjectIds array) fetch kora hoy.
+- Jodi user-er kono favorite card na thake, tahole empty data array ebong empty meta information return kora hoy.
+- Multiple favorites thakle `QueryBuilder` use kore selection criteria (search/filter/sort/pagination) apply kora hoy.
+- `$in` operator use kore specific cards-gulo retrieve kora hoy ebong flatten format-e return kora hoy.
 
 #### Responses
 
@@ -192,6 +210,12 @@ Auth: Bearer {{accessToken}}
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
 - **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `favoriteCard`
+- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `favoritePreferenceCardInDB`
+
+**Business Logic (`favoritePreferenceCardInDB`):**
+- Card execution-er age check kora hoy card-ti exist kore kina; na thakle `NOT_FOUND` error throw kore.
+- Visibility check: Card-ti jodi `published` na hoy, tahole shudhu matro creator operation-ti korte pare; onnothay `FORBIDDEN` error throw kore.
+- User record update kora hoy `$addToSet` command use kore jate same card multiple bar favorite list-e na dhoke.
 
 #### Responses
 - **Scenario: Success (200)**: `{ "success": true, "message": "Preference card favorited" }`
@@ -210,6 +234,11 @@ Auth: Bearer {{accessToken}}
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
 - **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `unfavoriteCard`
+- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `unfavoritePreferenceCardInDB`
+
+**Business Logic (`unfavoritePreferenceCardInDB`):**
+- Card existence check kora hoy.
+- User profile theke `$pull` use kore specific `cardId`-ti favorite array theke remove kora hoy.
 
 #### Responses
 - **Scenario: Success (200)**: `{ "success": true, "message": "Preference card unfavorited" }`
@@ -228,6 +257,12 @@ Auth: Bearer {{accessToken}}
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
 - **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `incrementDownloadCount`
+- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `incrementDownloadCountInDB`
+
+**Business Logic (`incrementDownloadCountInDB`):**
+- Card existence validation kora hoy.
+- Authorization check: Private card-er khetre shudhu matro creator ba `SUPER_ADMIN` download count barate pare.
+- Atomic-ly `downloadCount` value 1 increment kore save kora hoy.
 
 #### Responses
 - **Scenario: Success (200)**: `{ "success": true, "message": "Download count incremented", "data": { "downloadCount": 13 } }`
