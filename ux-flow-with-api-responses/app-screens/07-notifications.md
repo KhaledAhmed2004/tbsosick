@@ -1,185 +1,102 @@
-# Screen 7: Notifications
+# Notifications Flow
 
-> **Section**: App APIs (Student-Facing)
+> **Section**: System-Wide Notifications
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
-> **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Home](./02-home.md) (Access via bell icon), [Preference Card Details](./03-preference-card-details.md) (Navigation from notification)
+> **Standard Envelope**: See [README.md](../README.md#standard-response-envelope)
 
-## UX Flow
+## Overview
 
-### Notification List Load
-1. User app-er header-e thaka notification (bell) icon-e tap kore.
-2. Page load-e user-er shob notifications fetch hoy → `GET /notifications` (→ 7.1).
-3. Screen render hoy:
-   - Notification cards (Title, Subtitle/Text, Icon, Time).
-   - Unread notifications highlight hoye thake.
-   - List khali thakle "No notifications yet" message dekhay.
-
-### Notification Interactions
-1. **Mark as Read**: User kono notification-e tap korle details-e navigate korar age oita read mark hoy → `PATCH /notifications/:id/read` (→ 7.2).
-2. **Mark All Read**: User "Mark All as Read" button-e tap korle shob notification ekshathe read mark hoy → `PATCH /notifications/read-all` (→ 7.3).
-3. **Delete**: Notification swipe korle ba delete icon-e tap korle oita remove hoy → `DELETE /notifications/:id` (→ 7.4).
-4. **Navigation**: 
-   - Notification card-e tap korle corresponding resource-e (e.g., Preference Card details) navigate kore based on `resourceType` and `resourceId`.
+System-e bibhinno action-er upor vitti kore user-der notification pathano hoy. Ei notification gula main-ly 3-ti channel-e jete pare:
+1. **Push Notification**: Firebase (FCM) er maddhome mobile device-e.
+2. **Socket Notification**: Socket.io er maddhome real-time app-er bhitor.
+3. **Database Notification**: MongoDB-te save thake jeta user pore "Notification List" theke dekhte pare.
 
 ---
 
-## Edge Cases
+## Notification Types & Triggers
 
-- **Real-time Update**: App open thaka obosthay socket-er maddhome naya notification asle list-e auto add hoy.
-- **Empty List**: Kono notification na thakle empty state illustration dekhano hoy.
-- **Expired Notifications**: Kono notification-er `expiresAt` periye gele oita list-e dekhabe na.
+Current system-e nicher dhoron-er notification gula trigger hoy:
+
+### 1. Event Reminders (Calendar)
+- **Trigger 1**: Event shuru hovar **24 ghonta age**.
+- **Trigger 2**: Event shuru hovar **1 ghonta age**.
+- **Channels**: Push, Database, Socket.
+- **Content**: `Your event "{{title}}" is in 24 hours/1 hour`.
+- **Logic**: `EventService` theke `scheduleEventReminders` call kora hoy.
+
+### 2. Preference Card Notifications
+- **Trigger**: Jokhon kono notun **Preference Card** create ba add kora hoy.
+- **Channels**: Database, Socket.
+- **Content**: `New Card Added: {{surgeonName}} — {{procedure}}`.
+- **Logic**: `PreferenceCardService` theke `NotificationService.createForPreferenceCard` call kora hoy.
+
+### 3. Event Scheduled Confirmation
+- **Trigger**: Jokhon kono notun **Event** schedule kora hoy.
+- **Channels**: Database, Socket.
+- **Content**: `Event Scheduled: {{title}} on {{whenText}}`.
+- **Logic**: `EventService` theke `NotificationService.createForEventScheduled` call kora hoy.
 
 ---
 
-<!-- ══════════════════════════════════════ -->
-<!--           NOTIFICATION LIST              -->
-<!-- ══════════════════════════════════════ -->
+## Notification List API
 
-### 7.1 List My Notifications
-
+### Get My Notifications
 ```
 GET /notifications
 Auth: Bearer {{accessToken}}
 ```
 
-> User-er shob notification (read/unread) fetch korar jonno. Latest gulo age thake.
+**Query Parameters:**
+- `page`: Pagination-er jonno (default: 1).
+- `limit`: Per page item count (default: 20).
 
-**Implementation:**
-- **Route**: [notification.routes.ts](file:///src/app/modules/notification/notification.routes.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `listMyNotifications`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `listForUser`
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Notifications fetched",
-    "data": [
-      {
-        "_id": "664a1b2c3d4e5f6a7b8c9d0e",
-        "title": "New Card Added",
-        "subtitle": "Dr. Smith — Knee Arthroscopy",
-        "type": "PREFERENCE_CARD_CREATED",
-        "read": false,
-        "resourceType": "PreferenceCard",
-        "resourceId": "664a1b2c3d4e5f6a7b8c9d0f",
-        "icon": "card",
-        "createdAt": "2026-04-07T10:30:00.000Z"
-      }
-    ]
-  }
-  ```
-
----
-
-### 7.2 Mark Notification as Read
-
-```
-PATCH /notifications/:id/read
-Content-Type: application/json
-Auth: Bearer {{accessToken}}
-```
-
-> Specific ekta notification read mark korar jonno. `read` body field-e `true` ba `false` pathano jay.
-
-**Request Body:**
+**Response (200):**
 ```json
 {
-  "read": true
+  "success": true,
+  "statusCode": 200,
+  "message": "Notifications fetched successfully",
+  "data": [
+    {
+      "_id": "664a1b2c3d4e5f6a7b8c9d11",
+      "title": "Event Reminder",
+      "subtitle": "Surgery on 2026-04-10 at 08:00",
+      "type": "REMINDER",
+      "read": false,
+      "icon": "calendar",
+      "createdAt": "2026-04-09T08:00:00.000Z"
+    }
+  ]
 }
 ```
 
-**Implementation:**
-- **Route**: [notification.routes.ts](file:///src/app/modules/notification/notification.routes.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `markRead`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `markRead`
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Notification marked read",
-    "data": {
-      "_id": "664a1b2c3d4e5f6a7b8c9d0e",
-      "read": true
-    }
-  }
-  ```
-
 ---
 
-### 7.3 Mark All Notifications as Read
+## Notification Actions
 
+### Mark as Read
 ```
-PATCH /notifications/read-all
+PATCH /notifications/:notificationId/read
 Auth: Bearer {{accessToken}}
 ```
 
-> User-er shob unread notification ekshathe read mark korar jonno.
-
-**Implementation:**
-- **Route**: [notification.routes.ts](file:///src/app/modules/notification/notification.routes.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `markAllRead`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `markAllRead`
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "All notifications marked read",
-    "data": {
-      "updated": true
-    }
-  }
-  ```
-
----
-
-### 7.4 Delete Notification
-
+### Mark All as Read
 ```
-DELETE /notifications/:id
+PUT /notifications/mark-all-read
 Auth: Bearer {{accessToken}}
 ```
 
-> Kono notification list theke permanently remove korar jonno.
-
-**Implementation:**
-- **Route**: [notification.routes.ts](file:///src/app/modules/notification/notification.routes.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `deleteNotification`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `deleteById`
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Notification deleted",
-    "data": {
-      "_id": "664a1b2c3d4e5f6a7b8c9d0e"
-    }
-  }
-  ```
+### Delete Notification
+```
+DELETE /notifications/:notificationId
+Auth: Bearer {{accessToken}}
+```
 
 ---
 
-## API Status
+## Implementation Details
 
-| # | Endpoint | Method | Auth | Status | Notes |
-|---|---|---|---|:---:|---|
-| 7.1 | `/notifications` | `GET` | Bearer | ✅ Done | List all notifications |
-| 7.2 | `/notifications/:id/read` | `PATCH` | Bearer | ✅ Done | Mark single notification as read |
-| 7.3 | `/notifications/read-all` | `PATCH` | Bearer | ✅ Done | Mark all as read |
-| 7.4 | `/notifications/:id` | `DELETE` | Bearer | ✅ Done | Delete notification |
+- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) - Database logic and trigger helpers.
+- **Model**: [notification.model.ts](file:///src/app/modules/notification/notification.model.ts) - Schema defining fields like `userId`, `type`, `title`, `subtitle`, etc.
+- **Helper**: [notificationsHelper.ts](file:///src/app/modules/notification/notificationsHelper.ts) - Handles socket emission and push notification logic.
+- **Builder**: [NotificationBuilder.ts](file:///src/app/builder/NotificationBuilder/NotificationBuilder.ts) - Unified API for complex multi-channel notifications.

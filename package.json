@@ -18,7 +18,8 @@
     "start": "node dist/server.js",
     "generate:module": "node scripts/generate-module/index.js",
     "generate:openapi": "node scripts/generate-module/generators/openapi-generator.js",
-    "generate:frontend-types": "node scripts/generate-module/generators/frontend-types-generator.js"
+    "generate:frontend-types": "node scripts/generate-module/generators/frontend-types-generator.js",
+    "generate:postman": "ts-node scripts/generate-postman.ts"
   },
   "keywords": [],
   "author": "",
@@ -59,7 +60,6 @@
     "jsdom": "^27.0.0",
     "mongodb-memory-server": "^10.2.1",
     "ora": "^5.4.1",
-    "socket.io-client": "^4.8.1",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.4",
     "ts-node-dev": "^2.0.0",

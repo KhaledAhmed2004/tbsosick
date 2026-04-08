@@ -68,16 +68,8 @@ export const EventService = {
       date: new Date(`${payload.date}T00:00:00.000Z`),
     });
 
-    const eventStart = buildEventStartDate(payload.date, payload.time);
     const eventId = (event._id as any).toString();
-    const whenText = `${payload.date} at ${payload.time}`;
-
-    NotificationService.createForEventScheduled({
-      userId,
-      eventId,
-      title: payload.title,
-      whenText,
-    }).catch(() => {});
+    const eventStart = buildEventStartDate(payload.date, payload.time);
 
     await scheduleEventReminders(
       userId,
@@ -106,7 +98,7 @@ export const EventService = {
     }
 
     return EventModel.find(filter).select(
-      'title eventType date time durationHours location notes',
+      'title eventType date time durationHours location notes personnel preferenceCard',
     );
   },
 

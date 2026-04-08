@@ -1,598 +1,1170 @@
 {
   "info": {
-    "_postman_id": "8d774a15-6124-49b1-a4cb-3df1ab5010fe",
     "name": "tbsosick",
-    "description": "Organized Postman collection grouped by modules with clear request docs. Base prefix: /api/v1.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "46502872",
-    "_collection_link": "https://go.postman.co/collection/46502872-8d774a15-6124-49b1-a4cb-3df1ab5010fe?source=collection_link"
+    "description": "Automatically generated from UX flow documentation with testing guides."
   },
   "item": [
     {
-      "name": "Auth Module",
-      "item": [
-        {
-          "name": "Google OAuth login",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/google",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "google"
-              ]
-            },
-            "description": "Start Google OAuth login.\n\nAuthentication: Public.\nBehavior: Redirects to Google consent screen with email/profile scopes.\nOn success: Google will call the callback endpoint to finalize login."
-          },
-          "response": []
-        },
-        {
-          "name": "Google OAuth callback",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/google/callback",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "google",
-                "callback"
-              ]
-            },
-            "description": "Handle Google OAuth callback and finalize sign‑in.\n\nAuthentication: Public; invoked by Google.\nBehavior: Exchanges Google code for tokens and creates/returns user session.\nSuccess 200: Returns accessToken, refreshToken, and user."
-          },
-          "response": []
-        },
-        {
-          "name": "User logout",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/logout",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "logout"
-              ]
-            },
-            "description": "Logout current user and invalidate tokens.\n\nAuthentication: Bearer token required.\nBehavior: Revokes active session (access/refresh tokens).\nSuccess 200: Confirmation message."
-          },
-          "response": []
-        },
-        {
-          "name": "1.2 Forgot Password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test-jiggalala@example.com\"\n}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/forgot-password",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "forgot-password"
-              ]
-            },
-            "description": "Request a password reset OTP via email.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → forgetPassword\n- Service: auth.service.ts → forgetPasswordToDB"
-          },
-          "response": []
-        },
-        {
-          "name": "1.3 Verify OTP",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test-jiggalala@example.com\",\n  \"otp\": \"123456\"\n}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/verify-otp",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "verify-otp"
-              ]
-            },
-            "description": "Verify OTP code sent to email.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → verifyEmail\n- Service: auth.service.ts → verifyEmailToDB"
-          },
-          "response": []
-        },
-        {
-          "name": "1.4 Reset Password",
-          "request": {
-            "auth": {
-              "type": "noauth"
-            },
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"token\": \"<reset-token>\",\n    \"newPassword\": \"NewSecurePass123!\"\n}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/reset-password",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "reset-password"
-              ]
-            },
-            "description": "Reset password using a valid reset token.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → resetPassword\n- Service: auth.service.ts → resetPasswordToDB"
-          },
-          "response": []
-        },
-        {
-          "name": "Change password",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"oldPassword\": \"OldPass123!\",\n  \"newPassword\": \"NewSecurePass123!\"\n}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/change-password",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "change-password"
-              ]
-            },
-            "description": "Change current user password.\n\nAuthentication: Bearer token required.\nRequest Body:\n- oldPassword (string)\n- newPassword (string, must meet security rules)\nSuccess 200: Password changed; re‑authenticate recommended."
-          },
-          "response": []
-        },
-        {
-          "name": "Resend verification email",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\"\n}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/resend-verify-email",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "resend-verify-email"
-              ]
-            },
-            "description": "Resend email verification message.\n\nAuthentication: Public.\nRequest Body: email (string).\nSuccess 200: Verification email queued if account needs verification."
-          },
-          "response": []
-        },
-        {
-          "name": "Refresh token",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{}"
-            },
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/auth/refresh-token",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "auth",
-                "refresh-token"
-              ]
-            },
-            "description": "Exchange refresh token for a new access token.\n\nAuthentication: Refresh token (cookie/body).\nSuccess 200: Returns fresh accessToken.\nNotes: If refresh token is invalid/expired, returns 401."
-          },
-          "response": []
-        }
-      ],
-      "description": "Authentication endpoints including login, OAuth, logout, and token flows."
+      "name": "🚀 Testing Guide & Docs",
+      "description": "\n## Welcome to tbsosick API Testing Guide\n\nFollow these detailed steps to test APIs and Socket events:\n\n### 1. Setup & Auth (First Step)\n1.  **Login**: First, go to **App Screens > Auth > 1.2 Login**.\n2.  **Auto-Token**: Successful login korle `accessToken` automatic collection variable-e save hoye jabe.\n3.  **Check**: Apni Collection-er **Variables** tab-e giye check korte paren token-ti set hoyeche kina.\n\n### 2. Standard API Testing\n- Protiti folder screen-er nam onujayi organized.\n- Path variables (যেমন `:id`) thakle Postman-er **Params** tab-e value boshate hobe.\n\n### 3. Socket.IO Testing (Detailed Guide)\nPostman theke Socket test korar jonno nicher visual guide-ti follow koren:\n\n#### A. Connection Setup\n- Click **New** > **Socket.IO**.\n- **URL**: `http://localhost:5000` (Not `/api/v1`).\n- **Auth (Handshake)**:\n    - **Handshake** tab-e jan.\n    - **Auth** section-e **Auth Object** select koren.\n    - `token` key-te value `{{accessToken}}` boshie **Connect** koren.\n\n#### B. How to \"Listen\" (Receive events from server)\nServer theke real-time data receive korar jonno nicher steps follow koren:\n\n1.  **Events Tab**: Connection tab-er pashe thaka **Events** tab-e jan.\n2.  **Add Event**: `Add event` button-e click koren.\n3.  **Event Name**: `Event name` field-e nicher common event-gulo add koren (ekekti event-er jonno alada row):\n    - `USER_ONLINE`: Jokhon keu online ashe.\n    - `MESSAGE_RECEIVED`: Jokhon keu apnake message pathay.\n    - `TYPING_START`: Keu type kora shuru korle.\n    - `get-notification::{{userId}}`: Personal notifications-er jonno.\n4.  **Messages Pane**: Ekhon server theke oi event-ti asle niche **Messages** pane-e real-time JSON data dekhabe. \n    > **Note**: Ekhane kono JSON pathano lagbe na, shudhu event-er nam-ti add korlei Postman server theke asha data capture korbe.\n\n#### C. How to \"Emit\" (Send events to server)\n- Server-e data pathanor jonno **Message** tab-e jan.\n- **Event Name**: Jekhane event-er nam likhte hoy (যেমন: `JOIN_CHAT`).\n- **Payload**: Niche JSON format-e data-ti likhun:\n    ```json\n    { \"chatId\": \"664a1b2c3d4e5f6a7b8c9d0e\" }\n    ```\n- Click **Send**.\n\n### 🔌 Socket.IO Events Inventory & Guide\n\nJokhon apni Socket test korben, nicher table-ti follow koren bujhar jonno je konta apnake pathate hobe (Emit) ar konta server pathabe (Listen).\n\n| Event Name | Action Type | Direction | Payload Example | Step-by-Step Testing |\n|------------|-------------|-----------|-----------------|----------------------|\n| `JOIN_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab-e event name `JOIN_CHAT` likhun ebong payload JSON format-e diye **Send** koren. |\n| `LEAVE_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `LEAVE_CHAT` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab theke emit koren typing shuru bujhate. |\n| `TYPING_STOP` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `TYPING_STOP` likhe JSON payload shoho **Send** koren. |\n| `DELIVERED_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `DELIVERED_ACK` likhe JSON payload shoho **Send** koren. |\n| `READ_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `READ_ACK` likhe JSON payload shoho **Send** koren. |\n| `disconnect` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `disconnect` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **LISTENING** (Receive) | 📤 Server -> Client | `{ \"chatId\": \"66...\" }` | **Events** tab-e `TYPING_START` add koren listening-er jonno. |\n| `TYPING_STOP` | **LISTENING** (Receive) | 📤 Server -> Client | N/A | **Events** tab-e `TYPING_STOP` nam-er ekta event add koren jate server theke response ashole apni **Messages** pane-e dekhte paren. |\n\n\n### 4. Common Testing Scenarios\n- **Chatting**:\n    1. Login koren.\n    2. Socket connect koren.\n    3. `JOIN_CHAT` emit koren chatId diye.\n    4. Onno user theke message pathale apni listener events-e sheta paben.\n    ",
+      "item": []
     },
     {
-      "name": "User Module",
+      "name": "App Screens",
       "item": [
         {
-          "name": "Fetch own profile details",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/user/profile",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "user",
-                "profile"
-              ]
-            },
-            "description": "Get the currently authenticated user’s profile.\n\nAuthentication: Bearer token required (any role).\nSuccess 200: Returns user details and settings."
-          },
-          "response": []
-        },
-        {
-          "name": "Update own profile",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\r\n  \"phone\": \"+8801812345678\",\r\n  \"hospital\": \"Square Hospital\"\r\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+          "name": "Auth",
+          "item": [
+            {
+              "name": "1.1 Register",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"phone\": \"+123456789\",\n  \"country\": \"USA\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1995-05-15\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
                 }
-              }
+              },
+              "response": []
             },
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/user/profile",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "user",
-                "profile"
-              ]
-            },
-            "description": "Update current user profile and optional file uploads.\n\nAuthentication: Bearer token required.\nContent‑Type: multipart/form‑data (for files).\nEditable fields may include name, avatar, preferences.\nSuccess 200: Returns updated user."
-          },
-          "response": []
-        },
-        {
-          "name": "Get specific user details by ID (super admin)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/user/:id",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "user",
-                ":id"
-              ],
-              "variable": [
+            {
+              "name": "1.2 Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"deviceToken\": \"fcm-token-xyz\" // optional\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
                 {
-                  "key": "id"
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();",
+                      "if (response.success && response.data && response.data.accessToken) {",
+                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                      "    console.log(\"accessToken has been set in collection variables\");",
+                      "}",
+                      "if (response.success && response.data && response.data.refreshToken) {",
+                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
                 }
               ]
             },
-            "description": "Get a specific user by ID (admin).\n\nAuthentication: SUPER_ADMIN required.\nPath: :id — target user ID.\nSuccess 200: Returns user details."
-          },
-          "response": []
+            {
+              "name": "1.3 Verify OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/verify-otp",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "verify-otp"
+                  ]
+                },
+                "description": "Registration ba Forgot Password flow e OTP verify korar jonno use hoy.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();",
+                      "if (response.success && response.data && response.data.accessToken) {",
+                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                      "    console.log(\"accessToken has been set in collection variables\");",
+                      "}",
+                      "if (response.success && response.data && response.data.refreshToken) {",
+                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "1.4 Forgot Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/forgot-password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "forgot-password"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "1.5 Reset Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/reset-password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "reset-password"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"newPassword\": \"NewStrongPassword123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "1.6 Refresh Token",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/refresh-token",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "refresh-token"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();",
+                      "if (response.success && response.data && response.data.accessToken) {",
+                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                      "    console.log(\"accessToken has been set in collection variables\");",
+                      "}",
+                      "if (response.success && response.data && response.data.refreshToken) {",
+                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "1.7 Logout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "1.8 Resend OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/resend-verify-email",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "resend-verify-email"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"john@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "1.9 Google Login",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/google",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "google"
+                  ]
+                },
+                "description": "Opens Google OAuth2 consent screen."
+              },
+              "response": []
+            },
+            {
+              "name": "1.10 Google Callback",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/google/callback",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "google",
+                    "callback"
+                  ]
+                },
+                "description": ""
+              },
+              "response": []
+            }
+          ]
         },
         {
-          "name": "Public user details (guest allowed) — rate limited",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/user/:id/user",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "user",
-                ":id",
-                "user"
-              ],
-              "variable": [
-                {
-                  "key": "id"
-                }
-              ]
+          "name": "Home",
+          "item": [
+            {
+              "name": "2.1 Search Preference Cards",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards?visibility=public&searchTerm=keyword",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards"
+                  ],
+                  "query": [
+                    {
+                      "key": "visibility",
+                      "value": "public"
+                    },
+                    {
+                      "key": "searchTerm",
+                      "value": "keyword"
+                    }
+                  ]
+                },
+                "description": "Top search field theke public cards search korar jonno."
+              },
+              "response": []
             },
-            "description": "Fetch public‑safe details for a user by ID.\n\nAuthentication: Guest allowed.\nPath: :id — target user ID.\nRate limiting: Enabled.\nSuccess 200: Returns non‑sensitive profile fields."
-          },
-          "response": []
+            {
+              "name": "2.2 Get Cards Stats",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/stats",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    "stats"
+                  ]
+                },
+                "description": "Home screen-e stats dekhate use hoy. Total public cards ebong user-er nijer cards er count return kore."
+              },
+              "response": []
+            },
+            {
+              "name": "2.3 List Favorite Cards",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/users/me/favorites",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "users",
+                    "me",
+                    "favorites"
+                  ]
+                },
+                "description": "Home screen-er niche favorite list dekhate use hoy."
+              },
+              "response": []
+            },
+            {
+              "name": "2.4 Favorite a Card",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId/favorite",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId",
+                    "favorite"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Card favorite list-e add korar jonno."
+              },
+              "response": []
+            },
+            {
+              "name": "2.5 Unfavorite a Card",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId/favorite",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId",
+                    "favorite"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Favorite list theke remove korar jonno."
+              },
+              "response": []
+            },
+            {
+              "name": "2.6 Download a Card",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId/download",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId",
+                    "download"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Card download-er sonkhya (Download Count) 1 baranor jonno."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Preference Card Details",
+          "item": [
+            {
+              "name": "3.1 Get Card Details",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Card-er shob details (surgeon, supplies, sutures, workflow, etc.) fetch korar jonno."
+              },
+              "response": []
+            },
+            {
+              "name": "3.2 Increment Download Count",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId/download",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId",
+                    "download"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "User card download korle download count baranor jonno call kora hoy."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Library",
+          "item": [
+            {
+              "name": "4.1 List Public Preference Cards",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards?visibility=public&searchTerm=keyword&surgeonSpecialty=Orthopedics&verificationStatus=VERIFIED",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards"
+                  ],
+                  "query": [
+                    {
+                      "key": "visibility",
+                      "value": "public"
+                    },
+                    {
+                      "key": "searchTerm",
+                      "value": "keyword"
+                    },
+                    {
+                      "key": "surgeonSpecialty",
+                      "value": "Orthopedics"
+                    },
+                    {
+                      "key": "verificationStatus",
+                      "value": "VERIFIED"
+                    }
+                  ]
+                },
+                "description": "Library-r \"Preference Cards\" tab-e shob public cards search ebong filter korar jonno."
+              },
+              "response": []
+            },
+            {
+              "name": "4.2 List Private Preference Cards",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards?visibility=private&searchTerm=keyword&surgeonSpecialty=General",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards"
+                  ],
+                  "query": [
+                    {
+                      "key": "visibility",
+                      "value": "private"
+                    },
+                    {
+                      "key": "searchTerm",
+                      "value": "keyword"
+                    },
+                    {
+                      "key": "surgeonSpecialty",
+                      "value": "General"
+                    }
+                  ]
+                },
+                "description": "Library-r \"Private Cards\" tab-e user-er nijer create kora private cards search ebong filter korar jonno."
+              },
+              "response": []
+            },
+            {
+              "name": "4.3 Favorite a Card",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId/favorite",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId",
+                    "favorite"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Card favorite list-e add korar jonno."
+              },
+              "response": []
+            },
+            {
+              "name": "4.4 Unfavorite a Card",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId/favorite",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId",
+                    "favorite"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Favorite list theke remove korar jonno."
+              },
+              "response": []
+            },
+            {
+              "name": "4.5 Download a Card",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId/download",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId",
+                    "download"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Card download-er sonkhya (Download Count) 1 baranor jonno."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Calendar",
+          "item": [
+            {
+              "name": "5.1 List My Events",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/events?from=2026-04-01&to=2026-04-30",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "events"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-04-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-04-30"
+                    }
+                  ]
+                },
+                "description": "User-er shob events fetch korar jonno. Calendar view-er jonno date range pathano jay.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Surgery with Dr. Smith\",\n  \"date\": \"2026-04-15\",\n  \"time\": \"09:30\",\n  \"durationHours\": 3,\n  \"eventType\": \"SURGERY\",\n  \"location\": \"Main Hospital - OR 2\",\n  \"preferenceCard\": \"664a1b2c3d4e5f6a7b8c9d0x\",\n  \"notes\": \"Hip Replacement case\",\n  \"personnel\": {\n    \"leadSurgeon\": \"Dr. Smith\",\n    \"surgicalTeam\": [\"Nurse Joy\", \"Anesthesiologist Bob\"]\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "5.2 Create Event",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/events",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "events"
+                  ]
+                },
+                "description": "Naya event toiri korar jonno. Auto reminder set hoy (24h ebong 1h age).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Surgery with Dr. Smith\",\n  \"date\": \"2026-04-15\",\n  \"time\": \"09:30\",\n  \"durationHours\": 3,\n  \"eventType\": \"SURGERY\",\n  \"location\": \"Main Hospital - OR 2\",\n  \"preferenceCard\": \"664a1b2c3d4e5f6a7b8c9d0x\",\n  \"notes\": \"Hip Replacement case\",\n  \"personnel\": {\n    \"leadSurgeon\": \"Dr. Smith\",\n    \"surgicalTeam\": [\"Nurse Joy\", \"Anesthesiologist Bob\"]\n  }\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "5.3 Get Event Details",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/events/:eventId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "events",
+                    ":eventId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "eventId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Specific event-er full details fetch korar jonno (jekhane `:eventId` holo Event-er unique ID). Modal ba Details screen render korar age call kora hoy."
+              },
+              "response": []
+            },
+            {
+              "name": "5.4 Update Event",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/events/:eventId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "events",
+                    ":eventId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "eventId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Existing event-er (`:eventId`) title, date, time, location, notes, ba personnel update korar jonno. Reminders automatically reschedule hoy."
+              },
+              "response": []
+            },
+            {
+              "name": "5.5 Delete Event",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/events/:eventId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "events",
+                    ":eventId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "eventId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Kono event permanent-ly remove korার jonno."
+              },
+              "response": []
+            }
+          ]
         }
-      ],
-      "description": "User profile and admin user management endpoints."
+      ]
     },
     {
-      "name": "Notification Module",
-      "item": [
-        {
-          "name": "Notification list + unread count",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/notifications/",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "notifications",
-                ""
-              ]
-            },
-            "description": "Purpose: List notifications\nMethod: GET\nURL: {{BASE_URL}}/api/v1/notifications/\nNotes: POSTER/TASKER roles."
-          },
-          "response": []
-        },
-        {
-          "name": "Mark notification as read",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/notifications/:id/read",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "notifications",
-                ":id",
-                "read"
-              ],
-              "variable": [
-                {
-                  "key": "id"
-                }
-              ]
-            },
-            "description": "Purpose: Read notification\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/notifications/:id/read\nNotes: POSTER/TASKER roles."
-          },
-          "response": []
-        },
-        {
-          "name": "Mark all notifications as read",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/notifications/read-all",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "notifications",
-                "read-all"
-              ]
-            },
-            "description": "Purpose: Read all notifications\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/notifications/read-all\nNotes: POSTER/TASKER roles."
-          },
-          "response": []
-        },
-        {
-          "name": "Admin notifications list + unread",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/notifications/admin",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "notifications",
-                "admin"
-              ]
-            },
-            "description": "Purpose: Admin notifications\nMethod: GET\nURL: {{BASE_URL}}/api/v1/notifications/admin\nNotes: SUPER_ADMIN only."
-          },
-          "response": []
-        },
-        {
-          "name": "Admin mark specific notification read",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/notifications/admin/:id/read",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "notifications",
-                "admin",
-                ":id",
-                "read"
-              ],
-              "variable": [
-                {
-                  "key": "id"
-                }
-              ]
-            },
-            "description": "Purpose: Admin read notification\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/notifications/admin/:id/read\nNotes: SUPER_ADMIN only."
-          },
-          "response": []
-        },
-        {
-          "name": "Admin mark all notifications read",
-          "request": {
-            "method": "PATCH",
-            "header": [],
-            "url": {
-              "raw": "{{BASE_URL}}/api/v1/notifications/admin/read-all",
-              "host": [
-                "{{BASE_URL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "notifications",
-                "admin",
-                "read-all"
-              ]
-            },
-            "description": "Purpose: Admin read all\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/notifications/admin/read-all\nNotes: SUPER_ADMIN only."
-          },
-          "response": []
-        }
-      ],
-      "description": "User and admin notifications."
-    },
-    {
-      "name": "Admin APIs",
+      "name": "Dashboard Screens",
       "item": [
         {
           "name": "Auth",
           "item": [
             {
               "name": "1.1 Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"StrongPassword123!\",\n  \"deviceToken\": \"fcm-token-xyz\"  // optional\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
               "event": [
                 {
                   "listen": "test",
                   "script": {
                     "exec": [
-                      "let response = pm.response.json();\r",
-                      "\r",
-                      "if (response.success && response.data.accessToken) {\r",
-                      "    // Store in collection variable\r",
-                      "    pm.collectionVariables.set(\"AdminAccessToken\", response.data.accessToken);\r",
-                      "} else {\r",
-                      "    console.warn(\"Login failed or accessToken not found!\");\r",
-                      "}\r",
-                      ""
+                      "const response = pm.response.json();",
+                      "if (response.success && response.data && response.data.accessToken) {",
+                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                      "    console.log(\"accessToken has been set in collection variables\");",
+                      "}",
+                      "if (response.success && response.data && response.data.refreshToken) {",
+                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                      "}"
                     ],
-                    "type": "text/javascript",
-                    "packages": {},
-                    "requests": {}
+                    "type": "text/javascript"
                   }
                 }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"StrongPassword123!\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/auth/login",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "auth",
-                    "login"
-                  ]
-                },
-                "description": "Admin email ebong password input kore submit button e tap kore.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → loginUser\n- Service: auth.service.ts → loginUserFromDB"
-              },
-              "response": []
+              ]
             },
             {
-              "name": "1.2 Forgot Password",
+              "name": "1.2 Forget Password",
               "request": {
                 "method": "POST",
                 "header": [
@@ -602,23 +1174,26 @@
                     "type": "text"
                   }
                 ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@example.com\"\n}"
-                },
                 "url": {
-                  "raw": "{{BASE_URL}}/api/v1/auth/forgot-password",
+                  "raw": "{{baseUrl}}/auth/forgot-password",
                   "host": [
-                    "{{BASE_URL}}"
+                    "{{baseUrl}}"
                   ],
                   "path": [
-                    "api",
-                    "v1",
                     "auth",
                     "forgot-password"
                   ]
                 },
-                "description": "Email input kore OTP request pathay.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → forgetPassword\n- Service: auth.service.ts → forgetPasswordToDB"
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
               },
               "response": []
             },
@@ -633,25 +1208,46 @@
                     "type": "text"
                   }
                 ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"otp\": \"123456\"\n}"
-                },
                 "url": {
-                  "raw": "{{BASE_URL}}/api/v1/auth/verify-otp",
+                  "raw": "{{baseUrl}}/auth/verify-otp",
                   "host": [
-                    "{{BASE_URL}}"
+                    "{{baseUrl}}"
                   ],
                   "path": [
-                    "api",
-                    "v1",
                     "auth",
                     "verify-otp"
                   ]
                 },
-                "description": "Email e jawa OTP input kore submit kore.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → verifyEmail\n- Service: auth.service.ts → verifyEmailToDB"
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"otp\": \"123456\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
               },
-              "response": []
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();",
+                      "if (response.success && response.data && response.data.accessToken) {",
+                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                      "    console.log(\"accessToken has been set in collection variables\");",
+                      "}",
+                      "if (response.success && response.data && response.data.refreshToken) {",
+                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
             },
             {
               "name": "1.4 Reset Password",
@@ -662,25 +1258,33 @@
                     "key": "Content-Type",
                     "value": "application/json",
                     "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
                   }
                 ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"token\": \"<reset-token>\",\n  \"newPassword\": \"NewPassword123!\"\n}"
-                },
                 "url": {
-                  "raw": "{{BASE_URL}}/api/v1/auth/reset-password",
+                  "raw": "{{baseUrl}}/auth/reset-password",
                   "host": [
-                    "{{BASE_URL}}"
+                    "{{baseUrl}}"
                   ],
                   "path": [
-                    "api",
-                    "v1",
                     "auth",
                     "reset-password"
                   ]
                 },
-                "description": "New password input kore confirm kore.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → resetPassword\n- Service: auth.service.ts → resetPasswordToDB"
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"newPassword\": \"StrongPassword123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
               },
               "response": []
             },
@@ -695,1831 +1299,254 @@
                     "type": "text"
                   }
                 ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
-                },
                 "url": {
-                  "raw": "{{BASE_URL}}/api/v1/auth/refresh-token",
+                  "raw": "{{baseUrl}}/auth/refresh-token",
                   "host": [
-                    "{{BASE_URL}}"
+                    "{{baseUrl}}"
                   ],
                   "path": [
-                    "api",
-                    "v1",
                     "auth",
                     "refresh-token"
                   ]
                 },
-                "description": "Exchange refresh token for a new access token.\n\nImplementation:\n- Route: src/app/modules/auth/auth.route.ts\n- Controller: auth.controller.ts → refreshToken\n- Service: auth.service.ts → refreshToken"
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"deviceToken\": \"fcm-token-xyz\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const response = pm.response.json();",
+                      "if (response.success && response.data && response.data.accessToken) {",
+                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                      "    console.log(\"accessToken has been set in collection variables\");",
+                      "}",
+                      "if (response.success && response.data && response.data.refreshToken) {",
+                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ]
+            },
+            {
+              "name": "1.6 Logout",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/logout",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "logout"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"deviceToken\": \"fcm-token-xyz\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "1.7 Change Password",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/change-password",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "change-password"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewStrongPassword123!\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "1.8 Resend OTP",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/resend-verify-email",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "auth",
+                    "resend-verify-email"
+                  ]
+                },
+                "description": "",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"admin@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
               },
               "response": []
             }
           ]
         },
         {
-          "name": "Overview Page",
+          "name": "Overview",
           "item": [
             {
               "name": "2.1 Growth Metrics (Stats)",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
                 "url": {
-                  "raw": "{{BASE_URL}}/api/v1/admin/growth-metrics",
+                  "raw": "{{baseUrl}}/admin/growth-metrics",
                   "host": [
-                    "{{BASE_URL}}"
+                    "{{baseUrl}}"
                   ],
                   "path": [
-                    "api",
-                    "v1",
                     "admin",
                     "growth-metrics"
                   ]
                 },
-                "description": "Overall dashboard stats.\n\nImplementation:\n- Route: src/app/modules/admin/admin.route.ts\n- Controller: src/app/modules/admin/admin.controller.ts — getDashboardStats\n- Service: src/app/modules/admin/admin.service.ts — getAdminDashboardStats"
+                "description": "Dashboard-er summary cards-er jonno ei endpoint use hoy. Monthly growth calculate kore: current month vs last month."
               },
               "response": []
             },
             {
               "name": "2.2 Monthly Preference Cards Trend",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
                 "url": {
-                  "raw": "{{BASE_URL}}/api/v1/admin/preference-cards/monthly",
+                  "raw": "{{baseUrl}}/admin/preference-cards/monthly",
                   "host": [
-                    "{{BASE_URL}}"
+                    "{{baseUrl}}"
                   ],
                   "path": [
-                    "api",
-                    "v1",
                     "admin",
                     "preference-cards",
                     "monthly"
                   ]
                 },
-                "description": "Monthly preferences trend data.\n\nImplementation:\n- Route: src/app/modules/admin/admin.route.ts\n- Controller: src/app/modules/admin/admin.controller.ts — getPreferenceCardMonthly\n- Service: src/app/modules/admin/admin.service.ts — getPreferenceCardMonthlyTrend"
+                "description": "Preference cards-er monthly trend chart render korar jonno data return kore. YoY comparison inline series e embedded — frontend ke আলাদা calculate korte hobe na."
               },
               "response": []
             },
             {
               "name": "2.3 Monthly Active Subscriptions Trend",
               "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
                 "method": "GET",
-                "header": [],
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
                 "url": {
-                  "raw": "{{BASE_URL}}/api/v1/admin/subscriptions/active/monthly",
+                  "raw": "{{baseUrl}}/admin/subscriptions/active/monthly",
                   "host": [
-                    "{{BASE_URL}}"
+                    "{{baseUrl}}"
                   ],
                   "path": [
-                    "api",
-                    "v1",
                     "admin",
                     "subscriptions",
                     "active",
                     "monthly"
                   ]
                 },
-                "description": "Monthly subscriptions trend data.\n\nImplementation:\n- Route: src/app/modules/admin/admin.route.ts\n- Controller: src/app/modules/admin/admin.controller.ts — getActiveSubscriptionMonthly\n- Service: src/app/modules/admin/admin.service.ts — getActiveSubscriptionMonthlyTrend"
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Doctors Page",
-          "item": [
-            {
-              "name": "3.1 Get/Search Doctors",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/doctors",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "doctors"
-                  ]
-                },
-                "description": "List/Search with pagination.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — getDoctors\n- Service: src/app/modules/doctor/doctor.service.ts — searchDoctors"
-              },
-              "response": []
-            },
-            {
-              "name": "3.2 Create Doctor",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Dr. Jane Smith\",\n  \"email\": \"dr.jane@example.com\",\n  \"password\": \"Password123!\",\n  \"specialization\": \"Dermatology\",\n  \"phone\": \"+123456789\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/doctors",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "doctors"
-                  ]
-                },
-                "description": "New doctor registration.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — createDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — createDoctor"
-              },
-              "response": []
-            },
-            {
-              "name": "3.3 Update Doctor",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Dr. Jane Updated\",\n  \"specialization\": \"Oncology\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/doctors/:id",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "doctors",
-                    ":id"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "664a1b2c3d4e5f6a7b8c9d0f"
-                    }
-                  ]
-                },
-                "description": "Update doctor details.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — updateDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — updateDoctorProfile"
-              },
-              "response": []
-            },
-            {
-              "name": "3.4 Block Doctor",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/doctors/:id/block",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "doctors",
-                    ":id",
-                    "block"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "664a1b2c3d4e5f6a7b8c9d0e"
-                    }
-                  ]
-                },
-                "description": "Block access.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — blockDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — blockDoctor"
-              },
-              "response": []
-            },
-            {
-              "name": "3.5 Unblock Doctor",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/doctors/:id/unblock",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "doctors",
-                    ":id",
-                    "unblock"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "664a1b2c3d4e5f6a7b8c9d0e"
-                    }
-                  ]
-                },
-                "description": "Restore access.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — unblockDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — unblockDoctor"
-              },
-              "response": []
-            },
-            {
-              "name": "3.6 Delete Doctor",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/doctors/:id",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "doctors",
-                    ":id"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "664a1b2c3d4e5f6a7b8c9d0e"
-                    }
-                  ]
-                },
-                "description": "Hard/Soft delete.\n\nImplementation:\n- Route: src/app/modules/doctor/doctor.route.ts\n- Controller: src/app/modules/doctor/doctor.controller.ts — deleteDoctor\n- Service: src/app/modules/doctor/doctor.service.ts — deleteDoctor"
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Sutures",
-          "item": [
-            {
-              "name": "Create Sutures",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Gloves sutures\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/sutures",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "sutures"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "List Sutures",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/sutures",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "sutures"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update Sutures",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Surgical Gloves\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/sutures/{{sutures_id}}",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "sutures",
-                    "{{sutures_id}}"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Delete Sutures",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/sutures/{{sutures_id}}",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "sutures",
-                    "{{sutures_id}}"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Bulk Create Sutures",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"items\": [\n        {\n            \"name\": \"Scalpel\"\n        },\n        {\n            \"name\": \"Syringe\"\n        },\n        {\n            \"name\": \"Gloves\"\n        }\n    ]\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/sutures/bulk",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "sutures",
-                    "bulk"
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Supplies",
-          "item": [
-            {
-              "name": "Create Supply",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Gloves Single\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/supplies",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "supplies"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "List Supplies",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/supplies",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "supplies"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update Supply",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Surgical Gloves\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/supplies/{{supply_id}}",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "supplies",
-                    "{{supply_id}}"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Delete Supply",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{token}}"
-                  }
-                ],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/supplies/{{supply_id}}",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "supplies",
-                    "{{supply_id}}"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Bulk Create Supplies",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"items\": [\n        {\n            \"name\": \"Scalpel\"\n        },\n        {\n            \"name\": \"Syringe\"\n        },\n        {\n            \"name\": \"Gloves\"\n        }\n    ]\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/supplies/bulk",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "supplies",
-                    "bulk"
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Preference Cards Page",
-          "item": [
-            {
-              "name": "list all cards",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/public",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    "public"
-                  ]
-                },
-                "description": "Purpose: Admin list all cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/admin\nNotes: SUPER_ADMIN only."
-              },
-              "response": []
-            },
-            {
-              "name": "Get preference card details by ID",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    ":id"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "698504e8154744318b2ee268"
-                    }
-                  ]
-                },
-                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Approve preference card",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/approve",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    ":id",
-                    "approve"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "6982881cff2e9e7a2354a74e"
-                    }
-                  ]
-                },
-                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Reject preference card",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/reject",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    ":id",
-                    "reject"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "6982881cff2e9e7a2354a74e"
-                    }
-                  ]
-                },
-                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "legal",
-          "item": [
-            {
-              "name": "Create a new legal page",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"title\": \"Terms & Conditions\",\r\n    \"content\": \"<h1>Terms</h1><p>Your full terms content here...</p>\"\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/legal",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "legal"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Update legal page",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{AdminAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"title\": \"Terms & Conditions\",\r\n    \"content\": \"<h1>Terms</h1><p>Your full terms content here...</p>\"\r\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/legal",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "legal"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Get single legal page by id",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/legal/699b638c10dc89fb9c195a68",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "legal",
-                    "699b638c10dc89fb9c195a68"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "list all legal pages",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/legal/699b638c10dc89fb9c195a68",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "legal",
-                    "699b638c10dc89fb9c195a68"
-                  ]
-                }
-              },
-              "response": []
-            }
-          ]
-        }
-      ],
-      "description": "Admin dashboard stats and counts."
-    },
-    {
-      "name": "App APIs",
-      "item": [
-        {
-          "name": "Auth Screen",
-          "item": [
-            {
-              "name": "Create new user",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"test-jiggalala@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone\": \"+8801712345678\",\n  \"country\": \"Bangladesh\"\n}\n"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/user",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "user"
-                  ]
-                },
-                "description": "Register a new user account.  \nRequest Body: name, email, password.  \nValidation: Email uniqueness; password strength policy.  \nRate limiting: Enabled to prevent abuse.  \nSuccess 201: Returns created user (without password)."
-              },
-              "response": []
-            },
-            {
-              "name": "User login",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "let response = pm.response.json();\r",
-                      "\r",
-                      "if (response.success && response.data.accessToken) {\r",
-                      "    // Store in collection variable\r",
-                      "    pm.collectionVariables.set(\"UserAccessToken\", response.data.accessToken);\r",
-                      "} else {\r",
-                      "    console.warn(\"Login failed or accessToken not found!\");\r",
-                      "}\r",
-                      ""
-                    ],
-                    "type": "text/javascript",
-                    "packages": {},
-                    "requests": {}
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"email\": \"mdbayazid131@gmail.com\",\n    \"password\": \"12Ab....@\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/auth/login",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "auth",
-                    "login"
-                  ]
-                },
-                "description": "Login a user and issue tokens.\n\nAuthentication: Public (no token required).\n\nRequest Body:\n\n- email (string, required)\n    \n- password (string, required)\n    \n\nSuccess 200: Returns accessToken, refreshToken, and user profile.  \nErrors: 400 invalid credentials, 429 too many attempts."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Home Screen",
-          "item": [
-            {
-              "name": "Cards count: public cards and user's own cards",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/count",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    "count"
-                  ]
-                },
-                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Card details by ID",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    ":id"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "698511d61628e7ac5c59e620"
-                    }
-                  ]
-                },
-                "description": "Purpose: Get card by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/:id\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Create preference card public",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"cardTitle\": \"General Surgery Preference Card\",\n    \"surgeon\": {\n        \"fullName\": \"Dr. John Doe\",\n        \"handPreference\": \"Right\",\n        \"specialty\": \"General Surgery\",\n        \"contactNumber\": \"0123456789\",\n        \"musicPreference\": \"Soft Music\"\n    },\n    \"medication\": \"Standard anesthesia\",\n    \"supplies\": [\n        { \"name\": \"6983a0caa236145d67735403\", \"quantity\": 5 },\n        { \"name\": \"Sterile Gauze Pads\", \"quantity\": 10 }\n    ],\n    \"sutures\": [\n        { \"name\": \"697be9a9757b11947477e9ad\", \"quantity\": 3 },\n        { \"name\": \"3-0 Vicryl\", \"quantity\": 2 }\n    ],\n    \"instruments\": \"Standard surgical instrument set\",\n    \"positioningEquipment\": \"Supine position\",\n    \"prepping\": \"Betadine skin preparation\",\n    \"workflow\": \"Standard surgical workflow followed\",\n    \"keyNotes\": \"Ensure all sterile protocols are maintained\",\n    \"photoLibrary\": [],\n    \"published\": true\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card"
-                  ]
-                },
-                "description": "Purpose: Create card\nMethod: POST\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Create preference card private",
-              "protocolProfileBehavior": {
-                "disableBodyPruning": true
-              },
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"cardTitle\": \"General Surgery Preference Card\",\n    \"surgeon\": {\n        \"fullName\": \"Md bayzid hosen\",\n        \"handPreference\": \"Right\",\n        \"specialty\": \"General Surgery\",\n        \"contactNumber\": \"0123456789\",\n        \"musicPreference\": \"Soft Music\"\n    },\n    \"medication\": \"Standard anesthesia\",\n    \"supplies\": [\n        { \"name\": \"697be6221c5624691bc89e38\", \"quantity\": 5 },\n        { \"name\": \"697be60a1c5624691bc89e30\", \"quantity\": 3 },\n        { \"name\": \"Surgical Tape\", \"quantity\": 8 }\n    ],\n    \"sutures\": [\n        { \"name\": \"697be9a9757b11947477e9ad\", \"quantity\": 4 }\n    ],\n    \"instruments\": \"Standard surgical instrument set\",\n    \"positioningEquipment\": \"Supine position\",\n    \"prepping\": \"Betadine skin preparation\",\n    \"workflow\": \"Standard surgical workflow followed\",\n    \"keyNotes\": \"Ensure all sterile protocols are maintained\",\n    \"photoLibrary\": [],\n    \"published\": false\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/private",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    "private"
-                  ]
-                },
-                "description": "Purpose: Create card\nMethod: POST\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "List Sutures",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/sutures",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "sutures"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "List Supplies",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/supplies",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "supplies"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Increment download count",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/download",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    ":id",
-                    "download"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "6983a0f7a236145d67735409"
-                    }
-                  ]
-                },
-                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "List all favorite cards for the authenticated user",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/favorites",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    "favorites"
-                  ]
-                },
-                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Library screen",
-          "item": [
-            {
-              "name": "Get all public cards",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/public",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    "public"
-                  ],
-                  "query": [
-                    {
-                      "key": "searchTerm",
-                      "value": "General Surgery Preference Card",
-                      "disabled": true
-                    },
-                    {
-                      "key": "verificationStatus",
-                      "value": "VERIFIED",
-                      "type": "text",
-                      "disabled": true
-                    }
-                  ]
-                },
-                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Get user own created privet cards",
-              "protocolProfileBehavior": {
-                "disableBodyPruning": true
-              },
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/private?searchTerm=General Surgery Preference Card&verificationStatus=UNVERIFIED",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    "private"
-                  ],
-                  "query": [
-                    {
-                      "key": "searchTerm",
-                      "value": "General Surgery Preference Card"
-                    },
-                    {
-                      "key": "verificationStatus",
-                      "value": "UNVERIFIED"
-                    }
-                  ]
-                },
-                "description": "Purpose: List my cards\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Card details by ID",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    ":id"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "698647b5ea96e311416673e9"
-                    }
-                  ]
-                },
-                "description": "Purpose: Get card by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/:id\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Favorite create",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/favorite",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    ":id",
-                    "favorite"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "69949d7eb3dcf145cdf02495"
-                    }
-                  ]
-                },
-                "description": "Purpose: Get card by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/:id\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Remove Favorite",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/preference-card/:id/favorite",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "preference-card",
-                    ":id",
-                    "favorite"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "69949d7eb3dcf145cdf02495"
-                    }
-                  ]
-                },
-                "description": "Purpose: Get card by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/preference-card/:id\nNotes: Auth required."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Event Screen",
-          "item": [
-            {
-              "name": "Create event",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n    \"title\": \"Surgery\",\n    \"date\": \"2024-02-10\",\n    \"time\": \"10:30\",\n    \"durationHours\": 2,\n    \"eventType\": \"SURGERY\",\n    \"location\": \"OR-1\",\n    \"notes\": \"Patient must be fasting for 8 hours\",\n    \"preferenceCard\":\"6994ec39b3dcf145cdf0252a\",\n    \"personnel\": {\n        \"leadSurgeon\": \"Dr. Ahmed\",\n        \"surgicalTeam\": [\n            \"Dr. Rahman\",\n            \"Nurse Fatima\",\n            \"Anesthetist Karim\"\n        ]\n    }\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/events",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "events"
-                  ]
-                },
-                "description": "Purpose: Create event\nMethod: POST\nURL: {{BASE_URL}}/api/v1/events/\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Delete event",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "DELETE",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/events/:id",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "events",
-                    ":id"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "69864afaea96e311416673f1"
-                    }
-                  ]
-                },
-                "description": "Purpose: Delete event\nMethod: DELETE\nURL: {{BASE_URL}}/api/v1/events/:id\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "List my events",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/events",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "events"
-                  ]
-                },
-                "description": "Purpose: List my events\nMethod: GET\nURL: {{BASE_URL}}/api/v1/events/\nNotes: Auth required; supports filters."
-              },
-              "response": []
-            },
-            {
-              "name": "Event details",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/events/:id",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "events",
-                    ":id"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "6995f7578e9f27652e427011"
-                    }
-                  ]
-                },
-                "description": "Purpose: Get event by ID\nMethod: GET\nURL: {{BASE_URL}}/api/v1/events/:id\nNotes: Auth required."
-              },
-              "response": []
-            },
-            {
-              "name": "Update event",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"title\": \"Updated Title\"\n}"
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/events/:id",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "events",
-                    ":id"
-                  ],
-                  "variable": [
-                    {
-                      "key": "id",
-                      "value": "698650ce82f65364edfe4496"
-                    }
-                  ]
-                },
-                "description": "Purpose: Update event\nMethod: PATCH\nURL: {{BASE_URL}}/api/v1/events/:id\nNotes: Auth required."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "Profile Screen",
-          "item": [
-            {
-              "name": "Fetch Own Profile (My Profile)",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/user/profile",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "user",
-                    "profile"
-                  ]
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "Edit Own Profile",
-              "request": {
-                "auth": {
-                  "type": "bearer",
-                  "bearer": [
-                    {
-                      "key": "token",
-                      "value": "{{UserAccessToken}}",
-                      "type": "string"
-                    }
-                  ]
-                },
-                "method": "PATCH",
-                "header": [],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\r\n    \"name\": \"Update Name\",\r\n    \"phone\": \"+8801700000000\",\r\n    \"location\": \"Dhaka\",\r\n    \"gender\": \"female\",\r\n    \"specialty\": \"Cardiology\",\r\n    \"hospital\": \"City Hospital\",\r\n    \"email\":\"mdbayazid131@gmail.com\"\r\n}\r\n",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{BASE_URL}}/api/v1/user/profile",
-                  "host": [
-                    "{{BASE_URL}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "user",
-                    "profile"
-                  ]
-                }
+                "description": "Active subscriptions-er monthly analytics return kore — same shape as 2.2. YoY data inline series e embedded."
               },
               "response": []
             }
@@ -2528,52 +1555,21 @@
       ]
     }
   ],
-  "auth": {
-    "type": "bearer",
-    "bearer": [
-      {
-        "key": "token",
-        "value": "{{accessToken}}",
-        "type": "string"
-      }
-    ]
-  },
-  "event": [
-    {
-      "listen": "prerequest",
-      "script": {
-        "type": "text/javascript",
-        "packages": {},
-        "requests": {},
-        "exec": [
-          ""
-        ]
-      }
-    },
-    {
-      "listen": "test",
-      "script": {
-        "type": "text/javascript",
-        "packages": {},
-        "requests": {},
-        "exec": [
-          ""
-        ]
-      }
-    }
-  ],
   "variable": [
     {
-      "key": "BASE_URL",
-      "value": "http://localhost:5000"
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string"
     },
     {
-      "key": "UserAccessToken",
-      "value": ""
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
     },
     {
-      "key": "AdminAccessToken",
-      "value": ""
+      "key": "refreshToken",
+      "value": "",
+      "type": "string"
     }
   ]
 }

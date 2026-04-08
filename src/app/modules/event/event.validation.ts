@@ -12,18 +12,38 @@ export const createEventZodSchema = z.object({
     location: z.string().optional(),
     preferenceCard: z.string().optional(),
     notes: z.string().optional(),
+    personnel: z
+      .object({
+        leadSurgeon: z.string().min(1, 'Lead surgeon is required'),
+        surgicalTeam: z.array(z.string()).optional(),
+      })
+      .optional(),
   }),
 });
 
 export const updateEventZodSchema = z.object({
   body: z.object({
     title: z.string().min(1).optional(),
-    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-    time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+    date: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    time: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/)
+      .optional(),
     durationHours: z.number().positive().optional(),
-    eventType: z.enum(Object.values(EVENT_TYPE) as [string, ...string[]]).optional(),
+    eventType: z
+      .enum(Object.values(EVENT_TYPE) as [string, ...string[]])
+      .optional(),
     location: z.string().optional(),
     preferenceCard: z.string().optional(),
     notes: z.string().optional(),
+    personnel: z
+      .object({
+        leadSurgeon: z.string().optional(),
+        surgicalTeam: z.array(z.string()).optional(),
+      })
+      .optional(),
   }),
 });
