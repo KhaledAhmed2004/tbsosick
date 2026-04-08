@@ -32,7 +32,7 @@ Design scalable NoSQL schemas for MongoDB using Mongoose. Covers document struct
 - **Referencing**: Use for large one-to-many or many-to-many relationships (e.g., users to orders, products to categories).
 - **Embedded Sub-schemas**: Define sub-schemas without `_id` when they don't need independent identity (e.g., `_id: false`).
 
-Refer to [codebase-blueprint.md](file:///.claude/rules/codebase-blueprint.md#L2) for Mongoose model and schema templates.
+Refer to [codebase-blueprint.md](file:///.trae/templates/codebase-blueprint.md#L2) for Mongoose model and schema templates.
 
 ### 2. Indexing Strategies
 

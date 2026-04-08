@@ -1,41 +1,27 @@
 # CLAUDE.md — Master AI Hub
 
-> This is the **single source of truth** for all AI tools working on this repository.
-> Claude Code, Trae, Antigravity, and Cursor all point here.
-> Update this file → all tools get the update automatically.
-
----
-
-## Project Overview
-
-Enterprise-grade TypeScript backend (tbsosick).
+> Single source of truth for all AI tools (Claude Code, Trae, Antigravity, Cursor).
 
 **Tech Stack**: TypeScript + Express + MongoDB/Mongoose + Socket.IO + Stripe + OpenTelemetry
 
----
-
-## 🌐 Universal AI Instructions
-
-> These instructions apply to **every AI tool** that reads this file — Claude Code, Trae, Antigravity, Cursor, or any other tool.
-> There are no tool-specific roles or limitations. All capabilities are available to all tools equally.
-
-**As an AI working on this project, you MUST:**
-
-1. **Follow coding rules** — Architecture, clean code, and route design rules are in this file. Apply them always.
-2. **Use Skills when relevant** — Skills live in `.trae/skills/`. Any tool can read and follow a SKILL.md. See the Skill Routing section below.
-3. **Follow Workflows for multi-step tasks** — Workflows live in `.agent/workflows/`. Any tool can read and execute a workflow step-by-step.
-4. **Plan before acting** — For any non-trivial task (3+ steps), write a plan first.
-5. **Verify your work** — Never mark a task complete without proof (build passing, tests run, endpoint tested).
-
-**Available capabilities (use any, always):**
-- 📜 Coding Rules → embedded in this file
-- ⚡ Skills → `.trae/skills/` (see Skill Index below)
-- 🔁 Workflows → `.agent/workflows/` (see Workflow Index below)
-- 📋 Code Templates → `.claude/rules/codebase-blueprint.md`
+**Resources** (on-demand, read when needed):
+- Templates: `.trae/templates/codebase-blueprint.md`
+- Skills: `.trae/skills/[name]/SKILL.md`
+- Workflows: `.trae/workflows/`
 
 ---
 
-## 🚀 Development Commands
+## AI Instructions
+
+1. Follow coding rules below. Always.
+2. Use Skills when request matches the Skill Routing table.
+3. Follow Workflows for multi-step tasks (read `.trae/workflows/`).
+4. Plan before acting (3+ steps).
+5. Verify work — build passing, tests run, endpoint tested.
+
+---
+
+## Development Commands
 
 ```bash
 npm run dev              # Start dev server
@@ -44,16 +30,13 @@ npm run lint:fix        # Auto-fix linting
 npm run prettier:fix    # Auto-format
 npm test                # Vitest watch mode
 npm run test:run        # Run tests once
-
-node scripts/code-review/reviewer.js       # Code Review CLI
-node scripts/generate-diagrams.js         # Mermaid Diagram Generator
 ```
 
 ---
 
-## ⚠️ CRITICAL: Import Order (MANDATORY)
+## CRITICAL: Import Order (MANDATORY)
 
-Import order in `src/app.ts` and `src/server.ts` is **MANDATORY** — violation causes runtime errors:
+Import order in `src/app.ts` and `src/server.ts` — violation causes runtime errors:
 
 1. `mongooseMetrics` — Before any Mongoose models compile
 2. `autoLabelBootstrap` — Before routes/controllers load
@@ -63,190 +46,66 @@ Import order in `src/app.ts` and `src/server.ts` is **MANDATORY** — violation 
 
 ---
 
-## 📐 Architecture Rules
+## Architecture Rules
 
-### Module Pattern
-Every feature lives in `src/app/modules/[feature]/`:
-- `[feature].interface.ts` — Types, enums, model type
-- `[feature].model.ts` — Mongoose schema + statics
-- `[feature].controller.ts` — Thin request handlers (`catchAsync`)
-- `[feature].service.ts` — Fat business logic (`ApiError`)
-- `[feature].route.ts` — Express routes (middleware chain)
-- `[feature].validation.ts` — Zod schemas
+Every feature: `src/app/modules/[feature]/` with `interface.ts`, `model.ts`, `controller.ts`, `service.ts`, `route.ts`, `validation.ts`. See `codebase-blueprint.md` for templates.
 
-**Request Flow**: Route → `validateRequest(ZodSchema)` → Controller (`catchAsync`) → Service → Model → `sendResponse()`
+**Flow**: Route -> `validateRequest(Zod)` -> Controller (`catchAsync`) -> Service (`ApiError`) -> Model -> `sendResponse()`
 
-### Query Builders
-- **QueryBuilder** (`app/builder/QueryBuilder.ts`): Chainable `.search()`, `.filter()`, `.sort()`, `.paginate()`, `.fields()`
-- **AggregationBuilder** (`app/builder/AggregationBuilder.ts`): Chainable `.match()`, `.lookup()`, `.unwind()`, `.group()`, `.sort()`, `.paginate()`
-
-### File Upload (`src/app/middlewares/fileHandler.ts`)
-- Providers: `local`, `s3`, `cloudinary`, `memory`
-- Simple: `fileHandler(['field1', 'field2'])`
-- Advanced: `fileHandler({ maxFileSizeMB: 500, maxFilesTotal: 6, ... })`
-- File URLs injected into `req.body` after middleware runs
-
-### Socket.IO
-- JWT-authenticated real-time features
-- Connection validated in `socketHelper.ts`
-- Rooms: Private `user:{userId}` and chat rooms
-- Helpers: `presenceHelper.ts` (online status), `unreadHelper.ts` (unread counts)
-
-### Payment (Stripe)
-- Components: `stripe.adapter.ts`, `payment.service.ts`, `stripeConnect.service.ts`, `webhook.controller.ts`
-- Flow: Create PaymentIntent → Hold funds (PENDING) → Transfer to seller on completion
-
-### Observability (OpenTelemetry)
-- Auto-Labeling: Classes named `*Controller` or `*Service` get automatic span creation
-- Request Context: `getRequestContext()` from `requestContext.ts`
-- Mongoose Metrics: Auto `.explain()` on queries
+- **Controllers**: Thin — HTTP only, no business logic
+- **Services**: Fat — all logic, DB interaction, throw `ApiError(StatusCode, msg)`
+- **QueryBuilder** (`app/builder/QueryBuilder.ts`): `.search()`, `.filter()`, `.sort()`, `.paginate()`, `.fields()`
+- **AggregationBuilder** (`app/builder/AggregationBuilder.ts`): `.match()`, `.lookup()`, `.unwind()`, `.group()`
+- **File Upload**: `fileHandler(['field'])` or `fileHandler({ maxFileSizeMB, maxFilesTotal, ... })`
+- **Observability**: Auto-labeling on `*Controller`/`*Service` classes, `getRequestContext()`, Mongoose metrics
+- **Env vars**: via `config/index.ts`, NOT `process.env`
 
 ---
 
-## 🧹 Clean Code Rules
+## Clean Code Rules
 
-### Naming
-- Meaningful names: `userSubscription` NOT `sub`
-- Boolean prefix: `isActive`, `hasPermission`, `shouldRetry`
-- Variables/functions: `camelCase`; Classes/interfaces: `PascalCase`
-- Files: `[feature].route.ts` (singular, not `.routes.ts`)
-- Paths: plural kebab-case (`/api/v1/users`, `/my-courses`)
-
-### Functions
-- Keep functions < 30 lines
-- Use `async/await` — no raw promises
-- Use object destructuring for multiple properties
-
-### Layered Architecture
-- **Controllers (Thin)**: HTTP handling only — extract data, call service, send response. No business logic.
-- **Services (Fat)**: All business logic, data transformation, DB interaction.
-- **Models**: Schema and statics only.
-
-### Stack Specifics
-- Zod schemas in `[feature].validation.ts`, always use `validateRequest`
-- Use `.lean()` for read-only Mongoose queries
-- Index all search/filter fields in Mongoose
-- Access env vars via `config/index.ts`, NOT `process.env` directly
-- Throw `ApiError(StatusCode, message)` for controlled errors
+- Meaningful names (`userSubscription` not `sub`), booleans: `isActive`, `hasPermission`
+- `camelCase` vars/functions, `PascalCase` classes/interfaces
+- Files: `[feature].route.ts` (singular). Paths: plural kebab-case (`/api/v1/users`)
+- Functions < 30 lines, `async/await` only, object destructuring
+- Zod in `[feature].validation.ts`, `.lean()` for read-only queries, index search/filter fields
 
 ---
 
-## 🛣️ Route Design Rules
+## Route Design Rules
 
-### Middleware Chain (Canonical Order)
-`rateLimit` → `auth` → `fileHandler` → `validateRequest` → `Controller`
+**Middleware order**: `rateLimit` -> `auth` -> `fileHandler` -> `validateRequest` -> `Controller`
 
-### Declaration Order in Route Files (CRITICAL)
-Express matches routes order. Fixed paths MUST come before param paths:
-1. `POST /webhook` (no auth)
-2. Collection-level fixed paths (`POST /`, `GET /`, `GET /stats`, `GET /my-items`)
-3. Single resource by param (`GET /:id`, `PATCH /:id`, `DELETE /:id`)
-4. Nested sub-resources (`POST /:id/modules`)
+**Declaration order** (CRITICAL — Express matches in order):
+1. Fixed paths first (`/webhook`, `/stats`, `/my-items`)
+2. Param paths after (`/:id`, `/:id/modules`)
 
-### HTTP Methods
-- `GET` → Read
-- `POST` → Create or trigger action (`POST /auth/login`, `POST /:id/refund`)
-- `PATCH` → Partial update or state toggle (`PATCH /:id/block`)
-- `DELETE` → Remove
-- Actions as suffix: `PATCH /:id/block` NOT `/block/:id`
+**Methods**: GET=read, POST=create/action, PATCH=update/toggle, DELETE=remove. Actions as suffix: `PATCH /:id/block`
 
-### Postman Collection
-- **Location**: `public/postman-collection.json` — single source of truth
-- **Update on EVERY route change** (add/modify/remove)
-- Organized by frontend screens, not backend modules
-- Use `{{baseUrl}}`, `{{accessToken}}`, `{{refreshToken}}` variables
+**Postman**: `public/postman-collection.json` — update on EVERY route change, use `{{baseUrl}}`/`{{accessToken}}`
 
 ---
 
-## 📖 Documentation Standards
+## Workflow Rules
 
-- **No code without docs**: Update docs when modifying modules, schemas, endpoints
-- **Critical systems**: Dedicated file in `docs/`
-- **Helpers**: Inline JSDoc + examples
-- **Language**: Bangla for architecture rationale; English for technical references
-
-### Module Docs Status
-
-| Module | Status | File |
-|---|---|---|
-| Logging & Tracing | ✅ Complete | `docs/logging-tracing-system-deep-dive-bn.md` |
-| Payment System | ✅ Complete | `docs/payment-module-architecture-bn.md` |
-| Messaging | ✅ Complete | `docs/messaging-system-deep-dive-bn.md` |
-| Architecture | ✅ Complete | `.claude/rules/architecture.md` |
-| Route Design | ✅ Complete | `.claude/rules/route-design.md` |
-| API Audits | ✅ Complete | `docs/audits/api-audit-report.md` |
+- Simplicity first, root cause fixes, plan before acting, verify with tests
+- Docs: Bangla for architecture rationale, English for technical references
 
 ---
 
-## ⚙️ Workflow Rules
+## Skill Routing
 
-- **Simplicity First**: Minimal code impact, clean solutions. No hacks.
-- **Root Cause**: No temporary fixes. Find and fix the actual problem.
-- **Plan Mode**: Required for non-trivial tasks (3+ steps).
-- **Verification**: Never mark a task complete without running tests or showing proof.
-- **Self-Improvement**: Use `skill-optimizer` from `.trae/skills/` periodically.
+When request matches, invoke the skill FIRST:
 
-### Task Flow
-1. Plan → Write actionable items
-2. Track → Mark items complete as you go
-3. Verify → Run tests and demonstrate functionality
-4. Document → Summarize changes and update relevant docs
-
----
-
-## 🧠 Skill Routing Rules
-
-When user request matches, ALWAYS invoke the Skill tool FIRST. Do not answer directly.
-
-| Request Type | Invoke Skill |
+| Request Type | Skill |
 |---|---|
-| Product ideas, brainstorming, "is this worth building" | `gstack-office-hours` |
-| Plan review, "think bigger", strategy | `gstack-ceo-review` |
-| Code review, "check my diff", security check | `gstack-review` |
-| Bugs, testing, edge cases, "test this" | `gstack-qa` / `superpowers-tdd` |
-| Research, comparing libraries, "find a solution" | `gstack-browse` |
-| Feature specs, requirements, "build this from scratch" | `gsd-spec` |
-| Context rot, long conversation, "what's the progress" | `gsd-state` |
-| Complex bug, "why is this failing", root cause | `superpowers-debugging` |
-| UX Flow doc, screen-by-screen API specs | `ux-flow-api-docs` |
-| REST API design, schema audit, Mongoose modeling | `api-design` / `nosql-database-design` |
-
----
-
-## ⚡ Skill Index (`.trae/skills/`)
-
-### Core Skills
-- **[api-design](file:///.trae/skills/api-design/SKILL.md)**: REST API design, building, auditing
-- **[code-reviewer](file:///.trae/skills/code-reviewer/SKILL.md)**: Senior-level code reviews
-- **[nosql-database-design](file:///.trae/skills/nosql-database-design/SKILL.md)**: Mongoose schema + MongoDB modeling
-- **[typescript](file:///.trae/skills/typescript/SKILL.md)**: Type-safe, maintainable TypeScript
-- **[ux-flow-api-docs](file:///.trae/skills/ux-flow-api-docs/SKILL.md)**: Screen-by-screen API docs in Banglish
-- **[skill-optimizer](file:///.trae/skills/skill-optimizer/SKILL.md)**: Rule refinement and self-improvement
-
-### Gstack Specialist Skills
-- **[gstack-office-hours](file:///.trae/skills/gstack-office-hours/SKILL.md)**: Product Architect brainstorming (Banglish)
-- **[gstack-ceo-review](file:///.trae/skills/gstack-ceo-review/SKILL.md)**: Founder-mode plan review (Banglish)
-- **[gstack-review](file:///.trae/skills/gstack-review/SKILL.md)**: Senior Engineer code review (Banglish)
-- **[gstack-qa](file:///.trae/skills/gstack-qa/SKILL.md)**: QA Lead testing and bug finding (Banglish)
-- **[gstack-browse](file:///.trae/skills/gstack-browse/SKILL.md)**: Deep research and first-principles search (Banglish)
-
-### GSD Skills
-- **[gsd-spec](file:///.trae/skills/gsd-spec/SKILL.md)**: Spec-driven development (Banglish)
-- **[gsd-state](file:///.trae/skills/gsd-state/SKILL.md)**: STATE.md management to avoid context rot (Banglish)
-
-### Superpowers Skills
-- **[superpowers-tdd](file:///.trae/skills/superpowers-tdd/SKILL.md)**: Red-Green-Refactor TDD (Banglish)
-- **[superpowers-debugging](file:///.trae/skills/superpowers-debugging/SKILL.md)**: Systematic root-cause analysis (Banglish)
-
----
-
-## 🔁 Workflow Index (`.agent/workflows/`)
-
-> Any tool can execute these workflows. Read the workflow file and follow its steps.
-
-| Trigger | Workflow File |
-|---|---|
-| "Build X feature", new module from scratch | [feature-implementation.md](file:///.agent/workflows/feature-implementation.md) |
-| Bug report, error, unexpected behavior | [bug-fix.md](file:///.agent/workflows/bug-fix.md) |
-| "Review my code", "check my diff" | [code-review.md](file:///.agent/workflows/code-review.md) |
-| "Audit endpoints", "sync Postman" | [api-audit.md](file:///.agent/workflows/api-audit.md) |
+| Product ideas, brainstorming | `gstack-office-hours` |
+| Plan review, strategy | `gstack-ceo-review` |
+| Code review, security check | `gstack-review` |
+| Bugs, testing, edge cases | `gstack-qa` / `superpowers-tdd` |
+| Research, comparing libraries | `gstack-browse` |
+| Feature specs, requirements | `gsd-spec` |
+| Context rot, progress check | `gsd-state` |
+| Complex bug, root cause | `superpowers-debugging` |
+| UX Flow docs, API specs | `ux-flow-api-docs` |
+| API design, schema audit | `api-design` / `nosql-database-design` |

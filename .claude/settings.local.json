@@ -18,7 +18,11 @@
       "Bash(npm run compile:*)",
       "Bash(node scripts/schema-diagram-generator/schema-diagram-generator.js:*)",
       "Bash(cat:*)",
-      "Bash(time curl:*)"
+      "Bash(time curl:*)",
+      "Bash(find \"D:/web projects/office-sta/re-fector/tbsosick/.trae\" \"D:/web projects/office-sta/re-fector/tbsosick/.agent\" \"D:/web projects/office-sta/re-fector/tbsosick/.claude\" -type f -exec wc -l {} +)",
+      "Bash(wc -l \"D:/web projects/office-sta/re-fector/tbsosick/.agent/workflows/\"*.md)",
+      "Bash(mv \"D:/web projects/office-sta/re-fector/tbsosick/.agent/workflows/\"*.md \"D:/web projects/office-sta/re-fector/tbsosick/.trae/workflows/\")",
+      "Bash(mv \"D:/web projects/office-sta/re-fector/tbsosick/.claude/rules/codebase-blueprint.md\" \"D:/web projects/office-sta/re-fector/tbsosick/.trae/templates/codebase-blueprint.md\")"
     ],
     "deny": [],
     "ask": []

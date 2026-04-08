@@ -30,7 +30,7 @@ This project follows a strict **Controller → Service → Model** flow.
 - **Services**: Fat layer for business logic. Always named `*Service`.
 - **Models**: Mongoose schema and database interaction logic.
 
-Refer to [codebase-blueprint.md](file:///.claude/rules/codebase-blueprint.md) for copy-paste templates.
+Refer to [codebase-blueprint.md](file:///.trae/templates/codebase-blueprint.md) for copy-paste templates.
 
 ## Observability & Auto-Labeling (CRITICAL)
 
