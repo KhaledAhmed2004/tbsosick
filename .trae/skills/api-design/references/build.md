@@ -329,8 +329,9 @@ router
   .get(auth(USER_ROLES.ADMIN, USER_ROLES.USER), validateRequest([Feature]Validation.querySchema), [Feature]Controller.getAll)
   .post(auth(USER_ROLES.ADMIN, USER_ROLES.USER), validateRequest([Feature]Validation.createSchema), [Feature]Controller.create);
 
+// Path param must be meaningful — `:[feature]Id`, never bare `:id`
 router
-  .route('/:id')
+  .route('/:[feature]Id')
   .get(auth(USER_ROLES.ADMIN, USER_ROLES.USER), validateRequest([Feature]Validation.idParamSchema), [Feature]Controller.getById)
   .patch(auth(USER_ROLES.ADMIN, USER_ROLES.USER), validateRequest([Feature]Validation.updateSchema), [Feature]Controller.update)
   .delete(auth(USER_ROLES.ADMIN, USER_ROLES.USER), validateRequest([Feature]Validation.idParamSchema), [Feature]Controller.remove);
@@ -355,28 +356,28 @@ Use this for actions that transition a resource's status — they need their own
 // validation
 const cancelSchema = z.object({
   body: z.object({ reason: z.string().max(500).optional() }).strict(),
-  params: z.object({ id: z.string().min(1) }),
+  params: z.object({ [feature]Id: z.string().min(1) }),
 });
 
 // route
-router.post('/:id/cancel', auth(USER_ROLES.USER), validateRequest([Feature]Validation.cancelSchema), [Feature]Controller.cancel);
+router.post('/:[feature]Id/cancel', auth(USER_ROLES.USER), validateRequest([Feature]Validation.cancelSchema), [Feature]Controller.cancel);
 
 // controller
 const cancel = catchAsync(async (req: Request, res: Response) => {
-  const result = await [Feature]Service.cancel(req.params.id, req.user!.userId, req.body);
+  const result = await [Feature]Service.cancel(req.params.[feature]Id, req.user!.userId, req.body);
   sendResponse(res, { success: true, statusCode: StatusCodes.OK, message: '[Feature] cancelled successfully', data: result });
 });
 
 // service — all guards live here, not in the controller
-const cancel = async (id: string, requesterId: string, payload: { reason?: string }) => {
-  const item = await [Feature].findById(id);
+const cancel = async ([feature]Id: string, requesterId: string, payload: { reason?: string }) => {
+  const item = await [Feature].findById([feature]Id);
   if (!item)                                          throw new ApiError(StatusCodes.NOT_FOUND,    '[Feature] not found');
   if (item.createdBy.toString() !== requesterId)      throw new ApiError(StatusCodes.FORBIDDEN,    'You cannot cancel this [feature]');
   if (item.status === 'cancelled')                    throw new ApiError(StatusCodes.CONFLICT,     '[Feature] is already cancelled');
   if (item.status === 'completed')                    throw new ApiError(StatusCodes.BAD_REQUEST,  'Completed [features] cannot be cancelled');
 
   return [Feature].findByIdAndUpdate(
-    id,
+    [feature]Id,
     { status: 'cancelled', cancelReason: payload.reason, cancelledAt: new Date() },
     { new: true },
   );
@@ -397,10 +398,10 @@ Always prefer soft delete. Here's why: hard delete makes it impossible to recove
 });
 
 // ADMIN restore endpoint (useful for accidental deletes):
-router.post('/:id/restore', auth(USER_ROLES.ADMIN), [Feature]Controller.restore);
+router.post('/:[feature]Id/restore', auth(USER_ROLES.ADMIN), [Feature]Controller.restore);
 
 const restore = catchAsync(async (req: Request, res: Response) => {
-  const result = await [Feature]Service.restore(req.params.id);
+  const result = await [Feature]Service.restore(req.params.[feature]Id);
   sendResponse(res, { success: true, statusCode: StatusCodes.OK, message: '[Feature] restored successfully', data: result });
 });
 

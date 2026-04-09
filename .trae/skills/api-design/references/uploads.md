@@ -218,7 +218,7 @@ const uploadLogo = catchAsync(async (req: Request, res: Response) => {
 // Upload routes use multer middleware instead of validateRequest
 // Do NOT add requireJson middleware to upload routes
 router.patch(
-  '/:id/logo',
+  '/:clubId/logo',
   auth(USER_ROLES.ADMIN, USER_ROLES.USER),
   imageUpload.single('logo'),   // 'logo' = the multipart field name
   ClubController.uploadLogo,
@@ -234,7 +234,7 @@ const uploadPhotos = catchAsync(async (req: Request, res: Response) => {
   }
 
   const result = await TurfService.uploadPhotos(
-    req.params.id,
+    req.params.turfId,
     req.files.map((f) => f.buffer),
     req.user!.userId,
   );
@@ -244,7 +244,7 @@ const uploadPhotos = catchAsync(async (req: Request, res: Response) => {
 
 // Route
 router.post(
-  '/:id/photos',
+  '/:turfId/photos',
   auth(USER_ROLES.ADMIN, USER_ROLES.USER),
   multiImageUpload.array('photos', 5), // 'photos' field, max 5 files
   TurfController.uploadPhotos,

@@ -87,10 +87,10 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
   const { status } = req.body as { status: USER_STATUS };
 
-  const result = await UserService.updateUserStatus(id, status);
+  const result = await UserService.updateUserStatus(userId, status);
 
   sendResponse(res, {
     success: true,
@@ -101,9 +101,9 @@ const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
 });
 
 const adminUpdateUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
   const payload = { ...req.body };
-  const result = await UserService.updateUserByAdmin(id, payload);
+  const result = await UserService.updateUserByAdmin(userId, payload);
 
   sendResponse(res, {
     success: true,
@@ -114,8 +114,8 @@ const adminUpdateUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await UserService.deleteUserPermanently(id);
+  const { userId } = req.params;
+  const result = await UserService.deleteUserPermanently(userId);
 
   sendResponse(res, {
     success: true,
@@ -137,34 +137,10 @@ const getAllUserRoles = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const blockUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await UserService.updateUserStatus(id, USER_STATUS.RESTRICTED);
-
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'User blocked',
-    data: result,
-  });
-});
-
-const unblockUser = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const result = await UserService.updateUserStatus(id, USER_STATUS.ACTIVE);
-
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'User unblocked',
-    data: result,
-  });
-});
-
 const getUserById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
 
-  const result = await UserService.getUserById(id);
+  const result = await UserService.getUserById(userId);
 
   sendResponse(res, {
     success: true,
@@ -175,9 +151,9 @@ const getUserById = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getUserDetailsById = catchAsync(async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
 
-  const result = await UserService.getUserDetailsById(id);
+  const result = await UserService.getUserDetailsById(userId);
 
   sendResponse(res, {
     success: true,
@@ -207,8 +183,6 @@ export const UserController = {
   updateUserStatus,
   adminUpdateUser,
   deleteUser,
-  blockUser,
-  unblockUser,
   getUserById,
   getUserDetailsById,
   getUsersStats,

@@ -63,7 +63,7 @@ export const UserValidation = {
   updateUserZodSchema,
   updateUserStatusZodSchema: z.object({
     params: z.object({
-      id: z.string({ required_error: 'User ID is required' }),
+      userId: z.string({ required_error: 'User ID is required' }),
     }),
     body: z.object({
       status: z.enum([USER_STATUS.ACTIVE, USER_STATUS.RESTRICTED], {
@@ -74,7 +74,7 @@ export const UserValidation = {
   }),
   adminUpdateUserZodSchema: z.object({
     params: z.object({
-      id: z.string({ required_error: 'User ID is required' }),
+      userId: z.string({ required_error: 'User ID is required' }),
     }),
     body: z.object({
       name: z.string().optional(),

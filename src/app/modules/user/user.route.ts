@@ -20,7 +20,7 @@ router.post(
 
 // Public user details (guest allowed) — rate limited
 router.get(
-  '/:id/user',
+  '/:userId/user',
   auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
   rateLimitMiddleware({
     windowMs: 60_000,
@@ -64,39 +64,25 @@ router.get('/stats', auth(USER_ROLES.SUPER_ADMIN), UserController.getUsersStats)
 router.get('/', auth(USER_ROLES.SUPER_ADMIN), UserController.getAllUserRoles);
 
 // Get specific user details by ID (Admin)
-router.get('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
+router.get('/:userId', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
 
 // Admin: Update any user (Update fields including specialty, role, status)
 router.patch(
-  '/:id',
+  '/:userId',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(UserValidation.adminUpdateUserZodSchema),
   UserController.adminUpdateUser,
 );
 
-// Admin: Block user
-router.patch(
-  '/:id/block',
-  auth(USER_ROLES.SUPER_ADMIN),
-  UserController.blockUser,
-);
-
-// Admin: Unblock user
-router.patch(
-  '/:id/unblock',
-  auth(USER_ROLES.SUPER_ADMIN),
-  UserController.unblockUser,
-);
-
 // Update user status directly (Admin)
 router.patch(
-  '/:id/status',
+  '/:userId/status',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(UserValidation.updateUserStatusZodSchema),
   UserController.updateUserStatus,
 );
 
 // Admin: Delete user permanently
-router.delete('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.deleteUser);
+router.delete('/:userId', auth(USER_ROLES.SUPER_ADMIN), UserController.deleteUser);
 
 export const UserRoutes = router;

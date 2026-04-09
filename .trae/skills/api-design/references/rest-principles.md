@@ -13,6 +13,29 @@ Industry-standard REST design rules. Read this for naming decisions, method/stat
 - **No file extensions**: never `/users.json`
 - **No trailing slashes**: `/clubs` not `/clubs/`
 
+### Path parameter names — must be meaningful
+**Never use bare `:id`.** Always name the param after the resource it identifies: `:userId`, `:clubId`, `:bookingId`, `:cardId`. The reasons:
+- **Self-documenting** — `req.params.userId` reads correctly anywhere; `req.params.id` forces the reader to scroll up to see *which* id.
+- **Nested routes get unambiguous** — in `/clubs/:clubId/members/:memberId`, both params have distinct names. If both were `:id`, Express would silently overwrite.
+- **Refactor safety** — searching for `clubId` finds every consumer; searching for `id` finds half the codebase.
+- **Validation pairs cleanly** — `z.object({ params: z.object({ userId: z.string() }) })` matches the route literally.
+
+```
+✅  GET    /api/v1/users/:userId
+✅  PATCH  /api/v1/clubs/:clubId
+✅  DELETE /api/v1/bookings/:bookingId
+❌  GET    /api/v1/users/:id
+❌  PATCH  /api/v1/clubs/:id
+```
+
+In controllers / services, destructure by the same name:
+```typescript
+const { userId } = req.params;          // ✅
+const result = await UserService.getById(userId);
+
+const { id } = req.params;              // ❌ — what id?
+```
+
 ### Path depth
 ```
 /api/v1/clubs                              ✅ collection
@@ -28,14 +51,14 @@ Keep nesting to **≤ 2 levels**. Deeper nesting makes URLs unreadable and hard 
 ```
 
 ### Verb endpoints (non-CRUD state transitions)
-Use `POST /:id/{verb}` for actions that transition resource state. The `POST` on a sub-path signals "this does something" rather than "this is a resource":
+Use `POST /:resourceId/{verb}` for actions that transition resource state. The `POST` on a sub-path signals "this does something" rather than "this is a resource". **Reach for this only when the action genuinely cannot be modeled as a field update** — most state changes are better as `PATCH /:resourceId` with the field in the body.
 ```
-POST /api/v1/bookings/:id/cancel      ✅
-POST /api/v1/orders/:id/approve       ✅
-POST /api/v1/users/:id/deactivate     ✅
-POST /api/v1/auth/login               ✅
-POST /api/v1/auth/logout              ✅
-POST /api/v1/auth/refresh-token       ✅
+POST /api/v1/bookings/:bookingId/cancel      ✅
+POST /api/v1/orders/:orderId/approve         ✅
+POST /api/v1/users/:userId/deactivate        ✅
+POST /api/v1/auth/login                      ✅
+POST /api/v1/auth/logout                     ✅
+POST /api/v1/auth/refresh-token              ✅
 ```
 
 ### Batch operations
@@ -319,8 +342,10 @@ export const HealthRoutes = router;
 
 | Anti-pattern | Why it's wrong | Correct approach |
 |---|---|---|
-| `GET /deleteUser/:id` | GET must be safe — no side effects | `DELETE /users/:id` |
+| `GET /deleteUser/:id` | GET must be safe — no side effects | `DELETE /users/:userId` |
 | `POST /users/getAll` | Defeats HTTP caching and semantics | `GET /users` |
+| Bare `:id` in any route | Ambiguous; collides in nested routes; harder to grep | Name it: `:userId`, `:clubId`, `:bookingId` |
+| Separate `/block` + `/unblock` routes | Doubles surface for one boolean; drifts out of sync | `PATCH /users/:userId` with `{ status }` |
 | `PUT` for partial updates | Client must send entire object | `PATCH` |
 | `200 OK` with `{ success: false }` | Status code contradicts body | Use correct 4xx |
 | `500` for business rule violations | 500 means unexpected/unhandled | `400`, `404`, `409`, `422` |

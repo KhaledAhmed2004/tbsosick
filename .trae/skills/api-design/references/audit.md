@@ -100,6 +100,8 @@ Stack traces reveal file paths, line numbers, and implementation details — att
 **URL naming**
 - [ ] Plural noun, kebab-case: `/user-profiles` not `/userProfile`
 - [ ] No verbs in base paths: `/users` not `/getUsers`
+- [ ] **Path params are meaningful — `:userId` / `:clubId`, never bare `:id`** (collides in nested routes, harder to grep, ambiguous in controllers)
+- [ ] **No `/block` + `/unblock` style mirrored pairs** for one boolean — collapse to `PATCH /:resourceId` with the field in the body
 - [ ] Nesting ≤ 2 levels
 - [ ] Versioned: `/api/v1/...`
 
@@ -186,6 +188,8 @@ Violations: X Critical · Y Warnings · Z Suggestions
 | No `validateRequest` on POST | Unvalidated input reaches DB | Add Zod schema + middleware |
 | No `auth()` on protected route | Unauthenticated access | Add `auth(USER_ROLES.X)` |
 | No `.strict()` on body schema | Mass-assignment possible | Add `.strict()` |
+| Bare `:id` path param | Ambiguous, collides in nested routes | Rename to `:userId`, `:clubId`, etc. |
+| `/block` + `/unblock` mirror routes | Doubles surface for one boolean | `PATCH /:resourceId` body `{ status }` |
 | `.find({})` without pagination | Unbounded DB query | Use `QueryBuilder` |
 | Business logic in controller | Untestable, unreusable | Move to service |
 | `console.log` in code | Unstructured, no log levels | Replace with `logger` |

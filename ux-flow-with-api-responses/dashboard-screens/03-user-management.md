@@ -16,9 +16,9 @@
 5. Admin filters use kore specialty ba status select kore → `GET /users?specialty=Cardiology&status=ACTIVE` (→ 3.1)
 6. User table render hoy: User Info (Name, Email, Phone, Specialty, Cards Count, Subscription Status) dekhay
 7. Admin "Create User" button click kore form fill up kore submit kore → `POST /users` (→ 3.2)
-8. Edit action click korle pre-filled form ashe, update kore submit → `PATCH /users/:id` (→ 3.3)
-9. Block/Activate action click kore user status update kore → `PATCH /users/:id/block` (or `/unblock`) (→ 3.4/3.5)
-10. Delete action click korle confirm modal ashe, submit → `DELETE /users/:id` (→ 3.6)
+8. Edit action click korle pre-filled form ashe, update kore submit → `PATCH /users/:userId` (→ 3.3)
+9. Block/Activate action click kore user status update kore → `PATCH /users/:userId` body `{ "status": "RESTRICTED" | "ACTIVE" }` (→ 3.3)
+10. Delete action click korle confirm modal ashe, submit → `DELETE /users/:userId` (→ 3.4)
 
 ---
 
@@ -216,26 +216,33 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ### 3.3 Update User
 ```http
-PATCH /users/:id
+PATCH /users/:userId
 Content-Type: application/json
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> User details update kore.
+> User details update kore. **Block / Unblock o eikhane diye hoy** — body-te `status: "RESTRICTED"` dile block, `status: "ACTIVE"` dile unblock. Alada `/block` ba `/unblock` route nai (REST principle: state change is just a field update on the resource, separate verb-route na rakha).
 
 **Implementation:**
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `adminUpdateUser`
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateUserByAdmin`
 
-**Request Body:**
+**Request Body (any subset of these fields):**
 ```json
 {
   "name": "Dr. Jane Updated",
   "specialty": "Oncology",
-  "hospital": "Central Hospital"
+  "hospital": "Central Hospital",
+  "status": "RESTRICTED"
 }
 ```
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `name`, `email`, `phone`, `country`, `specialty`, `hospital`, `location`, `gender`, `dateOfBirth`, `profilePicture` | `string` | Profile fields |
+| `role` | `"SUPER_ADMIN" \| "USER"` | Role change |
+| `status` | `"ACTIVE" \| "INACTIVE" \| "RESTRICTED" \| "DELETE"` | **Block = `RESTRICTED`**, **Unblock = `ACTIVE`** |
 
 #### Responses
 
@@ -266,66 +273,9 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 3.4 Block User
+### 3.4 Delete User
 ```http
-PATCH /users/:id/block
-Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
-```
-
-**Implementation:**
-- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
-- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `blockUser`
-
-### 3.5 Unblock User
-```http
-PATCH /users/:id/unblock
-Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
-```
-
-**Implementation:**
-- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
-- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `unblockUser`
-
-**Request Body:**
-```json
-{ "status": "RESTRICTED" | "ACTIVE" }
-```
-
-#### Responses
-
-- **Scenario: Success (200)**
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Doctor status updated",
-  "data": { "status": "RESTRICTED" }
-}
-```
-
-- **Scenario: Invalid Status (400)**
-```json
-{
-  "success": false,
-  "statusCode": 400,
-  "message": "Invalid status value"
-}
-```
-
-- **Scenario: Not Found (404)**
-```json
-{
-  "success": false,
-  "statusCode": 404,
-  "message": "User not found"
-}
-```
-
----
-
-### 3.6 Delete User
-```http
-DELETE /users/:id
+DELETE /users/:userId
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
@@ -356,6 +306,5 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 | 2.1 | `GET /users/stats` | ✅ Done | User growth metrics included |
 | 3.1 | `GET /users` | ✅ Done | Detailed aggregation for stats added |
 | 3.2 | `POST /users` | ✅ Done | User registration logic |
-| 3.3 | `PATCH /users/:id` | ✅ Done | Admin update implemented |
-| 3.4 | `PATCH /users/:id/block` | ✅ Done | Block implemented |
-| 3.5 | `DELETE /doctors/:id` | ✅ Done | Hard delete implemented |
+| 3.3 | `PATCH /users/:userId` | ✅ Done | Admin update — also handles block/unblock via `status` field |
+| 3.4 | `DELETE /users/:userId` | ✅ Done | Hard delete implemented |

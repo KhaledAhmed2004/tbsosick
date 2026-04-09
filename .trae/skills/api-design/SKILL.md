@@ -45,11 +45,12 @@ Load multiple files when a task spans concerns (e.g. building a file-upload endp
 
 ### Route
 ```typescript
+// Always name path params after the resource (`:featureId`), never bare `:id`.
 router.post('/', auth(USER_ROLES.ADMIN), validateRequest(FeatureValidation.createSchema), FeatureController.create);
 router.get('/', auth(USER_ROLES.ADMIN), validateRequest(FeatureValidation.querySchema), FeatureController.getAll);
-router.get('/:id', auth(USER_ROLES.ADMIN), FeatureController.getById);
-router.patch('/:id', auth(USER_ROLES.ADMIN), validateRequest(FeatureValidation.updateSchema), FeatureController.update);
-router.delete('/:id', auth(USER_ROLES.ADMIN), FeatureController.remove);
+router.get('/:featureId', auth(USER_ROLES.ADMIN), FeatureController.getById);
+router.patch('/:featureId', auth(USER_ROLES.ADMIN), validateRequest(FeatureValidation.updateSchema), FeatureController.update);
+router.delete('/:featureId', auth(USER_ROLES.ADMIN), FeatureController.remove);
 ```
 
 ### Controller
@@ -98,8 +99,10 @@ throw new ApiError(StatusCodes.CONFLICT, 'Feature already exists');
 
 - Plural nouns, kebab-case: `/api/v1/turf-bookings`
 - Sub-resources for ownership: `/api/v1/clubs/:clubId/members`
-- Verbs only for state transitions: `/api/v1/bookings/:id/cancel`
-- Never: ~~`/getUsers`~~ ~~`/userProfile`~~ ~~`/deleteClub`~~
+- **Path params must be meaningful** — `:userId`, `:clubId`, `:bookingId`. **Never bare `:id`.**
+- Verbs only for state transitions: `/api/v1/bookings/:bookingId/cancel`
+- **State change = field update on the resource**, not a separate route. Don't make `/block` + `/unblock` pairs — use `PATCH /:resourceId` with the field in the body.
+- Never: ~~`/getUsers`~~ ~~`/userProfile`~~ ~~`/deleteClub`~~ ~~`/users/:id`~~
 - Always versioned: `/api/v1/...`
 
 ---

@@ -78,9 +78,11 @@ Every feature: `src/app/modules/[feature]/` with `interface.ts`, `model.ts`, `co
 
 **Declaration order** (CRITICAL — Express matches in order):
 1. Fixed paths first (`/webhook`, `/stats`, `/my-items`)
-2. Param paths after (`/:id`, `/:id/modules`)
+2. Param paths after (`/:resourceId`, `/:resourceId/modules`)
 
-**Methods**: GET=read, POST=create/action, PATCH=update/toggle, DELETE=remove. Actions as suffix: `PATCH /:id/block`
+**Path params**: Always meaningful — `:userId`, `:cardId`, `:bookingId`. **Never bare `:id`** (ambiguous, collides in nested routes).
+
+**Methods**: GET=read, POST=create/action, PATCH=update/toggle, DELETE=remove. Prefer `PATCH /:resourceId` with field in body for state changes (e.g. block via `{ status: "RESTRICTED" }`) — avoid mirrored verb routes like `/block` + `/unblock`.
 
 **Postman**: `public/postman-collection.json` — update on EVERY route change, use `{{baseUrl}}`/`{{accessToken}}`
 

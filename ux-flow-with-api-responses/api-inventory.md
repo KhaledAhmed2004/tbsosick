@@ -30,11 +30,9 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | 3.1 | `/users` | `GET` | SUPER_ADMIN | `user.route.ts` | ✅ |
 | 3.2 | `/users` | `POST` | Public | `user.route.ts` | ✅ |
-| 3.3 | `/users/:id` | `GET` | SUPER_ADMIN | `user.route.ts` | ✅ |
-| 3.4 | `/users/:id` | `PATCH` | SUPER_ADMIN | `user.route.ts` | ✅ |
-| 3.5 | `/users/:id/block` | `PATCH` | SUPER_ADMIN | `user.route.ts` | ✅ |
-| 3.6 | `/users/:id/unblock` | `PATCH` | SUPER_ADMIN | `user.route.ts` | ✅ |
-| 3.7 | `/users/:id` | `DELETE` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.3 | `/users/:userId` | `GET` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.4 | `/users/:userId` | `PATCH` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.5 | `/users/:userId` | `DELETE` | SUPER_ADMIN | `user.route.ts` | ✅ |
 
 ### 4. Other Admin Controls (Doc Missing)
 | Module | Endpoint | Method | Roles | Implementation | Status |

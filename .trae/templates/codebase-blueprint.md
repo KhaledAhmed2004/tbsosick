@@ -326,12 +326,12 @@ router.post(
 // Get all (public, no auth)
 router.get('/', FeatureController.getAll);
 
-// Get by ID
-router.get('/:id', FeatureController.getById);
+// Get by ID — path param must be meaningful (`:featureId`, never bare `:id`)
+router.get('/:featureId', FeatureController.getById);
 
 // Update
 router.patch(
-  '/:id',
+  '/:featureId',
   auth(USER_ROLES.SUPER_ADMIN),
   fileHandler(['thumbnail']),
   validateRequest(FeatureValidation.updateZodSchema),
@@ -339,7 +339,7 @@ router.patch(
 );
 
 // Delete
-router.delete('/:id', auth(USER_ROLES.SUPER_ADMIN), FeatureController.remove);
+router.delete('/:featureId', auth(USER_ROLES.SUPER_ADMIN), FeatureController.remove);
 
 export const FeatureRoutes = router;
 ```

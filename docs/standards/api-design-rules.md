@@ -14,7 +14,7 @@ Follow these rules for all future API development and audits to ensure consisten
 - **Why**: RESTful design uses HTTP verbs (GET, POST, etc.) to describe the action. Adding verbs to the URL is redundant and non-standard.
 - **Examples**:
   - ❌ `/get-users`, `/create-user`, `/update-status`, `/block-user`
-  - ✅ `GET /users`, `POST /users`, `PATCH /users/:id`, `PATCH /users/:id` (with status in body)
+  - ✅ `GET /users`, `POST /users`, `PATCH /users/:userId`, `PATCH /users/:userId` (with status in body)
 
 ## 3. 🚦 Correct Use of HTTP Methods
 | Method | Usage |
@@ -27,7 +27,8 @@ Follow these rules for all future API development and audits to ensure consisten
 
 ## 4. 🔗 Nested Resources
 - **Rule**: Use nesting to show relationships.
-- **Example**: `GET /users/:id/preference-cards` (Get all cards belonging to a specific user).
+- **Example**: `GET /users/:userId/preference-cards` (Get all cards belonging to a specific user).
+- **Note**: Path params must be **meaningful** — use `:userId`, `:cardId`, `:bookingId` etc. Never bare `:id` (ambiguous, collides in nested routes, harder to grep).
 
 ## 5. 🛠️ Sub-Resources for Actions
 - **Rule**: If an action is complex or needs to be tracked, treat it as a sub-resource.

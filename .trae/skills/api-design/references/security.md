@@ -254,8 +254,8 @@ const auth = (...requiredRoles: string[]) =>
   });
 
 // Usage:
-router.delete('/:id', auth(USER_ROLES.ADMIN), ClubController.remove);
-router.patch('/:id', auth(USER_ROLES.ADMIN, USER_ROLES.MODERATOR), ClubController.update);
+router.delete('/:clubId', auth(USER_ROLES.ADMIN), ClubController.remove);
+router.patch('/:clubId', auth(USER_ROLES.ADMIN, USER_ROLES.MODERATOR), ClubController.update);
 router.get('/', auth(), ClubController.getAll); // any authenticated user
 ```
 
