@@ -1,4 +1,4 @@
-# Screen 3: Doctor
+# Screen 3: User Management
 
 > **Section**: Dashboard APIs (Admin-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
@@ -9,16 +9,16 @@
 
 ### Doctor List & Management Flow
 
-1. Admin sidebar theke "Doctor" module e click kore
-2. Page load e doctor stats cards fetch hoy → `GET /doctors/stats` (→ 2.1)
-3. Page load e doctor list fetch hoy → `GET /doctors` (→ 3.1)
-4. Admin search bar use kore doctor name ba email search kore → `GET /doctors?search=Dr. John` (→ 3.1)
-5. Admin filters use kore specialty ba status select kore → `GET /doctors?specialty=Cardiology&status=ACTIVE` (→ 3.1)
-6. Doctor table render hoy: Doctor Info (Name, Email, Phone, Specialty, Cards Count, Subscription Status) dekhay
-7. Admin "Create Doctor" button click kore form fill up kore submit kore → `POST /doctors` (→ 3.2)
-8. Edit action click korle pre-filled form ashe, update kore submit → `PATCH /doctors/:id` (→ 3.3)
-9. Block/Activate action click kore doctor status update kore → `PATCH /doctors/:id/status` (→ 3.4)
-10. Delete action click korle confirm modal ashe, submit → `DELETE /doctors/:id` (→ 3.5)
+1. Admin sidebar theke "User Management" module e click kore
+2. Page load e user stats cards fetch hoy → `GET /users/stats` (→ 2.1)
+3. Page load e user list fetch hoy → `GET /users` (→ 3.1)
+4. Admin search bar use kore user name ba email search kore → `GET /users?search=Dr. John` (→ 3.1)
+5. Admin filters use kore specialty ba status select kore → `GET /users?specialty=Cardiology&status=ACTIVE` (→ 3.1)
+6. User table render hoy: User Info (Name, Email, Phone, Specialty, Cards Count, Subscription Status) dekhay
+7. Admin "Create User" button click kore form fill up kore submit kore → `POST /users` (→ 3.2)
+8. Edit action click korle pre-filled form ashe, update kore submit → `PATCH /users/:id` (→ 3.3)
+9. Block/Activate action click kore user status update kore → `PATCH /users/:id/block` (or `/unblock`) (→ 3.4/3.5)
+10. Delete action click korle confirm modal ashe, submit → `DELETE /users/:id` (→ 3.6)
 
 ---
 
@@ -26,27 +26,27 @@
 
 | Scenario | Behavior |
 | :--- | :--- |
-| **Duplicate Email** | `POST /doctors` e existing email dile 400 Bad Request return kore. |
+| **Duplicate Email** | `POST /users` e existing email dile 400 Bad Request return kore. |
 | **Invalid ID** | PATCH/DELETE request e non-existent ID dile 404 Not Found ashe. |
 | **Empty Search Result** | `data` array empty thake kintu structure thik thake (200 OK). |
 | **Validation Fail** | Zod validation fail hole (e.g. invalid phone/email) detailed 400 error message dekhay. |
 | **Invalid Status Value** | `status` field e invalid value dile 400 Bad Request return kore. |
-| **Subscription Status** | Doctor delete korleo logic cascade hoye system consistent rakhe. |
+| **Subscription Status** | User delete korleo logic cascade hoye system consistent rakhe. |
 
 ---
 
-### 2.1 Doctor Stats (Overview Cards)
+### 2.1 User Stats (Overview Cards)
 ```http
-GET /doctors/stats
+GET /users/stats
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Dashboard-er doctor section-er summary stat cards-er jonno. Total, active, inactive, blocked doctor count with monthly growth return kore.
+> Dashboard-er user section-er (Doctors focus) summary stat cards-er jonno. Total, active, inactive, blocked user count with monthly growth return kore.
 
 **Implementation:**
-- **Route**: [doctor.route.ts](file:///src/app/modules/doctor/doctor.route.ts)
-- **Controller**: [doctor.controller.ts](file:///src/app/modules/doctor/doctor.controller.ts) — `getDoctorStats`
-- **Service**: [doctor.service.ts](file:///src/app/modules/doctor/doctor.service.ts) — `getDoctorStats`
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getUsersStats`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getUsersStats`
 
 **Query Parameters:** None
 
@@ -73,22 +73,22 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
     "meta": {
       "comparisonPeriod": "month"
     },
-    "totalDoctors": {
+    "totalUsers": {
       "value": 250,
       "changePct": 25,
       "direction": "up"
     },
-    "activeDoctors": {
+    "activeUsers": {
       "value": 198,
       "changePct": 10,
       "direction": "up"
     },
-    "inactiveDoctors": {
+    "inactiveUsers": {
       "value": 32,
       "changePct": 5,
       "direction": "down"
     },
-    "blockedDoctors": {
+    "blockedUsers": {
       "value": 20,
       "changePct": 0,
       "direction": "neutral"
@@ -101,18 +101,18 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 3.1 Get/Search Doctors
+### 3.1 Get/Search Users (Doctors)
 ```http
-GET /doctors
+GET /users
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Doctor list search, filter, ebong pagination handle kore. Complex aggregation use kora hoyeche specialty ebong card counts calculate korar jonno.
+> User list search, filter, ebong pagination handle kore. Complex aggregation use kora hoyeche specialty ebong card counts calculate korar jonno.
 
 **Implementation:**
-- **Route**: [doctor.route.ts](file:///src/app/modules/doctor/doctor.route.ts)
-- **Controller**: [doctor.controller.ts](file:///src/app/modules/doctor/doctor.controller.ts) — `getDoctors`
-- **Service**: [doctor.service.ts](file:///src/app/modules/doctor/doctor.service.ts) — `getDoctors`
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getAllUserRoles`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getAllUserRoles`
 
 **Query Parameters:**
 
@@ -157,19 +157,19 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 3.2 Create Doctor
+### 3.2 Create User
 ```http
-POST /doctors
+POST /users
 Content-Type: application/json
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Admin manually doctor account create kore. Auto-verified thake ebong role `USER` (Doctor) assigned hoy.
+> Admin manually user account create kore (ba Registration). Auto-verified thake ebong role `USER` assigned hoy.
 
 **Implementation:**
-- **Route**: [doctor.route.ts](file:///src/app/modules/doctor/doctor.route.ts)
-- **Controller**: [doctor.controller.ts](file:///src/app/modules/doctor/doctor.controller.ts) — `createDoctor`
-- **Service**: [doctor.service.ts](file:///src/app/modules/doctor/doctor.service.ts) — `createDoctor`
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `createUser`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `createUserToDB`
 
 **Request Body:**
 ```json
@@ -214,19 +214,19 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 3.3 Update Doctor
+### 3.3 Update User
 ```http
-PATCH /doctors/:id
+PATCH /users/:id
 Content-Type: application/json
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Doctor details update kore. Security-r jonno password ebong status change kora allowed na ei endpoint e.
+> User details update kore.
 
 **Implementation:**
-- **Route**: [doctor.route.ts](file:///src/app/modules/doctor/doctor.route.ts)
-- **Controller**: [doctor.controller.ts](file:///src/app/modules/doctor/doctor.controller.ts) — `updateDoctor`
-- **Service**: [doctor.service.ts](file:///src/app/modules/doctor/doctor.service.ts) — `updateDoctor`
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `adminUpdateUser`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateUserByAdmin`
 
 **Request Body:**
 ```json
@@ -266,19 +266,25 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 3.4 Update Doctor Status
+### 3.4 Block User
 ```http
-PATCH /doctors/:id/status
-Content-Type: application/json
+PATCH /users/:id/block
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Doctor er system access control kore status update korar maddhome. `RESTRICTED` dile block hoy, `ACTIVE` dile unblock hoy.
+**Implementation:**
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `blockUser`
+
+### 3.5 Unblock User
+```http
+PATCH /users/:id/unblock
+Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
+```
 
 **Implementation:**
-- **Route**: [doctor.route.ts](file:///src/app/modules/doctor/doctor.route.ts)
-- **Controller**: [doctor.controller.ts](file:///src/app/modules/doctor/doctor.controller.ts) — `updateDoctorStatus`
-- **Service**: [doctor.service.ts](file:///src/app/modules/doctor/doctor.service.ts) — `updateDoctorStatus`
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `unblockUser`
 
 **Request Body:**
 ```json
@@ -317,18 +323,18 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 3.5 Delete Doctor
+### 3.6 Delete User
 ```http
-DELETE /doctors/:id
+DELETE /users/:id
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Doctor account permanent-ly delete kore.
+> User account permanent-ly delete kore.
 
 **Implementation:**
-- **Route**: [doctor.route.ts](file:///src/app/modules/doctor/doctor.route.ts)
-- **Controller**: [doctor.controller.ts](file:///src/app/modules/doctor/doctor.controller.ts) — `deleteDoctor`
-- **Service**: [doctor.service.ts](file:///src/app/modules/doctor/doctor.service.ts) — `deleteDoctor`
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `deleteUser`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `deleteUserPermanently`
 
 #### Responses
 
@@ -347,9 +353,9 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 | # | Endpoint | Status | Notes |
 | :--- | :--- | :---: | :--- |
-| 2.1 | `GET /doctors/stats` | ✅ Done | Monthly growth + direction included |
-| 3.1 | `GET /doctors` | ✅ Done | Detailed aggregation for stats added |
-| 3.2 | `POST /doctors` | ✅ Done | Zod validation + duplicate check included |
-| 3.3 | `PATCH /doctors/:id` | ✅ Done | Whitelisted fields only, status + password excluded |
-| 3.4 | `PATCH /doctors/:id/status` | ✅ Done | Replaces separate block/unblock endpoints |
+| 2.1 | `GET /users/stats` | ✅ Done | User growth metrics included |
+| 3.1 | `GET /users` | ✅ Done | Detailed aggregation for stats added |
+| 3.2 | `POST /users` | ✅ Done | User registration logic |
+| 3.3 | `PATCH /users/:id` | ✅ Done | Admin update implemented |
+| 3.4 | `PATCH /users/:id/block` | ✅ Done | Block implemented |
 | 3.5 | `DELETE /doctors/:id` | ✅ Done | Hard delete implemented |
