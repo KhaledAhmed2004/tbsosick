@@ -4,7 +4,7 @@ import { PreferenceCardModel } from '../preference-card/preference-card.model';
 import { Subscription } from '../subscription/subscription.model';
 import { SUBSCRIPTION_STATUS } from '../subscription/subscription.interface';
 
-export const getAdminDashboardStats = async () => {
+const getAdminDashboardStats = async () => {
   const doctorBuilder = new AggregationBuilder(User as any);
   const doctors = await doctorBuilder.calculateGrowth({
     period: 'month',
@@ -47,7 +47,7 @@ export const getAdminDashboardStats = async () => {
 };
 
 // Monthly trend for total preference cards (each month’s count)
-export const getPreferenceCardMonthlyTrend = async () => {
+const getPreferenceCardMonthlyTrend = async () => {
   const cardBuilder = new AggregationBuilder(PreferenceCardModel as any);
   const series = await cardBuilder.getTimeTrends({ timeUnit: 'month' });
   return series.map((s: any) => ({
@@ -57,7 +57,7 @@ export const getPreferenceCardMonthlyTrend = async () => {
 };
 
 // Monthly trend for active subscriptions (complex analytics shape)
-export const getActiveSubscriptionMonthlyTrend = async () => {
+const getActiveSubscriptionMonthlyTrend = async () => {
   const subBuilder = new AggregationBuilder(Subscription as any);
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -141,4 +141,10 @@ export const getActiveSubscriptionMonthlyTrend = async () => {
     },
     series: formattedSeries,
   };
+};
+
+export const AdminService = {
+  getAdminDashboardStats,
+  getPreferenceCardMonthlyTrend,
+  getActiveSubscriptionMonthlyTrend,
 };

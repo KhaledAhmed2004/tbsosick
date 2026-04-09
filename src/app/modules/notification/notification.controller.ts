@@ -7,7 +7,7 @@ import { JwtPayload } from 'jsonwebtoken';
 
 const listMyNotifications = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
-  const result = await NotificationService.listForUser((user as any).id);
+  const result = await NotificationService.listForUser((user as any).id, req.query as any);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -15,6 +15,7 @@ const listMyNotifications = catchAsync(async (req: Request, res: Response) => {
     data: result,
   });
 });
+
 
 const markAllRead = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
@@ -55,11 +56,5 @@ export const NotificationController = {
   markAllRead,
   markRead,
   deleteNotification,
-  // Backward-compatible names expected by existing routes
-  getNotificationFromDB: listMyNotifications,
-  readNotification: markRead,
-  readAllNotifications: markAllRead,
-  adminNotificationFromDB: listMyNotifications,
-  adminMarkNotificationAsRead: markRead,
-  adminMarkAllNotificationsAsRead: markAllRead,
 };
+

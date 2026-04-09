@@ -16,7 +16,7 @@ const generateSlug = async (title: string): Promise<string> => {
   return slug;
 };
 
-const createLegalPage = async (
+const createLegalPageToDB = async (
   payload: Partial<ILegalPage>,
 ): Promise<ILegalPage> => {
   if (!payload.title) {
@@ -30,7 +30,7 @@ const createLegalPage = async (
   return result as ILegalPage;
 };
 
-const getAll = async (): Promise<ILegalPage[]> => {
+const getAllLegalPagesFromDB = async (): Promise<ILegalPage[]> => {
   const result = await LegalPage.find()
     .select('-_id slug title')
     .sort({ title: 1 })
@@ -38,7 +38,7 @@ const getAll = async (): Promise<ILegalPage[]> => {
   return result;
 };
 
-const getBySlug = async (slug: string): Promise<ILegalPage> => {
+const getLegalPageBySlugFromDB = async (slug: string): Promise<ILegalPage> => {
   const result = await LegalPage.findOne({ slug }).select(
     '-_id slug title content updatedAt',
   ).lean();
@@ -48,7 +48,7 @@ const getBySlug = async (slug: string): Promise<ILegalPage> => {
   return result;
 };
 
-const updateBySlug = async (
+const updateLegalPageBySlugInDB = async (
   slug: string,
   payload: Partial<ILegalPage>,
 ): Promise<ILegalPage> => {
@@ -72,7 +72,7 @@ const updateBySlug = async (
   return result;
 };
 
-const deleteBySlug = async (slug: string): Promise<void> => {
+const deleteLegalPageBySlugFromDB = async (slug: string): Promise<void> => {
   const existing = await LegalPage.findOne({ slug }).lean();
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
@@ -81,9 +81,9 @@ const deleteBySlug = async (slug: string): Promise<void> => {
 };
 
 export const LegalService = {
-  createLegalPage,
-  getAll,
-  getBySlug,
-  updateBySlug,
-  deleteBySlug,
+  createLegalPageToDB,
+  getAllLegalPagesFromDB,
+  getLegalPageBySlugFromDB,
+  updateLegalPageBySlugInDB,
+  deleteLegalPageBySlugFromDB,
 };

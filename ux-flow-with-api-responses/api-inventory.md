@@ -39,9 +39,6 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | **PrefCard** | `/preference-cards/:cardId/approve` | `PATCH` | SUPER_ADMIN | `preference-card.route.ts` | ✅ |
 | **PrefCard** | `/preference-cards/:cardId/reject` | `PATCH` | SUPER_ADMIN | `preference-card.route.ts` | ✅ |
-| **Notif** | `/notifications/admin` | `GET` | SUPER_ADMIN | `notification.routes.ts` | ✅ |
-| **Notif** | `/notifications/admin/:id/read` | `PATCH` | SUPER_ADMIN | `notification.routes.ts` | ✅ |
-| **Notif** | `/notifications/admin/read-all` | `PATCH` | SUPER_ADMIN | `notification.routes.ts` | ✅ |
 | **Legal** | `/legal` | `POST` | SUPER_ADMIN | `legal.route.ts` | ✅ |
 | **Legal** | `/legal/:slug` | `PATCH` | SUPER_ADMIN | `legal.route.ts` | ✅ |
 | **Legal** | `/legal/:slug` | `DELETE` | SUPER_ADMIN | `legal.route.ts` | ✅ |
@@ -125,9 +122,10 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 ### 7. [Notifications (Mobile)](./app-screens/07-notifications.md)
 | ID | Endpoint | Method | Roles | Implementation | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
-| 7.1 | `/notifications` | `GET` | User | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
-| 7.2 | `/notifications/:id/read` | `PATCH` | User | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
-| 7.3 | `/notifications/read-all` | `PATCH` | User | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
+| 7.1 | `/notifications` | `GET` | User/Admin | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
+| 7.2 | `/notifications/:id/read` | `PATCH` | User/Admin | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
+| 7.3 | `/notifications/read-all` | `PATCH` | User/Admin | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
+| 7.4 | `/notifications/:id` | `DELETE` | User/Admin | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
 
 ### 8. Payment & Wallet (Doc Missing)
 | ID | Endpoint | Method | Roles | Implementation | Status |
@@ -147,6 +145,5 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | :--- | :--- | :---: | :--- | :---: |
 | **Subscription** | `/subscription/iap/verify` | `POST` | Doc missing screen context but route exists | Medium |
 | **Subscription** | `/subscription/choose/free` | `POST` | Doc missing screen context but route exists | Medium |
-| **Notification** | `/notifications/:id` | `DELETE` | In inventory but not implemented in code | Low |
 | **Payment** | `/payments/webhook` | `POST` | Needs proper testing with Stripe CLI | High |
 | **Payment** | `/payments/by-bid/:bidId/current-intent` | `GET` | Bid flow documentation missing | Medium |

@@ -82,7 +82,7 @@ Auth: Bearer {{accessToken}}
 
 ### Mark All as Read
 ```
-PUT /notifications/mark-all-read
+PATCH /notifications/read-all
 Auth: Bearer {{accessToken}}
 ```
 
@@ -91,6 +91,7 @@ Auth: Bearer {{accessToken}}
 DELETE /notifications/:notificationId
 Auth: Bearer {{accessToken}}
 ```
+
 
 ---
 

@@ -3,7 +3,14 @@ import { Notification } from './notification.model';
 import { User } from '../user/user.model';
 import { pushNotificationHelper } from './pushNotificationHelper';
 
-export const sendNotifications = async (data: any): Promise<INotification> => {
+export const sendNotifications = async (data: Partial<INotification>): Promise<INotification> => {
+  // Set default expiry to 30 days if not provided
+  if (!data.expiresAt) {
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30);
+    data.expiresAt = expiryDate;
+  }
+
   const result = await Notification.create(data);
 
   const user = await User.findById(data?.userId);
@@ -16,27 +23,25 @@ export const sendNotifications = async (data: any): Promise<INotification> => {
   ) {
     const message = {
       notification: {
-        // title: 'New Notification Received',
-        title: data?.title || 'Task Titans Notification',
-        body: data?.subtitle || data?.title,
+        title: data?.title || 'TBSosick Notification',
+        body: data?.subtitle || data?.title || '',
       },
       tokens: user.deviceTokens,
     };
-    //firebase
+
     try {
       await pushNotificationHelper.sendPushNotifications(message);
     } catch (error) {
       console.error('Failed to send push notification:', error);
-      // Don't throw error, just log it so notification creation still succeeds
     }
   }
 
   //@ts-ignore
   const socketIo = global.io;
-
   if (socketIo) {
     socketIo.emit(`get-notification::${data?.userId}`, result);
   }
 
   return result;
 };
+

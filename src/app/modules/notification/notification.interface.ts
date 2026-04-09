@@ -32,7 +32,9 @@ export type INotification = {
   resourceType?: 'PreferenceCard' | 'Event' | string;
   resourceId?: string;
   read?: boolean;
+  isDeleted?: boolean;
   icon?: string;
+
 
   // Timestamps (Mongoose)
   expiresAt?: Date;

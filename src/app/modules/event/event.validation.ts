@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { EVENT_TYPE } from './event.interface';
 
 // Require date, time, durationHours and eventType
-export const createEventZodSchema = z.object({
+const createEventZodSchema = z.object({
   body: z.object({
     title: z.string().min(1, 'Title is required'),
     date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -21,7 +21,7 @@ export const createEventZodSchema = z.object({
   }),
 });
 
-export const updateEventZodSchema = z.object({
+const updateEventZodSchema = z.object({
   body: z.object({
     title: z.string().min(1).optional(),
     date: z
@@ -47,3 +47,8 @@ export const updateEventZodSchema = z.object({
       .optional(),
   }),
 });
+
+export const EventValidation = {
+  createEventZodSchema,
+  updateEventZodSchema,
+};

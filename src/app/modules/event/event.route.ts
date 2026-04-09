@@ -3,7 +3,7 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { USER_ROLES } from '../../../enums/user';
 import { EventController } from './event.controller';
-import { createEventZodSchema, updateEventZodSchema } from './event.validation';
+import { EventValidation } from './event.validation';
 
 const router = express.Router();
 
@@ -11,7 +11,7 @@ const router = express.Router();
 router.post(
   '/',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  validateRequest(createEventZodSchema),
+  validateRequest(EventValidation.createEventZodSchema),
   EventController.createEvent,
 );
 
@@ -33,7 +33,7 @@ router.get(
 router.patch(
   '/:id',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  validateRequest(updateEventZodSchema),
+  validateRequest(EventValidation.updateEventZodSchema),
   EventController.updateEvent,
 );
 
