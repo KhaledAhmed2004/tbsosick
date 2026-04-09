@@ -28,13 +28,21 @@
       "Bash('C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe' build:*)",
       "Bash('C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe' install:*)",
       "Bash(\"C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe\" build:*)",
-      "Bash(\"C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe\" install:*)"
+      "Bash(\"C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe\" install:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.stripe.com)",
+      "WebFetch(domain:www.revenuecat.com)",
+      "WebFetch(domain:adapty.io)",
+      "Bash(rm -rf src/app/modules/payment)",
+      "Bash(rm -f src/config/stripe.ts)",
+      "Bash(rm -f src/app/logging/patchStripe.ts)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": []
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "code-review-graph"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

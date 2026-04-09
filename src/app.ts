@@ -5,7 +5,6 @@ import './app/logging/autoLabelBootstrap';
 import './app/logging/opentelemetry';
 import './app/logging/patchBcrypt';
 import './app/logging/patchJWT';
-import './app/logging/patchStripe';
 import router from './routes';
 import { Morgan } from './shared/morgen';
 import swaggerUi from 'swagger-ui-express';
@@ -113,17 +112,15 @@ app.options(
 );
 
 // Body parser
-// Special handling for webhook routes - they need raw body for signature verification
-app.use('/api/v1/payments/webhook', express.raw({ type: 'application/json' }));
+// Apple Server Notifications V2 require the raw request body so the JWS
+// signature can be verified against the original bytes. This MUST be
+// registered before the generic express.json() middleware below.
+app.use(
+  '/api/v1/subscription/apple/webhook',
+  express.raw({ type: 'application/json' })
+);
 
-// For all other routes, use JSON parsing
-app.use((req, res, next) => {
-  if (req.path.includes('/webhook')) {
-    return next(); // Skip JSON parsing for webhook routes
-  }
-  express.json()(req, res, next);
-});
-
+app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Cookie parser (for reading refresh tokens from cookies)

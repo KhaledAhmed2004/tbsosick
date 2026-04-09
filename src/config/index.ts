@@ -63,6 +63,20 @@ export default {
   firebase_api_key_base64: process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64,
   firebase_web_push_credentials: process.env.FIREBASE_WEB_PUSH_CREDENTIALS,
 
+  // Apple In-App Purchase (StoreKit 2 + App Store Server API)
+  apple: {
+    bundleId: process.env.APPLE_BUNDLE_ID || '',
+    appAppleId: process.env.APPLE_APP_APPLE_ID,
+    keyId: process.env.APPLE_KEY_ID,
+    issuerId: process.env.APPLE_ISSUER_ID,
+    privateKeyPath: process.env.APPLE_PRIVATE_KEY_PATH,
+    environment: (process.env.APPLE_ENVIRONMENT || 'sandbox') as
+      | 'sandbox'
+      | 'production',
+    rootCertsDir:
+      process.env.APPLE_ROOT_CERTS_DIR || './secrets/apple-root-certs',
+  },
+
   // 🆕 NEW: Tracing capture configuration
   tracing: {
     capture: {

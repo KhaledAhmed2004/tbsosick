@@ -1,15 +1,15 @@
 import { z } from 'zod';
 
 export const SubscriptionValidation = {
-  verifyIapSubscriptionSchema: z
+  appleVerifySchema: z
     .object({
       body: z.object({
-        platform: z.enum(['android', 'ios']),
-        productId: z.string().min(1),
-        receipt: z.string().min(1),
+        signedTransactionInfo: z
+          .string()
+          .min(1, 'signedTransactionInfo is required'),
       }),
       params: z.object({}).optional(),
       query: z.object({}).optional(),
     })
-    .describe('SubscriptionIapVerifySchema'),
+    .describe('AppleVerifyPurchaseSchema'),
 };

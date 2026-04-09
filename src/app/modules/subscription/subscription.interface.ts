@@ -14,17 +14,42 @@ export enum SUBSCRIPTION_STATUS {
   INACTIVE = 'inactive',
 }
 
+export enum SUBSCRIPTION_PLATFORM {
+  APPLE = 'apple',
+  GOOGLE = 'google',
+  ADMIN = 'admin', // manually assigned by a super admin (e.g. enterprise contracts)
+}
+
 export type SubscriptionPlanType = SUBSCRIPTION_PLAN;
 export type SubscriptionStatusType = SUBSCRIPTION_STATUS;
+export type SubscriptionPlatformType = SUBSCRIPTION_PLATFORM;
+export type SubscriptionEnvironmentType = 'sandbox' | 'production';
 
 export type ISubscription = {
   _id?: Types.ObjectId;
   userId: Types.ObjectId;
   plan: SubscriptionPlanType;
   status: SubscriptionStatusType;
-  stripeCustomerId?: string;
-  stripeSubscriptionId?: string;
+
+  platform?: SubscriptionPlatformType;
+  environment?: SubscriptionEnvironmentType;
+  productId?: string;
+  autoRenewing?: boolean;
+
+  // Apple-specific
+  appleOriginalTransactionId?: string;
+  appleLatestTransactionId?: string;
+
+  // Google-specific (populated in the next phase)
+  googlePurchaseToken?: string;
+  googleOrderId?: string;
+
+  // Lifecycle timestamps
+  startedAt?: Date | null;
   currentPeriodEnd?: Date | null;
+  gracePeriodEndsAt?: Date | null;
+  canceledAt?: Date | null;
+
   metadata?: Record<string, any>;
   createdAt?: Date;
   updatedAt?: Date;
@@ -32,5 +57,8 @@ export type ISubscription = {
 
 export type SubscriptionModel = {
   findByUser(userId: Types.ObjectId): Promise<ISubscription | null>;
-  upsertForUser(userId: Types.ObjectId, payload: Partial<ISubscription>): Promise<ISubscription>;
+  upsertForUser(
+    userId: Types.ObjectId,
+    payload: Partial<ISubscription>
+  ): Promise<ISubscription>;
 } & Model<ISubscription>;

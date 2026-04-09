@@ -9,7 +9,6 @@ import { AdminRoutes } from '../app/modules/admin/admin.route';
 import { SuppliesRoutes } from '../app/modules/supplies/supplies.route';
 import { SuturesRoutes } from '../app/modules/sutures/sutures.route';
 import { LegalRoutes } from '../app/modules/legal/legal.route';
-import { PaymentRoutes } from '../app/modules/payment/payment.routes';
 
 const router = express.Router();
 
@@ -53,10 +52,6 @@ const apiRoutes = [
   {
     path: '/legal',
     route: LegalRoutes,
-  },
-  {
-    path: '/payments',
-    route: PaymentRoutes,
   },
 ];
 

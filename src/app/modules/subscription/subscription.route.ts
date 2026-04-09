@@ -9,23 +9,39 @@ import { rateLimitMiddleware } from '../../middlewares/rateLimit';
 const router = express.Router();
 
 // GET /subscription/me
-// নিজের সাবস্ক্রিপশন স্ট্যাটাস/প্ল্যান দেখায় (Stripe থাকলে লাইভ সিঙ্ক)
+// নিজের সাবস্ক্রিপশন স্ট্যাটাস/প্ল্যান দেখায়
 router.get(
   '/me',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   SubscriptionController.getMySubscriptionController
 );
 
+// POST /subscription/apple/verify
+// iOS ক্লায়েন্ট StoreKit থেকে signedTransactionInfo পাঠায় — server verify করে
+// DB-তে সাবস্ক্রিপশন তৈরি/আপডেট করে।
 router.post(
-  '/iap/verify',
+  '/apple/verify',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  rateLimitMiddleware({ windowMs: 60_000, max: 30, routeName: 'subscription-iap-verify' }),
-  validateRequest(SubscriptionValidation.verifyIapSubscriptionSchema),
-  SubscriptionController.verifyIapSubscriptionController
+  rateLimitMiddleware({
+    windowMs: 60_000,
+    max: 30,
+    routeName: 'subscription-apple-verify',
+  }),
+  validateRequest(SubscriptionValidation.appleVerifySchema),
+  SubscriptionController.verifyApplePurchaseController
+);
+
+// POST /subscription/apple/webhook
+// Apple App Store Server Notifications V2 — no auth middleware because
+// Apple's JWS signature is verified inside the controller/service.
+// Raw body parsing for this route is configured in src/app.ts.
+router.post(
+  '/apple/webhook',
+  SubscriptionController.appleWebhookController
 );
 
 // POST /subscription/choose/free
-// লোকালি Free প্ল্যানে সুইচ করে (Stripe সাবস্ক্রিপশন ছাড়াই)
+// লোকালি Free প্ল্যানে সুইচ করে
 router.post(
   '/choose/free',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
