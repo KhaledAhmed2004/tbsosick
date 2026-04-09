@@ -62,7 +62,7 @@ const updateProfileToDB = async (
   return updateDoc;
 };
 
-const getAllUsers = async (query: Record<string, unknown>) => {
+const getAllUsersFromDB = async (query: Record<string, unknown>) => {
   const userQuery = new QueryBuilder(User.find(), query)
     .search(['name', 'email'])
     .filter()
@@ -79,7 +79,7 @@ const getAllUsers = async (query: Record<string, unknown>) => {
   };
 };
 
-const getUsersStats = async () => {
+const getUsersStatsFromDB = async () => {
   const aggregationBuilder = new AggregationBuilder(User);
   
   // Overall user growth
@@ -121,7 +121,7 @@ const getUsersStats = async () => {
   };
 };
 
-const getAllUserRoles = async (query: Record<string, unknown>) => {
+const getAllUserRolesFromDB = async (query: Record<string, unknown>) => {
   const { search, email, role = USER_ROLES.USER, status, specialty, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = query;
   
   const skip = (Number(page) - 1) * Number(limit);
@@ -246,18 +246,21 @@ const getAllUserRoles = async (query: Record<string, unknown>) => {
   ]);
 
   const total = countResult[0]?.total || 0;
+  const totalPages = Math.ceil(total / Number(limit));
   return {
     meta: {
       page: Number(page),
       limit: Number(limit),
       total,
-      totalPage: Math.ceil(total / Number(limit)),
+      totalPages,
+      hasNext: Number(page) < totalPages,
+      hasPrev: Number(page) > 1,
     },
     data,
   };
 };
 
-const updateUserStatus = async (id: string, status: USER_STATUS) => {
+const updateUserStatusInDB = async (id: string, status: USER_STATUS) => {
   const user = await User.isExistUserById(id);
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
@@ -272,7 +275,7 @@ const updateUserStatus = async (id: string, status: USER_STATUS) => {
   return updatedUser;
 };
 
-const deleteUserPermanently = async (id: string) => {
+const deleteUserPermanentlyFromDB = async (id: string) => {
   const user = await User.findById(id);
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
@@ -283,7 +286,7 @@ const deleteUserPermanently = async (id: string) => {
   return deletedUser;
 };
 
-const updateUserByAdmin = async (id: string, payload: Partial<IUser>) => {
+const updateUserByAdminInDB = async (id: string, payload: Partial<IUser>) => {
   const user = await User.findById(id).select('+password');
   if (!user) {
     throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
@@ -310,7 +313,7 @@ const updateUserByAdmin = async (id: string, payload: Partial<IUser>) => {
   return plain as IUser;
 };
 
-const getUserById = async (id: string) => {
+const getUserByIdFromDB = async (id: string) => {
   // Only return user info; remove task/bid side data
   const user = await User.findById(id).select('-password -authentication');
   if (!user) {
@@ -319,7 +322,7 @@ const getUserById = async (id: string) => {
   return { user };
 };
 
-const getUserDetailsById = async (id: string) => {
+const getUserDetailsByIdFromDB = async (id: string) => {
   const user = await User.findById(id).select('-password -authentication');
   if (!user) {
     throw new ApiError(StatusCodes.NOT_FOUND, "User doesn't exist!");
@@ -331,12 +334,12 @@ export const UserService = {
   createUserToDB,
   getUserProfileFromDB,
   updateProfileToDB,
-  getAllUsers,
-  getAllUserRoles,
-  updateUserStatus,
-  updateUserByAdmin,
-  deleteUserPermanently,
-  getUserById,
-  getUserDetailsById,
-  getUsersStats,
+  getAllUsersFromDB,
+  getAllUserRolesFromDB,
+  updateUserStatusInDB,
+  updateUserByAdminInDB,
+  deleteUserPermanentlyFromDB,
+  getUserByIdFromDB,
+  getUserDetailsByIdFromDB,
+  getUsersStatsFromDB,
 };

@@ -51,68 +51,73 @@ const scheduleEventReminders = (userId, eventId, title, eventStart) => __awaiter
             .send();
     }
 });
+const createEventInDB = (userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    if (!((_a = payload.date) === null || _a === void 0 ? void 0 : _a.match(/^\d{4}-\d{2}-\d{2}$/))) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid date');
+    }
+    if (!((_b = payload.time) === null || _b === void 0 ? void 0 : _b.match(/^\d{2}:\d{2}$/))) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid time');
+    }
+    const event = yield event_model_1.default.create(Object.assign(Object.assign({ userId }, payload), { date: new Date(`${payload.date}T00:00:00.000Z`) }));
+    const eventId = event._id.toString();
+    const eventStart = buildEventStartDate(payload.date, payload.time);
+    yield scheduleEventReminders(userId, eventId, payload.title, eventStart);
+    return event;
+});
+const listEventsForUserFromDB = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
+    const filter = { userId };
+    if (query.from || query.to) {
+        filter.date = {};
+        if (query.from) {
+            filter.date.$gte = new Date(`${query.from}T00:00:00.000Z`);
+        }
+        if (query.to) {
+            filter.date.$lte = new Date(`${query.to}T00:00:00.000Z`);
+        }
+    }
+    return event_model_1.default.find(filter).select('title eventType date time durationHours location notes personnel preferenceCard').lean();
+});
+const getEventByIdFromDB = (id, requester) => __awaiter(void 0, void 0, void 0, function* () {
+    const event = yield event_model_1.default.findById(id).populate('preferenceCard', 'cardTitle').lean();
+    if (!event)
+        return null;
+    if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed to view this event');
+    }
+    return event;
+});
+const updateEventInDB = (eventId, user, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    // Find the event by ID
+    const event = yield event_model_1.default.findById(eventId);
+    if (!event) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Event not found');
+    }
+    // Check authorization: either the owner or a SUPER_ADMIN can update
+    if (event.userId.toString() !== user.id && user.role !== 'SUPER_ADMIN') {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to update this event');
+    }
+    // Update the event with new data
+    Object.assign(event, payload);
+    // Save the changes
+    const updatedEvent = yield event.save();
+    return updatedEvent;
+});
+const deleteEventFromDB = (id, requester) => __awaiter(void 0, void 0, void 0, function* () {
+    const event = yield event_model_1.default.findById(id);
+    if (!event) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Event not found');
+    }
+    if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed to delete this event');
+    }
+    const deleted = yield event_model_1.default.findByIdAndDelete(id);
+    return deleted;
+});
 exports.EventService = {
-    createEventInDB: (userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
-        var _a, _b;
-        if (!((_a = payload.date) === null || _a === void 0 ? void 0 : _a.match(/^\d{4}-\d{2}-\d{2}$/))) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid date');
-        }
-        if (!((_b = payload.time) === null || _b === void 0 ? void 0 : _b.match(/^\d{2}:\d{2}$/))) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid time');
-        }
-        const event = yield event_model_1.default.create(Object.assign(Object.assign({ userId }, payload), { date: new Date(`${payload.date}T00:00:00.000Z`) }));
-        const eventId = event._id.toString();
-        const eventStart = buildEventStartDate(payload.date, payload.time);
-        yield scheduleEventReminders(userId, eventId, payload.title, eventStart);
-        return event;
-    }),
-    listEventsForUserFromDB: (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
-        const filter = { userId };
-        if (query.from || query.to) {
-            filter.date = {};
-            if (query.from) {
-                filter.date.$gte = new Date(`${query.from}T00:00:00.000Z`);
-            }
-            if (query.to) {
-                filter.date.$lte = new Date(`${query.to}T00:00:00.000Z`);
-            }
-        }
-        return event_model_1.default.find(filter).select('title eventType date time durationHours location notes personnel preferenceCard').lean();
-    }),
-    getEventByIdFromDB: (id, requester) => __awaiter(void 0, void 0, void 0, function* () {
-        const event = yield event_model_1.default.findById(id).populate('preferenceCard', 'cardTitle').lean();
-        if (!event)
-            return null;
-        if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed to view this event');
-        }
-        return event;
-    }),
-    updateEventInDB: (eventId, user, payload) => __awaiter(void 0, void 0, void 0, function* () {
-        // Find the event by ID
-        const event = yield event_model_1.default.findById(eventId);
-        if (!event) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Event not found');
-        }
-        // Check authorization: either the owner or a SUPER_ADMIN can update
-        if (event.userId.toString() !== user.id && user.role !== 'SUPER_ADMIN') {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to update this event');
-        }
-        // Update the event with new data
-        Object.assign(event, payload);
-        // Save the changes
-        const updatedEvent = yield event.save();
-        return updatedEvent;
-    }),
-    deleteEventFromDB: (id, requester) => __awaiter(void 0, void 0, void 0, function* () {
-        const event = yield event_model_1.default.findById(id);
-        if (!event) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Event not found');
-        }
-        if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed to delete this event');
-        }
-        const deleted = yield event_model_1.default.findByIdAndDelete(id);
-        return deleted;
-    }),
+    createEventInDB,
+    listEventsForUserFromDB,
+    getEventByIdFromDB,
+    updateEventInDB,
+    deleteEventFromDB,
 };

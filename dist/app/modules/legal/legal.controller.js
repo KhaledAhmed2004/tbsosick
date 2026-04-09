@@ -18,7 +18,7 @@ const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const legal_service_1 = require("./legal.service");
 const createLegalPage = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield legal_service_1.LegalService.createLegalPage(req.body);
+    const result = yield legal_service_1.LegalService.createLegalPageToDB(req.body);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.CREATED,
@@ -27,7 +27,7 @@ const createLegalPage = (0, catchAsync_1.default)((req, res) => __awaiter(void 0
     });
 }));
 const getAll = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield legal_service_1.LegalService.getAll();
+    const result = yield legal_service_1.LegalService.getAllLegalPagesFromDB();
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -36,7 +36,7 @@ const getAll = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0,
     });
 }));
 const getBySlug = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield legal_service_1.LegalService.getBySlug(req.params.slug);
+    const result = yield legal_service_1.LegalService.getLegalPageBySlugFromDB(req.params.slug);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -45,7 +45,7 @@ const getBySlug = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void
     });
 }));
 const updateBySlug = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield legal_service_1.LegalService.updateBySlug(req.params.slug, req.body);
+    const result = yield legal_service_1.LegalService.updateLegalPageBySlugInDB(req.params.slug, req.body);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -54,7 +54,7 @@ const updateBySlug = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
     });
 }));
 const deleteBySlug = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    yield legal_service_1.LegalService.deleteBySlug(req.params.slug);
+    yield legal_service_1.LegalService.deleteLegalPageBySlugFromDB(req.params.slug);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

@@ -1,23 +1,23 @@
 import { z } from 'zod';
 
-export const createSutureSchema = z.object({
+const createSutureSchema = z.object({
   body: z.object({
     name: z.string().min(1),
   }),
 });
 
-export const updateSutureSchema = z.object({
+const updateSutureSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
   body: z.object({
     name: z.string().min(1).optional(),
   }),
 });
 
-export const paramIdSchema = z.object({
+const paramIdSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
 });
 
-export const bulkCreateSchema = z.object({
+const bulkCreateSchema = z.object({
   body: z.object({
     items: z
       .array(
@@ -28,3 +28,10 @@ export const bulkCreateSchema = z.object({
       .min(1),
   }),
 });
+
+export const SuturesValidation = {
+  createSutureSchema,
+  updateSutureSchema,
+  paramIdSchema,
+  bulkCreateSchema,
+};

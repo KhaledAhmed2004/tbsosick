@@ -4,13 +4,8 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { USER_ROLES } from '../../../enums/user';
 import { PreferenceCardController } from './preference-card.controller';
-import {
-  PreferenceCardValidation,
-  createPreferenceCardSchema,
-  updatePreferenceCardSchema,
-} from './preference-card.validation';
+import { PreferenceCardValidation } from './preference-card.validation';
 import { fileHandler } from '../../middlewares/fileHandler';
-
 import { rateLimitMiddleware } from '../../middlewares/rateLimit';
 
 const router = express.Router();
@@ -54,7 +49,7 @@ router.post(
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   fileHandler([{ name: 'photoLibrary', maxCount: 5 }]),
   parseBody,
-  validateRequest(createPreferenceCardSchema),
+  validateRequest(PreferenceCardValidation.createPreferenceCardSchema),
   PreferenceCardController.createCard,
 );
 
@@ -106,7 +101,7 @@ router.patch(
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   fileHandler([{ name: 'photoLibrary', maxCount: 5 }]),
   parseBody,
-  validateRequest(updatePreferenceCardSchema),
+  validateRequest(PreferenceCardValidation.updatePreferenceCardSchema),
   PreferenceCardController.updateCard,
 );
 

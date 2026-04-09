@@ -19,7 +19,7 @@ const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const notification_service_1 = require("./notification.service");
 const listMyNotifications = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const result = yield notification_service_1.NotificationService.listForUser(user.id);
+    const result = yield notification_service_1.NotificationService.listForUser(user.id, req.query);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -64,11 +64,4 @@ exports.NotificationController = {
     markAllRead,
     markRead,
     deleteNotification,
-    // Backward-compatible names expected by existing routes
-    getNotificationFromDB: listMyNotifications,
-    readNotification: markRead,
-    readAllNotifications: markAllRead,
-    adminNotificationFromDB: listMyNotifications,
-    adminMarkNotificationAsRead: markRead,
-    adminMarkAllNotificationsAsRead: markAllRead,
 };

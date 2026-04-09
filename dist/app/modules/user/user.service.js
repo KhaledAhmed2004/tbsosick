@@ -15,13 +15,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const user_1 = require("../../../enums/user");
-const mongoose_1 = require("mongoose");
 const preference_card_model_1 = require("../preference-card/preference-card.model");
 const subscription_model_1 = require("../subscription/subscription.model");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const unlinkFile_1 = __importDefault(require("../../../shared/unlinkFile"));
 const user_model_1 = require("./user.model");
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
+const AggregationBuilder_1 = __importDefault(require("../../builder/AggregationBuilder"));
 const createUserToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const createUser = yield user_model_1.User.create(Object.assign(Object.assign({}, payload), { verified: true }));
     if (!createUser) {
@@ -56,7 +56,7 @@ const updateProfileToDB = (user, payload) => __awaiter(void 0, void 0, void 0, f
     });
     return updateDoc;
 });
-const getAllUsers = (query) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllUsersFromDB = (query) => __awaiter(void 0, void 0, void 0, function* () {
     const userQuery = new QueryBuilder_1.default(user_model_1.User.find(), query)
         .search(['name', 'email'])
         .filter()
@@ -70,66 +70,176 @@ const getAllUsers = (query) => __awaiter(void 0, void 0, void 0, function* () {
         data: users,
     };
 });
-const getAllUserRoles = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const qb = new QueryBuilder_1.default(user_model_1.User.find({ role: user_1.USER_ROLES.USER }), query)
-        .filter()
-        .sort()
-        .paginate();
-    // Select core fields needed for listing
-    const docs = (yield qb.modelQuery
-        .select('_id name email profilePicture status specialty hospital role')
-        .lean());
-    const paginationInfo = yield qb.getPaginationInfo();
-    // Build id arrays for lookups
-    const idStrings = docs.map(d => (d._id ? d._id.toString() : null)).filter(Boolean);
-    // Cards count per user (PreferenceCard.createdBy stores string userId)
-    const cardCountsAgg = yield preference_card_model_1.PreferenceCardModel.aggregate([
-        { $match: { createdBy: { $in: idStrings } } },
-        { $group: { _id: '$createdBy', count: { $sum: 1 } } },
-    ]);
-    const cardCountsMap = new Map();
-    for (const item of cardCountsAgg) {
-        cardCountsMap.set(item._id, item.count);
-    }
-    // Subscription per user
-    const objectIds = idStrings.map(id => new mongoose_1.Types.ObjectId(id));
-    const subs = yield subscription_model_1.Subscription.find({ userId: { $in: objectIds } })
-        .select('userId plan status currentPeriodEnd')
-        .lean();
-    const subsMap = new Map();
-    for (const s of subs) {
-        subsMap.set(s.userId.toString(), {
-            plan: s.plan,
-            status: s.status,
-            currentPeriodEnd: (_a = s.currentPeriodEnd) !== null && _a !== void 0 ? _a : null,
-        });
-    }
-    // Compose final response objects
-    const data = docs.map(d => {
-        var _a, _b, _c, _d, _e;
-        const id = (_a = d._id) === null || _a === void 0 ? void 0 : _a.toString();
-        return {
-            _id: d._id,
-            name: d.name,
-            email: d.email,
-            profilePicture: d.profilePicture,
-            role: d.role,
-            specialty: (_b = d.specialty) !== null && _b !== void 0 ? _b : null,
-            hospital: (_c = d.hospital) !== null && _c !== void 0 ? _c : null,
-            status: d.status,
-            cards: id ? (_d = cardCountsMap.get(id)) !== null && _d !== void 0 ? _d : 0 : 0,
-            subscription: id ? (_e = subsMap.get(id)) !== null && _e !== void 0 ? _e : null : null,
-            createdAt: d.createdAt,
-            updatedAt: d.updatedAt,
-        };
+const getUsersStatsFromDB = () => __awaiter(void 0, void 0, void 0, function* () {
+    const aggregationBuilder = new AggregationBuilder_1.default(user_model_1.User);
+    // Overall user growth
+    const totalStats = yield aggregationBuilder.calculateGrowth({ period: 'month' });
+    // Status based growth
+    aggregationBuilder.reset();
+    const activeStats = yield aggregationBuilder.calculateGrowth({
+        filter: { status: user_1.USER_STATUS.ACTIVE },
+        period: 'month'
+    });
+    aggregationBuilder.reset();
+    const inactiveStats = yield aggregationBuilder.calculateGrowth({
+        filter: { status: user_1.USER_STATUS.INACTIVE },
+        period: 'month'
+    });
+    aggregationBuilder.reset();
+    const blockedStats = yield aggregationBuilder.calculateGrowth({
+        filter: { status: user_1.USER_STATUS.RESTRICTED },
+        period: 'month'
+    });
+    const formatMetric = (stat) => ({
+        value: stat.total,
+        changePct: stat.growth,
+        direction: stat.growthType === 'increase' ? 'up' : stat.growthType === 'decrease' ? 'down' : 'neutral',
     });
     return {
-        meta: paginationInfo,
+        meta: {
+            comparisonPeriod: 'month',
+        },
+        totalUsers: formatMetric(totalStats),
+        activeUsers: formatMetric(activeStats),
+        inactiveUsers: formatMetric(inactiveStats),
+        blockedUsers: formatMetric(blockedStats),
+    };
+});
+const getAllUserRolesFromDB = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const { search, email, role = user_1.USER_ROLES.USER, status, specialty, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+    const skip = (Number(page) - 1) * Number(limit);
+    const match = {};
+    if (status)
+        match.status = status;
+    if (role)
+        match.role = role;
+    if (email)
+        match.email = { $regex: email, $options: 'i' };
+    if (search) {
+        match.$or = [
+            { name: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+        ];
+    }
+    const basePipeline = [
+        { $match: match },
+        // Lookup preference cards created by this user
+        {
+            $lookup: {
+                from: preference_card_model_1.PreferenceCardModel.collection.name,
+                let: { userIdStr: { $toString: '$_id' } },
+                pipeline: [
+                    { $match: { $expr: { $eq: ['$createdBy', '$$userIdStr'] } } },
+                ],
+                as: 'cards',
+            },
+        },
+        // Compute specialties and cards count
+        {
+            $addFields: {
+                cardsCount: { $size: '$cards' },
+                specialties: {
+                    $setDifference: [
+                        {
+                            $setUnion: [
+                                {
+                                    $map: {
+                                        input: '$cards',
+                                        as: 'c',
+                                        in: { $ifNull: ['$$c.surgeon.specialty', null] },
+                                    },
+                                },
+                                [],
+                            ],
+                        },
+                        [null],
+                    ],
+                },
+            },
+        },
+        // Optional specialty filter
+        ...(specialty
+            ? [
+                {
+                    $match: {
+                        specialties: { $elemMatch: { $regex: specialty, $options: 'i' } },
+                    },
+                },
+            ]
+            : []),
+        // Lookup subscription status
+        {
+            $lookup: {
+                from: subscription_model_1.Subscription.collection.name,
+                localField: '_id',
+                foreignField: 'userId',
+                as: 'subscription',
+            },
+        },
+        {
+            $addFields: {
+                subscriptionStatus: {
+                    $ifNull: [{ $arrayElemAt: ['$subscription.status', 0] }, 'inactive'],
+                },
+                subscriptionPlan: {
+                    $ifNull: [{ $arrayElemAt: ['$subscription.plan', 0] }, 'FREE'],
+                },
+            },
+        },
+        {
+            $project: {
+                _id: 1,
+                name: 1,
+                email: 1,
+                phone: 1,
+                specialty: 1,
+                hospital: 1,
+                status: 1,
+                verified: 1,
+                role: 1,
+                profilePicture: 1,
+                specialties: 1,
+                cardsCount: 1,
+                subscriptionStatus: 1,
+                subscriptionPlan: 1,
+                createdAt: 1,
+                updatedAt: 1,
+            },
+        },
+    ];
+    const sortStage = {
+        $sort: { [sortBy]: sortOrder === 'desc' ? -1 : 1 },
+    };
+    const paginatedPipeline = [
+        ...basePipeline,
+        sortStage,
+        { $skip: skip },
+        { $limit: Number(limit) },
+    ];
+    const countPipeline = [
+        ...basePipeline,
+        { $count: 'total' },
+    ];
+    const [data, countResult] = yield Promise.all([
+        user_model_1.User.aggregate(paginatedPipeline),
+        user_model_1.User.aggregate(countPipeline),
+    ]);
+    const total = ((_a = countResult[0]) === null || _a === void 0 ? void 0 : _a.total) || 0;
+    const totalPages = Math.ceil(total / Number(limit));
+    return {
+        meta: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            totalPages,
+            hasNext: Number(page) < totalPages,
+            hasPrev: Number(page) > 1,
+        },
         data,
     };
 });
-const updateUserStatus = (id, status) => __awaiter(void 0, void 0, void 0, function* () {
+const updateUserStatusInDB = (id, status) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield user_model_1.User.isExistUserById(id);
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
@@ -137,7 +247,7 @@ const updateUserStatus = (id, status) => __awaiter(void 0, void 0, void 0, funct
     const updatedUser = yield user_model_1.User.findByIdAndUpdate(id, { status }, { new: true });
     return updatedUser;
 });
-const deleteUserPermanently = (id) => __awaiter(void 0, void 0, void 0, function* () {
+const deleteUserPermanentlyFromDB = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield user_model_1.User.findById(id);
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
@@ -146,7 +256,7 @@ const deleteUserPermanently = (id) => __awaiter(void 0, void 0, void 0, function
         .select('-password -authentication');
     return deletedUser;
 });
-const updateUserByAdmin = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {
+const updateUserByAdminInDB = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield user_model_1.User.findById(id).select('+password');
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, "User doesn't exist!");
@@ -182,7 +292,7 @@ const updateUserByAdmin = (id, payload) => __awaiter(void 0, void 0, void 0, fun
     delete plain.authentication;
     return plain;
 });
-const getUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
+const getUserByIdFromDB = (id) => __awaiter(void 0, void 0, void 0, function* () {
     // Only return user info; remove task/bid side data
     const user = yield user_model_1.User.findById(id).select('-password -authentication');
     if (!user) {
@@ -190,7 +300,7 @@ const getUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     }
     return { user };
 });
-const getUserDetailsById = (id) => __awaiter(void 0, void 0, void 0, function* () {
+const getUserDetailsByIdFromDB = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const user = yield user_model_1.User.findById(id).select('-password -authentication');
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, "User doesn't exist!");
@@ -201,11 +311,12 @@ exports.UserService = {
     createUserToDB,
     getUserProfileFromDB,
     updateProfileToDB,
-    getAllUsers,
-    getAllUserRoles,
-    updateUserStatus,
-    updateUserByAdmin,
-    deleteUserPermanently,
-    getUserById,
-    getUserDetailsById,
+    getAllUsersFromDB,
+    getAllUserRolesFromDB,
+    updateUserStatusInDB,
+    updateUserByAdminInDB,
+    deleteUserPermanentlyFromDB,
+    getUserByIdFromDB,
+    getUserDetailsByIdFromDB,
+    getUsersStatsFromDB,
 };

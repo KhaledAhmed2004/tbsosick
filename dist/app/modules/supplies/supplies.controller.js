@@ -17,52 +17,57 @@ const http_status_codes_1 = require("http-status-codes");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const supplies_service_1 = require("./supplies.service");
+const createSupply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield supplies_service_1.SuppliesService.createSupplyToDB(req.body);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.CREATED,
+        message: 'Supply created',
+        data: result,
+    });
+}));
+const updateSupply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield supplies_service_1.SuppliesService.updateSupplyInDB(req.params.id, req.body);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Supply updated',
+        data: result,
+    });
+}));
+const deleteSupply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield supplies_service_1.SuppliesService.deleteSupplyFromDB(req.params.id);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Supply deleted',
+        data: result,
+    });
+}));
+const bulkCreate = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { items } = req.body;
+    const result = yield supplies_service_1.SuppliesService.bulkCreateSuppliesToDB(items);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Supplies created',
+        data: result,
+    });
+}));
+const listSupplies = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield supplies_service_1.SuppliesService.listSuppliesFromDB(req.query);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Supplies fetched',
+        meta: result.meta,
+        data: result.data,
+    });
+}));
 exports.SuppliesController = {
-    createSupply: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield supplies_service_1.SuppliesService.createSupplyInDB(req.body);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.CREATED,
-            message: 'Supply created',
-            data: result,
-        });
-    })),
-    updateSupply: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield supplies_service_1.SuppliesService.updateSupplyInDB(req.params.id, req.body);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Supply updated',
-            data: result,
-        });
-    })),
-    deleteSupply: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield supplies_service_1.SuppliesService.deleteSupplyFromDB(req.params.id);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Supply deleted',
-            data: result,
-        });
-    })),
-    bulkCreate: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const { items } = req.body;
-        const result = yield supplies_service_1.SuppliesService.bulkCreateInDB(items);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Supplies created',
-            data: result,
-        });
-    })),
-    listSupplies: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield supplies_service_1.SuppliesService.listSuppliesFromDB(req.query);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Supplies fetched',
-            pagination: result.pagination,
-            data: result.data,
-        });
-    })),
+    createSupply,
+    updateSupply,
+    deleteSupply,
+    bulkCreate,
+    listSupplies,
 };

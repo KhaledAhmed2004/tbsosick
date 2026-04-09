@@ -89,324 +89,373 @@ const flattenCard = (doc: any) => {
 
 const flattenCards = (docs: any[]) => docs.map(flattenCard);
 
-export const PreferenceCardService = {
-  getCountsForCards: async (userId: string) => {
-    const [AllCardsCount, myCardsCount] = await Promise.all([
-      PreferenceCardModel.countDocuments({ published: true }),
-      PreferenceCardModel.countDocuments({ createdBy: userId }),
-    ]);
-    return { AllCardsCount, myCardsCount };
-  },
-  getDistinctSpecialtiesFromDB: async () => {
-    const specialties = await PreferenceCardModel.distinct('surgeon.specialty', { published: true });
-    return specialties.filter(Boolean).sort();
-  },
-  getFavoriteCardIdsForUser: async (userId: string) => {
-    const user = await User.findById(userId).select('favoriteCards').lean();
-    if (!user || !Array.isArray(user.favoriteCards)) {
-      return [];
-    }
-    return user.favoriteCards;
-  },
-  incrementDownloadCountInDB: async (
-    id: string,
-    userId: string,
-    role?: string,
-  ) => {
-    const doc = await PreferenceCardModel.findById(id);
-    if (!doc)
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+const getPreferenceCardCountsFromDB = async (userId: string) => {
+  const [AllCardsCount, myCardsCount] = await Promise.all([
+    PreferenceCardModel.countDocuments({ published: true }),
+    PreferenceCardModel.countDocuments({ createdBy: userId }),
+  ]);
+  return { AllCardsCount, myCardsCount };
+};
 
-    const isOwner = doc.createdBy.toString() === userId;
-    const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
-    if (!isOwner && !isSuperAdmin && !doc.published) {
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        'Not authorized to update download count',
-      );
-    }
+const getDistinctSpecialtiesFromDB = async () => {
+  const specialties = await PreferenceCardModel.distinct('surgeon.specialty', {
+    published: true,
+  });
+  return specialties.filter(Boolean).sort();
+};
 
-    doc.downloadCount = (doc.downloadCount || 0) + 1;
-    await doc.save();
-    return { downloadCount: doc.downloadCount };
-  },
-  createPreferenceCardInDB: async (userId: string, data: any) => {
-    if (data.supplies && Array.isArray(data.supplies)) {
-      data.supplies = await resolveMixedItemsWithQuantity(data.supplies, 'name', SupplyModel);
-    }
-    if (data.sutures && Array.isArray(data.sutures)) {
-      data.sutures = await resolveMixedItemsWithQuantity(data.sutures, 'name', SutureModel);
-    }
+const getFavoriteCardIdsForUserFromDB = async (userId: string) => {
+  const user = await User.findById(userId).select('favoriteCards').lean();
+  if (!user || !Array.isArray(user.favoriteCards)) {
+    return [];
+  }
+  return user.favoriteCards;
+};
 
-    const dataToSave = {
-      ...data,
-      createdBy: userId,
-    };
+const incrementDownloadCountInDB = async (
+  id: string,
+  userId: string,
+  role?: string,
+) => {
+  const doc = await PreferenceCardModel.findById(id);
+  if (!doc)
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
 
-    const card = await PreferenceCardModel.create(dataToSave);
-    return card;
-  },
-  listPreferenceCardsForUserFromDB: async (userId: string) => {
-    const docs = await PreferenceCardModel.find({
-      createdBy: userId,
+  const isOwner = doc.createdBy.toString() === userId;
+  const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
+  if (!isOwner && !isSuperAdmin && !doc.published) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to update download count',
+    );
+  }
+
+  doc.downloadCount = (doc.downloadCount || 0) + 1;
+  await doc.save();
+  return { downloadCount: doc.downloadCount };
+};
+
+const createPreferenceCardInDB = async (userId: string, data: any) => {
+  if (data.supplies && Array.isArray(data.supplies)) {
+    data.supplies = await resolveMixedItemsWithQuantity(
+      data.supplies,
+      'name',
+      SupplyModel,
+    );
+  }
+  if (data.sutures && Array.isArray(data.sutures)) {
+    data.sutures = await resolveMixedItemsWithQuantity(
+      data.sutures,
+      'name',
+      SutureModel,
+    );
+  }
+
+  const dataToSave = {
+    ...data,
+    createdBy: userId,
+  };
+
+  const card = await PreferenceCardModel.create(dataToSave);
+  return card;
+};
+
+const listPreferenceCardsForUserFromDB = async (userId: string) => {
+  const docs = await PreferenceCardModel.find({
+    createdBy: userId,
+  })
+    .populate('supplies.name', 'name -_id')
+    .populate('sutures.name', 'name -_id')
+    .sort({
+      updatedAt: -1,
     })
-      .populate('supplies.name', 'name -_id')
-      .populate('sutures.name', 'name -_id')
-      .sort({
-        updatedAt: -1,
-      })
-      .lean();
+    .lean();
 
-    return flattenCards(docs);
-  },
-  listPrivatePreferenceCardsForUserFromDB: async (
-    userId: string,
-    query?: Record<string, any>,
-  ) => {
-    const qb = new QueryBuilder(
-      PreferenceCardModel.find({
-        createdBy: userId,
-        published: false,
-      }),
-      query || {},
-    )
-      .search(['cardTitle', 'surgeon.fullName', 'medication'])
-      .filter()
-      .sort()
-      .paginate()
-      .fields()
-      .populate(['supplies.name', 'sutures.name'], {
-        'supplies.name': 'name -_id',
-        'sutures.name': 'name -_id',
-      });
+  return flattenCards(docs);
+};
 
-    const docs = await qb.modelQuery;
-    const meta = await qb.getPaginationInfo();
+const listPrivatePreferenceCardsForUserFromDB = async (
+  userId: string,
+  query?: Record<string, any>,
+) => {
+  const qb = new QueryBuilder(
+    PreferenceCardModel.find({
+      createdBy: userId,
+      published: false,
+    }),
+    query || {},
+  )
+    .search(['cardTitle', 'surgeon.fullName', 'medication'])
+    .filter()
+    .sort()
+    .paginate()
+    .fields()
+    .populate(['supplies.name', 'sutures.name'], {
+      'supplies.name': 'name -_id',
+      'sutures.name': 'name -_id',
+    });
 
-    return {
-      meta,
-      data: flattenCards(docs),
-    };
-  },
-  getPreferenceCardByIdFromDB: async (
-    id: string,
-    userId: string,
-    role?: string,
-  ) => {
-    const doc = await PreferenceCardModel.findById(id)
-      .populate('supplies.name', 'name -_id')
-      .populate('sutures.name', 'name -_id')
-      .lean();
+  const docs = await qb.modelQuery;
+  const meta = await qb.getPaginationInfo();
 
-    if (!doc) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
-    }
+  return {
+    meta,
+    data: flattenCards(docs),
+  };
+};
 
-    const isOwner = doc.createdBy.toString() === userId;
-    const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
+const getPreferenceCardByIdFromDB = async (
+  id: string,
+  userId: string,
+  role?: string,
+) => {
+  const doc = await PreferenceCardModel.findById(id)
+    .populate('supplies.name', 'name -_id')
+    .populate('sutures.name', 'name -_id')
+    .lean();
 
-    if (!isOwner && !isSuperAdmin && !doc.published) {
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        'Not authorized to access this card',
-      );
-    }
+  if (!doc) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+  }
 
-    return flattenCard(doc);
-  },
-  updatePreferenceCardInDB: async (
-    id: string,
-    userId: string,
-    role: string | undefined,
-    payload: Record<string, any>,
-  ) => {
-    // Check if the card exists and get its creator
-    const existingCard =
-      await PreferenceCardModel.findById(id).select('createdBy').lean();
-    if (!existingCard) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
-    }
+  const isOwner = doc.createdBy.toString() === userId;
+  const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
 
-    // Authorization check
-    if (
-      existingCard.createdBy.toString() !== userId &&
-      role !== 'SUPER_ADMIN'
-    ) {
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        'Not authorized to update this card',
-      );
-    }
-
-    // Resolve mixed supplies/sutures if present
-    if (payload.supplies && Array.isArray(payload.supplies)) {
-      payload.supplies = await resolveMixedItemsWithQuantity(payload.supplies, 'name', SupplyModel);
-    }
-    if (payload.sutures && Array.isArray(payload.sutures)) {
-      payload.sutures = await resolveMixedItemsWithQuantity(payload.sutures, 'name', SutureModel);
-    }
-
-    // Update the document in one step
-    const updatedCard = await PreferenceCardModel.findOneAndUpdate(
-      { _id: id },
-      { $set: payload },
-      { new: true }, // return the updated doc
+  if (!isOwner && !isSuperAdmin && !doc.published) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to access this card',
     );
+  }
 
-    return updatedCard;
-  },
-  deletePreferenceCardFromDB: async (
-    id: string,
-    userId: string,
-    role?: string,
-  ) => {
-    const doc = await PreferenceCardModel.findById(id);
-    if (!doc)
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
-    if (doc.createdBy.toString() !== userId && role !== 'SUPER_ADMIN') {
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        'Not authorized to delete this card',
-      );
-    }
-    await PreferenceCardModel.findByIdAndDelete(id);
-    return { deleted: true };
-  },
-  updateVerificationStatusInDB: async (
-    id: string,
-    role: string | undefined,
-    status: 'VERIFIED' | 'UNVERIFIED',
-  ) => {
-    const doc = await PreferenceCardModel.findById(id);
-    if (!doc)
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+  return flattenCard(doc);
+};
 
-    if (role !== USER_ROLES.SUPER_ADMIN) {
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        'Not authorized to verify/reject this card',
-      );
-    }
+const updatePreferenceCardInDB = async (
+  id: string,
+  userId: string,
+  role: string | undefined,
+  payload: Record<string, any>,
+) => {
+  // Check if the card exists and get its creator
+  const existingCard = await PreferenceCardModel.findById(id)
+    .select('createdBy')
+    .lean();
+  if (!existingCard) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+  }
 
-    doc.verificationStatus = status;
-    await doc.save();
-    return { verificationStatus: doc.verificationStatus };
-  },
-  listPublicPreferenceCardsFromDB: async (query?: Record<string, any>) => {
-    const rawQuery = query || {};
-    const { specialty, surgeonSpecialty, ...rest } = rawQuery;
-    const enrichedQuery: Record<string, any> = { ...rest };
-
-    const specialtyValue = specialty || surgeonSpecialty;
-    if (specialtyValue) {
-      enrichedQuery['surgeon.specialty'] = {
-        $regex: String(specialtyValue),
-        $options: 'i',
-      };
-    }
-
-    const qb = new QueryBuilder(
-      PreferenceCardModel.find({ published: true }),
-      enrichedQuery,
-    )
-      .search(['cardTitle', 'surgeon.fullName', 'medication'])
-      .filter()
-      .sort()
-      .paginate()
-      .fields()
-      .populate(['supplies.name', 'sutures.name'], {
-        'supplies.name': 'name -_id',
-        'sutures.name': 'name -_id',
-      });
-
-    const cards = await qb.modelQuery;
-    const meta = await qb.getPaginationInfo();
-
-    return {
-      meta,
-      data: flattenCards(cards),
-    };
-  },
-  listFavoritePreferenceCardsForUserFromDB: async (
-    userId: string,
-    query?: Record<string, any>,
-  ) => {
-    const user = await User.findById(userId).select('favoriteCards').lean();
-    if (
-      !user ||
-      !Array.isArray(user.favoriteCards) ||
-      user.favoriteCards.length === 0
-    ) {
-      return {
-        meta: {
-          total: 0,
-          limit: Math.min(Number(query?.limit) || 10, 50),
-          page: Number(query?.page) || 1,
-          totalPages: 0,
-          hasNext: false,
-          hasPrev: false,
-        },
-        data: [],
-      };
-    }
-
-    const qb = new QueryBuilder(
-      PreferenceCardModel.find({
-        _id: { $in: user.favoriteCards },
-      }),
-      query || {},
-    )
-      .search(['cardTitle', 'surgeon.fullName', 'medication'])
-      .filter()
-      .sort()
-      .paginate()
-      .fields()
-      .populate(['supplies.name', 'sutures.name'], {
-        'supplies.name': 'name -_id',
-        'sutures.name': 'name -_id',
-      });
-
-    const docs = await qb.modelQuery;
-    const meta = await qb.getPaginationInfo();
-
-    return {
-      meta,
-      data: flattenCards(docs),
-    };
-  },
-  favoritePreferenceCardInDB: async (cardId: string, userId: string) => {
-    const card = await PreferenceCardModel.findById(cardId);
-    if (!card) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
-    }
-
-    if (!card.published && card.createdBy.toString() !== userId) {
-      throw new ApiError(
-        StatusCodes.FORBIDDEN,
-        'Not authorized to favorite this card',
-      );
-    }
-
-    await User.findByIdAndUpdate(
-      userId,
-      { $addToSet: { favoriteCards: cardId } },
-      { new: true },
+  // Authorization check
+  if (
+    existingCard.createdBy.toString() !== userId &&
+    role !== USER_ROLES.SUPER_ADMIN
+  ) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to update this card',
     );
+  }
 
-    return { favorited: true };
-  },
-  unfavoritePreferenceCardInDB: async (cardId: string, userId: string) => {
-    const card = await PreferenceCardModel.findById(cardId);
-    if (!card) {
-      throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
-    }
-
-    await User.findByIdAndUpdate(
-      userId,
-      { $pull: { favoriteCards: cardId } },
-      { new: true },
+  // Resolve mixed supplies/sutures if present
+  if (payload.supplies && Array.isArray(payload.supplies)) {
+    payload.supplies = await resolveMixedItemsWithQuantity(
+      payload.supplies,
+      'name',
+      SupplyModel,
     );
+  }
+  if (payload.sutures && Array.isArray(payload.sutures)) {
+    payload.sutures = await resolveMixedItemsWithQuantity(
+      payload.sutures,
+      'name',
+      SutureModel,
+    );
+  }
 
-    return { favorited: false };
-  },
+  // Update the document in one step
+  const updatedCard = await PreferenceCardModel.findOneAndUpdate(
+    { _id: id },
+    { $set: payload },
+    { new: true }, // return the updated doc
+  );
+
+  return updatedCard;
+};
+
+const deletePreferenceCardFromDB = async (
+  id: string,
+  userId: string,
+  role?: string,
+) => {
+  const doc = await PreferenceCardModel.findById(id);
+  if (!doc)
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+  if (doc.createdBy.toString() !== userId && role !== USER_ROLES.SUPER_ADMIN) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to delete this card',
+    );
+  }
+  await PreferenceCardModel.findByIdAndDelete(id);
+  return { deleted: true };
+};
+
+const updateVerificationStatusInDB = async (
+  id: string,
+  role: string | undefined,
+  status: 'VERIFIED' | 'UNVERIFIED',
+) => {
+  const doc = await PreferenceCardModel.findById(id);
+  if (!doc)
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+
+  if (role !== USER_ROLES.SUPER_ADMIN) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to verify/reject this card',
+    );
+  }
+
+  doc.verificationStatus = status;
+  await doc.save();
+  return { verificationStatus: doc.verificationStatus };
+};
+
+const listPublicPreferenceCardsFromDB = async (query?: Record<string, any>) => {
+  const rawQuery = query || {};
+  const { specialty, surgeonSpecialty, ...rest } = rawQuery;
+  const enrichedQuery: Record<string, any> = { ...rest };
+
+  const specialtyValue = specialty || surgeonSpecialty;
+  if (specialtyValue) {
+    enrichedQuery['surgeon.specialty'] = {
+      $regex: String(specialtyValue),
+      $options: 'i',
+    };
+  }
+
+  const qb = new QueryBuilder(
+    PreferenceCardModel.find({ published: true }),
+    enrichedQuery,
+  )
+    .search(['cardTitle', 'surgeon.fullName', 'medication'])
+    .filter()
+    .sort()
+    .paginate()
+    .fields()
+    .populate(['supplies.name', 'sutures.name'], {
+      'supplies.name': 'name -_id',
+      'sutures.name': 'name -_id',
+    });
+
+  const cards = await qb.modelQuery;
+  const meta = await qb.getPaginationInfo();
+
+  return {
+    meta,
+    data: flattenCards(cards),
+  };
+};
+
+const listFavoritePreferenceCardsForUserFromDB = async (
+  userId: string,
+  query?: Record<string, any>,
+) => {
+  const user = await User.findById(userId).select('favoriteCards').lean();
+  if (
+    !user ||
+    !Array.isArray(user.favoriteCards) ||
+    user.favoriteCards.length === 0
+  ) {
+    return {
+      meta: {
+        total: 0,
+        limit: Math.min(Number(query?.limit) || 10, 50),
+        page: Number(query?.page) || 1,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+      data: [],
+    };
+  }
+
+  const qb = new QueryBuilder(
+    PreferenceCardModel.find({
+      _id: { $in: user.favoriteCards },
+    }),
+    query || {},
+  )
+    .search(['cardTitle', 'surgeon.fullName', 'medication'])
+    .filter()
+    .sort()
+    .paginate()
+    .fields()
+    .populate(['supplies.name', 'sutures.name'], {
+      'supplies.name': 'name -_id',
+      'sutures.name': 'name -_id',
+    });
+
+  const docs = await qb.modelQuery;
+  const meta = await qb.getPaginationInfo();
+
+  return {
+    meta,
+    data: flattenCards(docs),
+  };
+};
+
+const favoritePreferenceCardInDB = async (cardId: string, userId: string) => {
+  const card = await PreferenceCardModel.findById(cardId);
+  if (!card) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+  }
+
+  if (!card.published && card.createdBy.toString() !== userId) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to favorite this card',
+    );
+  }
+
+  await User.findByIdAndUpdate(
+    userId,
+    { $addToSet: { favoriteCards: cardId } },
+    { new: true },
+  );
+
+  return { favorited: true };
+};
+
+const unfavoritePreferenceCardInDB = async (cardId: string, userId: string) => {
+  const card = await PreferenceCardModel.findById(cardId);
+  if (!card) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+  }
+
+  await User.findByIdAndUpdate(
+    userId,
+    { $pull: { favoriteCards: cardId } },
+    { new: true },
+  );
+
+  return { favorited: false };
+};
+
+export const PreferenceCardService = {
+  getPreferenceCardCountsFromDB,
+  getDistinctSpecialtiesFromDB,
+  getFavoriteCardIdsForUserFromDB,
+  incrementDownloadCountInDB,
+  createPreferenceCardInDB,
+  listPreferenceCardsForUserFromDB,
+  listPrivatePreferenceCardsForUserFromDB,
+  getPreferenceCardByIdFromDB,
+  updatePreferenceCardInDB,
+  deletePreferenceCardFromDB,
+  updateVerificationStatusInDB,
+  listPublicPreferenceCardsFromDB,
+  listFavoritePreferenceCardsForUserFromDB,
+  favoritePreferenceCardInDB,
+  unfavoritePreferenceCardInDB,
 };

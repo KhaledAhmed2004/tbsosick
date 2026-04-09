@@ -3,12 +3,7 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { USER_ROLES } from '../../../enums/user';
 import { SuppliesController } from './supplies.controller';
-import {
-  createSupplySchema,
-  updateSupplySchema,
-  paramIdSchema,
-  bulkCreateSchema,
-} from './supplies.validation';
+import { SuppliesValidation } from './supplies.validation';
 
 const router = express.Router();
 
@@ -16,7 +11,7 @@ const router = express.Router();
 router.post(
   '/',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(createSupplySchema),
+  validateRequest(SuppliesValidation.createSupplySchema),
   SuppliesController.createSupply,
 );
 
@@ -31,7 +26,7 @@ router.get(
 router.patch(
   '/:id',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(updateSupplySchema),
+  validateRequest(SuppliesValidation.updateSupplySchema),
   SuppliesController.updateSupply,
 );
 
@@ -39,7 +34,7 @@ router.patch(
 router.delete(
   '/:id',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(SuppliesValidation.paramIdSchema),
   SuppliesController.deleteSupply,
 );
 
@@ -47,7 +42,7 @@ router.delete(
 router.post(
   '/bulk',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(bulkCreateSchema),
+  validateRequest(SuppliesValidation.bulkCreateSchema),
   SuppliesController.bulkCreate,
 );
 

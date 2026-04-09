@@ -90,7 +90,7 @@ const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.params;
   const { status } = req.body as { status: USER_STATUS };
 
-  const result = await UserService.updateUserStatus(userId, status);
+  const result = await UserService.updateUserStatusInDB(userId, status);
 
   sendResponse(res, {
     success: true,
@@ -103,7 +103,7 @@ const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
 const adminUpdateUser = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.params;
   const payload = { ...req.body };
-  const result = await UserService.updateUserByAdmin(userId, payload);
+  const result = await UserService.updateUserByAdminInDB(userId, payload);
 
   sendResponse(res, {
     success: true,
@@ -115,7 +115,7 @@ const adminUpdateUser = catchAsync(async (req: Request, res: Response) => {
 
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.params;
-  const result = await UserService.deleteUserPermanently(userId);
+  const result = await UserService.deleteUserPermanentlyFromDB(userId);
 
   sendResponse(res, {
     success: true,
@@ -126,7 +126,7 @@ const deleteUser = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAllUserRoles = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.getAllUserRoles(req.query);
+  const result = await UserService.getAllUserRolesFromDB(req.query);
 
   sendResponse(res, {
     success: true,
@@ -140,7 +140,7 @@ const getAllUserRoles = catchAsync(async (req: Request, res: Response) => {
 const getUserById = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.params;
 
-  const result = await UserService.getUserById(userId);
+  const result = await UserService.getUserByIdFromDB(userId);
 
   sendResponse(res, {
     success: true,
@@ -153,7 +153,7 @@ const getUserById = catchAsync(async (req: Request, res: Response) => {
 const getUserDetailsById = catchAsync(async (req: Request, res: Response) => {
   const { userId } = req.params;
 
-  const result = await UserService.getUserDetailsById(userId);
+  const result = await UserService.getUserDetailsByIdFromDB(userId);
 
   sendResponse(res, {
     success: true,
@@ -164,7 +164,7 @@ const getUserDetailsById = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getUsersStats = catchAsync(async (req: Request, res: Response) => {
-  const result = await UserService.getUsersStats();
+  const result = await UserService.getUsersStatsFromDB();
 
   sendResponse(res, {
     success: true,

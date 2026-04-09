@@ -11,7 +11,6 @@ const subscription_route_1 = require("../app/modules/subscription/subscription.r
 const event_route_1 = require("../app/modules/event/event.route");
 const preference_card_route_1 = require("../app/modules/preference-card/preference-card.route");
 const admin_route_1 = require("../app/modules/admin/admin.route");
-const doctor_route_1 = require("../app/modules/doctor/doctor.route");
 const supplies_route_1 = require("../app/modules/supplies/supplies.route");
 const sutures_route_1 = require("../app/modules/sutures/sutures.route");
 const legal_route_1 = require("../app/modules/legal/legal.route");
@@ -44,10 +43,6 @@ const apiRoutes = [
     {
         path: '/dashboard',
         route: admin_route_1.AdminRoutes,
-    },
-    {
-        path: '/doctors',
-        route: doctor_route_1.DoctorRoutes,
     },
     {
         path: '/supplies',

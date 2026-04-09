@@ -12,10 +12,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.chooseFreePlanController = exports.verifyIapSubscriptionController = exports.getMySubscriptionController = void 0;
+exports.chooseFreePlanController = exports.appleWebhookController = exports.verifyApplePurchaseController = exports.getMySubscriptionController = void 0;
 const http_status_1 = __importDefault(require("http-status"));
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const subscription_service_1 = __importDefault(require("./subscription.service"));
 exports.getMySubscriptionController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.user;
@@ -27,14 +28,43 @@ exports.getMySubscriptionController = (0, catchAsync_1.default)((req, res) => __
         data: result,
     });
 }));
-exports.verifyIapSubscriptionController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.verifyApplePurchaseController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.user;
-    const { platform, productId, receipt } = req.body;
-    const result = yield subscription_service_1.default.verifyIapSubscription(id, { platform, productId, receipt });
+    const { signedTransactionInfo } = req.body;
+    const result = yield subscription_service_1.default.verifyApplePurchase(id, signedTransactionInfo);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_1.default.OK,
-        message: 'Subscription updated from in-app purchase',
+        message: 'Apple subscription verified successfully',
+        data: result,
+    });
+}));
+// Apple Server Notifications V2 webhook. No auth because signature
+// verification inside the service replaces caller trust.
+exports.appleWebhookController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // The /apple/webhook route uses express.raw() so req.body is a Buffer
+    // — parse it manually without mutating the raw bytes.
+    let body;
+    if (Buffer.isBuffer(req.body)) {
+        try {
+            body = JSON.parse(req.body.toString('utf8'));
+        }
+        catch (_a) {
+            throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Invalid webhook body JSON');
+        }
+    }
+    else {
+        body = req.body;
+    }
+    const signedPayload = body === null || body === void 0 ? void 0 : body.signedPayload;
+    if (!signedPayload) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'signedPayload missing from webhook body');
+    }
+    const result = yield subscription_service_1.default.processAppleWebhook(signedPayload);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Apple webhook processed',
         data: result,
     });
 }));
@@ -50,7 +80,8 @@ exports.chooseFreePlanController = (0, catchAsync_1.default)((req, res) => __awa
 }));
 const SubscriptionController = {
     getMySubscriptionController: exports.getMySubscriptionController,
-    verifyIapSubscriptionController: exports.verifyIapSubscriptionController,
+    verifyApplePurchaseController: exports.verifyApplePurchaseController,
+    appleWebhookController: exports.appleWebhookController,
     chooseFreePlanController: exports.chooseFreePlanController,
 };
 exports.default = SubscriptionController;

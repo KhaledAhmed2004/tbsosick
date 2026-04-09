@@ -13,10 +13,22 @@ const subscription_validation_1 = require("./subscription.validation");
 const rateLimit_1 = require("../../middlewares/rateLimit");
 const router = express_1.default.Router();
 // GET /subscription/me
-// নিজের সাবস্ক্রিপশন স্ট্যাটাস/প্ল্যান দেখায় (Stripe থাকলে লাইভ সিঙ্ক)
+// নিজের সাবস্ক্রিপশন স্ট্যাটাস/প্ল্যান দেখায়
 router.get('/me', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), subscription_controller_1.default.getMySubscriptionController);
-router.post('/iap/verify', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, rateLimit_1.rateLimitMiddleware)({ windowMs: 60000, max: 30, routeName: 'subscription-iap-verify' }), (0, validateRequest_1.default)(subscription_validation_1.SubscriptionValidation.verifyIapSubscriptionSchema), subscription_controller_1.default.verifyIapSubscriptionController);
+// POST /subscription/apple/verify
+// iOS ক্লায়েন্ট StoreKit থেকে signedTransactionInfo পাঠায় — server verify করে
+// DB-তে সাবস্ক্রিপশন তৈরি/আপডেট করে।
+router.post('/apple/verify', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, rateLimit_1.rateLimitMiddleware)({
+    windowMs: 60000,
+    max: 30,
+    routeName: 'subscription-apple-verify',
+}), (0, validateRequest_1.default)(subscription_validation_1.SubscriptionValidation.appleVerifySchema), subscription_controller_1.default.verifyApplePurchaseController);
+// POST /subscription/apple/webhook
+// Apple App Store Server Notifications V2 — no auth middleware because
+// Apple's JWS signature is verified inside the controller/service.
+// Raw body parsing for this route is configured in src/app.ts.
+router.post('/apple/webhook', subscription_controller_1.default.appleWebhookController);
 // POST /subscription/choose/free
-// লোকালি Free প্ল্যানে সুইচ করে (Stripe সাবস্ক্রিপশন ছাড়াই)
+// লোকালি Free প্ল্যানে সুইচ করে
 router.post('/choose/free', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), subscription_controller_1.default.chooseFreePlanController);
 exports.SubscriptionRoutes = router;

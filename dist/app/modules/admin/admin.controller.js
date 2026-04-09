@@ -17,33 +17,36 @@ const http_status_codes_1 = require("http-status-codes");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const admin_service_1 = require("./admin.service");
+const getDashboardStats = (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield admin_service_1.AdminService.getAdminDashboardStats();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Admin dashboard metrics',
+        data: result,
+    });
+}));
+const getPreferenceCardMonthly = (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield admin_service_1.AdminService.getPreferenceCardMonthlyTrend();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Preference card monthly trend',
+        data: result,
+    });
+}));
+const getActiveSubscriptionMonthly = (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield admin_service_1.AdminService.getActiveSubscriptionMonthlyTrend();
+    const currentYear = new Date().getFullYear();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: `Monthly analytics for ${currentYear} retrieved successfully.`,
+        data: result,
+    });
+}));
 exports.AdminController = {
-    getDashboardStats: (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield (0, admin_service_1.getAdminDashboardStats)();
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Admin dashboard metrics',
-            data: result,
-        });
-    })),
-    getPreferenceCardMonthly: (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield (0, admin_service_1.getPreferenceCardMonthlyTrend)();
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Preference card monthly trend',
-            data: result,
-        });
-    })),
-    getActiveSubscriptionMonthly: (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield (0, admin_service_1.getActiveSubscriptionMonthlyTrend)();
-        const currentYear = new Date().getFullYear();
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: `Monthly analytics for ${currentYear} retrieved successfully.`,
-            data: result,
-        });
-    })),
+    getDashboardStats,
+    getPreferenceCardMonthly,
+    getActiveSubscriptionMonthly,
 };

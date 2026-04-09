@@ -21,7 +21,7 @@ const sutureItemSchema = z.object({
 });
 
 // Create Preference Card
-export const createPreferenceCardSchema = z.object({
+const createPreferenceCardSchema = z.object({
   body: z.object({
     cardTitle: z.string().min(3),
     surgeon: surgeonSchema,
@@ -39,7 +39,7 @@ export const createPreferenceCardSchema = z.object({
 });
 
 // Update Preference Card (partial update)
-export const updatePreferenceCardSchema = z.object({
+const updatePreferenceCardSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
   body: z.object({
     cardTitle: z.string().min(3).optional(),
@@ -58,14 +58,14 @@ export const updatePreferenceCardSchema = z.object({
 });
 
 // Suggest Supplies Schema
-export const suggestSuppliesSchema = z.object({
+const suggestSuppliesSchema = z.object({
   body: z.object({
     specialty: z.string().optional(),
   }),
 });
 
 // Summarize Event Schema
-export const summarizeEventSchema = z.object({
+const summarizeEventSchema = z.object({
   params: z.object({ id: z.string().min(1) }).optional(),
   body: z
     .object({
@@ -80,12 +80,12 @@ export const summarizeEventSchema = z.object({
 });
 
 // Param ID Schema
-export const paramIdSchema = z.object({
+const paramIdSchema = z.object({
   params: z.object({ id: z.string().min(1) }),
 });
-  
+
 // Search Preference Cards Schema
-export const searchCardsSchema = z.object({
+const searchCardsSchema = z.object({
   query: z.object({
     searchTerm: z.string().trim().max(100).optional(),
     visibility: z.enum(['public', 'private']).default('public'),

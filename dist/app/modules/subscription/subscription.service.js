@@ -12,12 +12,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.setFreePlan = exports.verifyIapSubscription = exports.getMySubscription = void 0;
+exports.processAppleWebhook = exports.verifyApplePurchase = exports.setFreePlan = exports.getMySubscription = void 0;
 const mongoose_1 = require("mongoose");
-const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const http_status_1 = __importDefault(require("http-status"));
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const subscription_model_1 = require("./subscription.model");
 const subscription_interface_1 = require("./subscription.interface");
+const apple_verify_1 = require("./providers/apple/apple.verify");
+const apple_webhook_1 = require("./providers/apple/apple.webhook");
+const plan_mapper_1 = require("./helpers/plan.mapper");
 const ensureSubscriptionDoc = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const id = new mongoose_1.Types.ObjectId(userId);
     const doc = yield subscription_model_1.Subscription.findByUser(id);
@@ -29,53 +32,63 @@ const ensureSubscriptionDoc = (userId) => __awaiter(void 0, void 0, void 0, func
     });
 });
 const getMySubscription = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const sub = yield ensureSubscriptionDoc(userId);
-    return sub;
+    return ensureSubscriptionDoc(userId);
 });
 exports.getMySubscription = getMySubscription;
-const mapIapProductToPlan = (productId) => {
-    const normalized = productId.toLowerCase();
-    if (normalized.includes('enterprise')) {
-        return subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE;
-    }
-    if (normalized.includes('premium')) {
-        return subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM;
-    }
-    return subscription_interface_1.SUBSCRIPTION_PLAN.FREE;
-};
-const verifyIapSubscription = (userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const { platform, productId, receipt } = payload;
-    if (platform !== 'android' && platform !== 'ios') {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Invalid platform');
-    }
-    if (!receipt) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Receipt is required');
-    }
-    if (!productId) {
-        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Product ID is required');
-    }
-    const existing = yield ensureSubscriptionDoc(userId);
-    const plan = mapIapProductToPlan(productId);
-    const metadata = Object.assign(Object.assign({}, (existing.metadata || {})), { iapPlatform: platform, iapProductId: productId });
-    const updated = yield subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(userId), {
-        plan,
-        status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
-        metadata,
-    });
-    return updated;
-});
-exports.verifyIapSubscription = verifyIapSubscription;
 const setFreePlan = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     return subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(userId), {
         plan: subscription_interface_1.SUBSCRIPTION_PLAN.FREE,
         status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
-        stripeSubscriptionId: undefined,
     });
 });
 exports.setFreePlan = setFreePlan;
+const verifyApplePurchase = (userId, signedTransactionInfo) => __awaiter(void 0, void 0, void 0, function* () {
+    // 1. Cryptographically verify the JWS with Apple's library.
+    const decoded = yield (0, apple_verify_1.verifyAppleTransaction)(signedTransactionInfo);
+    // 2. Fraud guard: reject if this transaction is already bound to a
+    //    different user account.
+    const existingByTx = yield subscription_model_1.Subscription.findOne({
+        appleOriginalTransactionId: decoded.originalTransactionId,
+    });
+    if (existingByTx && existingByTx.userId.toString() !== userId) {
+        throw new ApiError_1.default(http_status_1.default.CONFLICT, 'This Apple transaction is already linked to another account');
+    }
+    // 3. Map the store-side productId to a local plan.
+    const plan = (0, plan_mapper_1.mapAppleProductToPlan)(decoded.productId);
+    if (plan === subscription_interface_1.SUBSCRIPTION_PLAN.FREE) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, `Unknown or unsupported productId: ${decoded.productId}`);
+    }
+    // 4. Persist the subscription for this user.
+    const updated = yield subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(userId), {
+        plan,
+        status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
+        platform: subscription_interface_1.SUBSCRIPTION_PLATFORM.APPLE,
+        environment: decoded.environment,
+        productId: decoded.productId,
+        appleOriginalTransactionId: decoded.originalTransactionId,
+        appleLatestTransactionId: decoded.transactionId,
+        startedAt: new Date(decoded.purchaseDate),
+        currentPeriodEnd: decoded.expiresDate
+            ? new Date(decoded.expiresDate)
+            : null,
+        canceledAt: null,
+        gracePeriodEndsAt: null,
+        metadata: {
+            appAccountToken: decoded.appAccountToken,
+            bundleId: decoded.bundleId,
+        },
+    });
+    return updated;
+});
+exports.verifyApplePurchase = verifyApplePurchase;
+const processAppleWebhook = (signedPayload) => __awaiter(void 0, void 0, void 0, function* () {
+    return (0, apple_webhook_1.handleAppleNotification)(signedPayload);
+});
+exports.processAppleWebhook = processAppleWebhook;
 const SubscriptionService = {
     getMySubscription: exports.getMySubscription,
     setFreePlan: exports.setFreePlan,
-    verifyIapSubscription: exports.verifyIapSubscription,
+    verifyApplePurchase: exports.verifyApplePurchase,
+    processAppleWebhook: exports.processAppleWebhook,
 };
 exports.default = SubscriptionService;

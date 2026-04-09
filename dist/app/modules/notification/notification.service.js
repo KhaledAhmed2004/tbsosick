@@ -16,8 +16,28 @@ exports.NotificationService = void 0;
 const notification_model_1 = require("./notification.model");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const http_status_codes_1 = require("http-status-codes");
-const listForUser = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    return notification_model_1.NotificationModel.find({ userId }).sort({ createdAt: -1 }).lean();
+const notificationsHelper_1 = require("./notificationsHelper");
+const mongoose_1 = require("mongoose");
+const listForUser = (userId_1, ...args_1) => __awaiter(void 0, [userId_1, ...args_1], void 0, function* (userId, query = {}) {
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
+    const skip = (page - 1) * limit;
+    const result = yield notification_model_1.NotificationModel.find({ userId, isDeleted: false })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+    const total = yield notification_model_1.NotificationModel.countDocuments({ userId, isDeleted: false });
+    const unreadCount = yield notification_model_1.NotificationModel.countDocuments({ userId, isDeleted: false, read: false });
+    return {
+        notifications: result,
+        meta: {
+            page,
+            limit,
+            total,
+            unreadCount,
+        },
+    };
 });
 const markAllRead = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     yield notification_model_1.NotificationModel.updateMany({ userId, read: false }, { $set: { read: true } });
@@ -36,12 +56,13 @@ const markRead = (id_1, userId_1, ...args_1) => __awaiter(void 0, [id_1, userId_
 });
 const deleteById = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const doc = yield notification_model_1.NotificationModel.findById(id);
+    const doc = yield notification_model_1.NotificationModel.findOne({ _id: id, isDeleted: false });
     if (!doc)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Notification not found');
     if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized');
-    yield notification_model_1.NotificationModel.findByIdAndDelete(id);
+    // Soft delete
+    yield notification_model_1.NotificationModel.findByIdAndUpdate(id, { $set: { isDeleted: true } });
     return { deleted: true };
 });
 // Helper creators for triggers
@@ -49,8 +70,8 @@ const createForPreferenceCard = (params) => __awaiter(void 0, void 0, void 0, fu
     const subtitle = params.surgeonName && params.procedure
         ? `${params.surgeonName} — ${params.procedure}`
         : params.cardTitle;
-    return notification_model_1.NotificationModel.create({
-        userId: params.userId,
+    return (0, notificationsHelper_1.sendNotifications)({
+        userId: new mongoose_1.Types.ObjectId(params.userId),
         type: 'PREFERENCE_CARD_CREATED',
         title: 'New Card Added',
         subtitle,
@@ -62,8 +83,8 @@ const createForPreferenceCard = (params) => __awaiter(void 0, void 0, void 0, fu
     });
 });
 const createForEventScheduled = (params) => __awaiter(void 0, void 0, void 0, function* () {
-    return notification_model_1.NotificationModel.create({
-        userId: params.userId,
+    return (0, notificationsHelper_1.sendNotifications)({
+        userId: new mongoose_1.Types.ObjectId(params.userId),
         type: 'EVENT_SCHEDULED',
         title: 'Event Scheduled',
         subtitle: `${params.title}${params.whenText ? ' on ' + params.whenText : ''}`,

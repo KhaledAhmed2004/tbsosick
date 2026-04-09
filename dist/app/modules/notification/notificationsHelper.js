@@ -14,6 +14,12 @@ const notification_model_1 = require("./notification.model");
 const user_model_1 = require("../user/user.model");
 const pushNotificationHelper_1 = require("./pushNotificationHelper");
 const sendNotifications = (data) => __awaiter(void 0, void 0, void 0, function* () {
+    // Set default expiry to 30 days if not provided
+    if (!data.expiresAt) {
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        data.expiresAt = expiryDate;
+    }
     const result = yield notification_model_1.Notification.create(data);
     const user = yield user_model_1.User.findById(data === null || data === void 0 ? void 0 : data.userId);
     // Check if user has device tokens and the array is not empty
@@ -22,19 +28,16 @@ const sendNotifications = (data) => __awaiter(void 0, void 0, void 0, function* 
         user.deviceTokens.length > 0) {
         const message = {
             notification: {
-                // title: 'New Notification Received',
-                title: (data === null || data === void 0 ? void 0 : data.title) || 'Task Titans Notification',
-                body: (data === null || data === void 0 ? void 0 : data.subtitle) || (data === null || data === void 0 ? void 0 : data.title),
+                title: (data === null || data === void 0 ? void 0 : data.title) || 'TBSosick Notification',
+                body: (data === null || data === void 0 ? void 0 : data.subtitle) || (data === null || data === void 0 ? void 0 : data.title) || '',
             },
             tokens: user.deviceTokens,
         };
-        //firebase
         try {
             yield pushNotificationHelper_1.pushNotificationHelper.sendPushNotifications(message);
         }
         catch (error) {
             console.error('Failed to send push notification:', error);
-            // Don't throw error, just log it so notification creation still succeeds
         }
     }
     //@ts-ignore
