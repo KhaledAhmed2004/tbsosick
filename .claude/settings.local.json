@@ -22,9 +22,19 @@
       "Bash(find \"D:/web projects/office-sta/re-fector/tbsosick/.trae\" \"D:/web projects/office-sta/re-fector/tbsosick/.agent\" \"D:/web projects/office-sta/re-fector/tbsosick/.claude\" -type f -exec wc -l {} +)",
       "Bash(wc -l \"D:/web projects/office-sta/re-fector/tbsosick/.agent/workflows/\"*.md)",
       "Bash(mv \"D:/web projects/office-sta/re-fector/tbsosick/.agent/workflows/\"*.md \"D:/web projects/office-sta/re-fector/tbsosick/.trae/workflows/\")",
-      "Bash(mv \"D:/web projects/office-sta/re-fector/tbsosick/.claude/rules/codebase-blueprint.md\" \"D:/web projects/office-sta/re-fector/tbsosick/.trae/templates/codebase-blueprint.md\")"
+      "Bash(mv \"D:/web projects/office-sta/re-fector/tbsosick/.claude/rules/codebase-blueprint.md\" \"D:/web projects/office-sta/re-fector/tbsosick/.trae/templates/codebase-blueprint.md\")",
+      "WebFetch(domain:github.com)",
+      "Bash(uv --version)",
+      "Bash('C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe' build:*)",
+      "Bash('C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe' install:*)",
+      "Bash(\"C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe\" build:*)",
+      "Bash(\"C:\\\\Users\\\\khaled\\\\AppData\\\\Local\\\\Packages\\\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\\\LocalCache\\\\local-packages\\\\Python313\\\\Scripts\\\\code-review-graph.exe\" install:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enabledMcpjsonServers": [
+    "code-review-graph"
+  ],
+  "enableAllProjectMcpServers": true
 }
