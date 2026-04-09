@@ -87,40 +87,40 @@ const updateProfile = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateUserStatus = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
+  const { id } = req.params;
   const { status } = req.body as { status: USER_STATUS };
 
-  const result = await UserService.updateUserStatus(userId, status);
+  const result = await UserService.updateUserStatus(id, status);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: `User status updated to ${status}`,
+    message: 'User status updated',
     data: result,
   });
 });
 
 const adminUpdateUser = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
+  const { id } = req.params;
   const payload = { ...req.body };
-  const result = await UserService.updateUserByAdmin(userId, payload);
+  const result = await UserService.updateUserByAdmin(id, payload);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'User updated successfully',
+    message: 'User updated',
     data: result,
   });
 });
 
 const deleteUser = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  const result = await UserService.deleteUserPermanently(userId);
+  const { id } = req.params;
+  const result = await UserService.deleteUserPermanently(id);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'User permanently deleted',
+    message: 'User deleted',
     data: result,
   });
 });
@@ -131,58 +131,69 @@ const getAllUserRoles = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'User roles retrieved successfully',
+    message: 'User list fetched',
     meta: result.meta,
     data: result.data,
   });
 });
 
 const blockUser = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  const result = await UserService.updateUserStatus(userId, USER_STATUS.RESTRICTED);
+  const { id } = req.params;
+  const result = await UserService.updateUserStatus(id, USER_STATUS.RESTRICTED);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'User blocked successfully',
+    message: 'User blocked',
     data: result,
   });
 });
 
 const unblockUser = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  const result = await UserService.updateUserStatus(userId, USER_STATUS.ACTIVE);
+  const { id } = req.params;
+  const result = await UserService.updateUserStatus(id, USER_STATUS.ACTIVE);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'User unblocked successfully',
+    message: 'User unblocked',
     data: result,
   });
 });
 
 const getUserById = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
+  const { id } = req.params;
 
-  const result = await UserService.getUserById(userId);
+  const result = await UserService.getUserById(id);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'User data retrieved successfully',
+    message: 'User data retrieved',
     data: result,
   });
 });
 
 const getUserDetailsById = catchAsync(async (req: Request, res: Response) => {
-  const { userId } = req.params;
+  const { id } = req.params;
 
-  const result = await UserService.getUserDetailsById(userId);
+  const result = await UserService.getUserDetailsById(id);
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'User details retrieved successfully',
+    data: result,
+  });
+});
+
+const getUsersStats = catchAsync(async (req: Request, res: Response) => {
+  const result = await UserService.getUsersStats();
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User statistics retrieved',
     data: result,
   });
 });
@@ -200,4 +211,5 @@ export const UserController = {
   unblockUser,
   getUserById,
   getUserDetailsById,
+  getUsersStats,
 };

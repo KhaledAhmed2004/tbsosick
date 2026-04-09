@@ -9,12 +9,28 @@ import express from 'express';
 
 const router = express.Router();
 
-// Create new user
+// --- Public / General ---
+
+// Create new user (Public Registration)
 router.post(
   '/',
   validateRequest(UserValidation.createUserZodSchema),
   UserController.createUser,
 );
+
+// Public user details (guest allowed) — rate limited
+router.get(
+  '/:id/user',
+  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
+  rateLimitMiddleware({
+    windowMs: 60_000,
+    max: 60,
+    routeName: 'public-user-details',
+  }),
+  UserController.getUserDetailsById,
+);
+
+// --- Self Management (User/Doctor) ---
 
 // Fetch own profile details
 router.get(
@@ -39,55 +55,48 @@ router.patch(
   UserController.updateProfile,
 );
 
-// List user roles only
+// --- Admin Management (Unified User/Doctor) ---
+
+// Get user growth statistics
+router.get('/stats', auth(USER_ROLES.SUPER_ADMIN), UserController.getUsersStats);
+
+// List all users with stats (Admin)
 router.get('/', auth(USER_ROLES.SUPER_ADMIN), UserController.getAllUserRoles);
 
-// Admin: Update any user
+// Get specific user details by ID (Admin)
+router.get('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
+
+// Admin: Update any user (Update fields including specialty, role, status)
 router.patch(
-  '/:userId',
+  '/:id',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(UserValidation.adminUpdateUserZodSchema),
   UserController.adminUpdateUser,
 );
 
-// Admin: Delete user permanently
-router.delete('/:userId', auth(USER_ROLES.SUPER_ADMIN), UserController.deleteUser);
-
-// Update user status (ACTIVE | RESTRICTED)
+// Admin: Block user
 router.patch(
-  '/:userId/status',
+  '/:id/block',
+  auth(USER_ROLES.SUPER_ADMIN),
+  UserController.blockUser,
+);
+
+// Admin: Unblock user
+router.patch(
+  '/:id/unblock',
+  auth(USER_ROLES.SUPER_ADMIN),
+  UserController.unblockUser,
+);
+
+// Update user status directly (Admin)
+router.patch(
+  '/:id/status',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(UserValidation.updateUserStatusZodSchema),
   UserController.updateUserStatus,
 );
 
-// Block user
-router.patch(
-  '/:userId/block',
-  auth(USER_ROLES.SUPER_ADMIN),
-  UserController.blockUser,
-);
-
-// Unblock user — super admin
-router.patch(
-  '/:userId/unblock',
-  auth(USER_ROLES.SUPER_ADMIN),
-  UserController.unblockUser,
-);
-
-// Get specific user details by ID (super admin)
-router.get('/:userId', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
-
-// Public user details (guest allowed) — rate limited
-router.get(
-  '/:userId/user',
-  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
-  rateLimitMiddleware({
-    windowMs: 60_000,
-    max: 60,
-    routeName: 'public-user-details',
-  }),
-  UserController.getUserDetailsById,
-);
+// Admin: Delete user permanently
+router.delete('/:id', auth(USER_ROLES.SUPER_ADMIN), UserController.deleteUser);
 
 export const UserRoutes = router;

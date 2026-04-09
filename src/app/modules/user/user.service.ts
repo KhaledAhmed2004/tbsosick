@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes';
 import { JwtPayload } from 'jsonwebtoken';
 import { USER_STATUS, USER_ROLES } from '../../../enums/user';
-import { Types } from 'mongoose';
+import { PipelineStage, Types } from 'mongoose';
 import { PreferenceCardModel } from '../preference-card/preference-card.model';
 import { Subscription as SubscriptionModel } from '../subscription/subscription.model';
 import ApiError from '../../../errors/ApiError';
@@ -11,6 +11,7 @@ import unlinkFile from '../../../shared/unlinkFile';
 import generateOTP from '../../../util/generateOTP';
 import { User } from './user.model';
 import QueryBuilder from '../../builder/QueryBuilder';
+import AggregationBuilder from '../../builder/AggregationBuilder';
 import { IUser } from './user.interface';
 
 const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
@@ -78,67 +79,180 @@ const getAllUsers = async (query: Record<string, unknown>) => {
   };
 };
 
-const getAllUserRoles = async (query: Record<string, unknown>) => {
-  const qb = new QueryBuilder(User.find({ role: USER_ROLES.USER }), query)
-    .filter()
-    .sort()
-    .paginate();
+const getUsersStats = async () => {
+  const aggregationBuilder = new AggregationBuilder(User);
+  
+  // Overall user growth
+  const totalStats = await aggregationBuilder.calculateGrowth({ period: 'month' });
+  
+  // Status based growth
+  aggregationBuilder.reset();
+  const activeStats = await aggregationBuilder.calculateGrowth({ 
+    filter: { status: USER_STATUS.ACTIVE }, 
+    period: 'month' 
+  });
+  
+  aggregationBuilder.reset();
+  const inactiveStats = await aggregationBuilder.calculateGrowth({ 
+    filter: { status: USER_STATUS.INACTIVE }, 
+    period: 'month' 
+  });
+  
+  aggregationBuilder.reset();
+  const blockedStats = await aggregationBuilder.calculateGrowth({ 
+    filter: { status: USER_STATUS.RESTRICTED }, 
+    period: 'month' 
+  });
 
-  // Select core fields needed for listing
-  const docs = (await qb.modelQuery
-    .select('_id name email profilePicture status specialty hospital role')
-    .lean()) as Array<any>;
-
-  const paginationInfo = await qb.getPaginationInfo();
-
-  // Build id arrays for lookups
-  const idStrings = docs.map(d => (d._id ? d._id.toString() : null)).filter(Boolean) as string[];
-
-  // Cards count per user (PreferenceCard.createdBy stores string userId)
-  const cardCountsAgg = await PreferenceCardModel.aggregate([
-    { $match: { createdBy: { $in: idStrings } } },
-    { $group: { _id: '$createdBy', count: { $sum: 1 } } },
-  ]);
-  const cardCountsMap = new Map<string, number>();
-  for (const item of cardCountsAgg) {
-    cardCountsMap.set(item._id, item.count);
-  }
-
-  // Subscription per user
-  const objectIds = idStrings.map(id => new Types.ObjectId(id));
-  const subs = await SubscriptionModel.find({ userId: { $in: objectIds } })
-    .select('userId plan status currentPeriodEnd')
-    .lean();
-  const subsMap = new Map<string, any>();
-  for (const s of subs) {
-    subsMap.set((s.userId as Types.ObjectId).toString(), {
-      plan: s.plan,
-      status: s.status,
-      currentPeriodEnd: s.currentPeriodEnd ?? null,
-    });
-  }
-
-  // Compose final response objects
-  const data = docs.map(d => {
-    const id = d._id?.toString() as string | undefined;
-    return {
-      _id: d._id,
-      name: d.name,
-      email: d.email,
-      profilePicture: d.profilePicture,
-      role: d.role,
-      specialty: d.specialty ?? null,
-      hospital: d.hospital ?? null,
-      status: d.status,
-      cards: id ? cardCountsMap.get(id) ?? 0 : 0,
-      subscription: id ? subsMap.get(id) ?? null : null,
-      createdAt: d.createdAt,
-      updatedAt: d.updatedAt,
-    };
+  const formatMetric = (stat: any) => ({
+    value: stat.total,
+    changePct: stat.growth,
+    direction: stat.growthType === 'increase' ? 'up' : stat.growthType === 'decrease' ? 'down' : 'neutral',
   });
 
   return {
-    meta: paginationInfo,
+    meta: {
+      comparisonPeriod: 'month',
+    },
+    totalUsers: formatMetric(totalStats),
+    activeUsers: formatMetric(activeStats),
+    inactiveUsers: formatMetric(inactiveStats),
+    blockedUsers: formatMetric(blockedStats),
+  };
+};
+
+const getAllUserRoles = async (query: Record<string, unknown>) => {
+  const { search, email, role = USER_ROLES.USER, status, specialty, page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+  
+  const skip = (Number(page) - 1) * Number(limit);
+
+  const match: Record<string, any> = {};
+  if (status) match.status = status;
+  if (role) match.role = role;
+  if (email) match.email = { $regex: email, $options: 'i' };
+  if (search) {
+    match.$or = [
+      { name: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } },
+    ];
+  }
+
+  const basePipeline: PipelineStage[] = [
+    { $match: match },
+    // Lookup preference cards created by this user
+    {
+      $lookup: {
+        from: PreferenceCardModel.collection.name,
+        let: { userIdStr: { $toString: '$_id' } },
+        pipeline: [
+          { $match: { $expr: { $eq: ['$createdBy', '$$userIdStr'] } } },
+        ],
+        as: 'cards',
+      },
+    },
+    // Compute specialties and cards count
+    {
+      $addFields: {
+        cardsCount: { $size: '$cards' },
+        specialties: {
+          $setDifference: [
+            {
+              $setUnion: [
+                {
+                  $map: {
+                    input: '$cards',
+                    as: 'c',
+                    in: { $ifNull: ['$$c.surgeon.specialty', null] },
+                  },
+                },
+                [],
+              ],
+            },
+            [null],
+          ],
+        },
+      },
+    },
+    // Optional specialty filter
+    ...(specialty
+      ? ([
+          {
+            $match: {
+              specialties: { $elemMatch: { $regex: specialty, $options: 'i' } },
+            },
+          },
+        ] as PipelineStage[])
+      : []),
+    // Lookup subscription status
+    {
+      $lookup: {
+        from: SubscriptionModel.collection.name,
+        localField: '_id',
+        foreignField: 'userId',
+        as: 'subscription',
+      },
+    },
+    {
+      $addFields: {
+        subscriptionStatus: {
+          $ifNull: [{ $arrayElemAt: ['$subscription.status', 0] }, 'inactive'],
+        },
+        subscriptionPlan: {
+          $ifNull: [{ $arrayElemAt: ['$subscription.plan', 0] }, 'FREE'],
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        email: 1,
+        phone: 1,
+        specialty: 1,
+        hospital: 1,
+        status: 1,
+        verified: 1,
+        role: 1,
+        profilePicture: 1,
+        specialties: 1,
+        cardsCount: 1,
+        subscriptionStatus: 1,
+        subscriptionPlan: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    },
+  ];
+
+  const sortStage: PipelineStage = {
+    $sort: { [sortBy as string]: sortOrder === 'desc' ? -1 : 1 },
+  };
+
+  const paginatedPipeline: PipelineStage[] = [
+    ...basePipeline,
+    sortStage,
+    { $skip: skip },
+    { $limit: Number(limit) },
+  ];
+
+  const countPipeline: PipelineStage[] = [
+    ...basePipeline,
+    { $count: 'total' },
+  ];
+
+  const [data, countResult] = await Promise.all([
+    User.aggregate(paginatedPipeline),
+    User.aggregate(countPipeline),
+  ]);
+
+  const total = countResult[0]?.total || 0;
+  return {
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPage: Math.ceil(total / Number(limit)),
+    },
     data,
   };
 };
@@ -224,4 +338,5 @@ export const UserService = {
   deleteUserPermanently,
   getUserById,
   getUserDetailsById,
+  getUsersStats,
 };
