@@ -17,52 +17,57 @@ const http_status_codes_1 = require("http-status-codes");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const sutures_service_1 = require("./sutures.service");
+const createSuture = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield sutures_service_1.SuturesService.createSutureToDB(req.body);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.CREATED,
+        message: 'Suture created',
+        data: result,
+    });
+}));
+const updateSuture = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield sutures_service_1.SuturesService.updateSutureInDB(req.params.id, req.body);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Suture updated',
+        data: result,
+    });
+}));
+const deleteSuture = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield sutures_service_1.SuturesService.deleteSutureFromDB(req.params.id);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Suture deleted',
+        data: result,
+    });
+}));
+const bulkCreate = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { items } = req.body;
+    const result = yield sutures_service_1.SuturesService.bulkCreateSuturesToDB(items);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Sutures created',
+        data: result,
+    });
+}));
+const listSutures = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield sutures_service_1.SuturesService.listSuturesFromDB(req.query);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Sutures fetched',
+        meta: result.meta,
+        data: result.data,
+    });
+}));
 exports.SuturesController = {
-    createSuture: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield sutures_service_1.SuturesService.createSutureInDB(req.body);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.CREATED,
-            message: 'Suture created',
-            data: result,
-        });
-    })),
-    updateSuture: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield sutures_service_1.SuturesService.updateSutureInDB(req.params.id, req.body);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Suture updated',
-            data: result,
-        });
-    })),
-    deleteSuture: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield sutures_service_1.SuturesService.deleteSutureFromDB(req.params.id);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Suture deleted',
-            data: result,
-        });
-    })),
-    bulkCreate: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const { items } = req.body;
-        const result = yield sutures_service_1.SuturesService.bulkCreateInDB(items);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Sutures created',
-            data: result,
-        });
-    })),
-    listSutures: (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const result = yield sutures_service_1.SuturesService.listSuturesFromDB(req.query);
-        (0, sendResponse_1.default)(res, {
-            success: true,
-            statusCode: http_status_codes_1.StatusCodes.OK,
-            message: 'Sutures fetched',
-            pagination: result.pagination,
-            data: result.data,
-        });
-    })),
+    createSuture,
+    updateSuture,
+    deleteSuture,
+    bulkCreate,
+    listSutures,
 };

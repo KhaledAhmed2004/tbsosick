@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getActiveSubscriptionMonthlyTrend = exports.getPreferenceCardMonthlyTrend = exports.getAdminDashboardStats = void 0;
+exports.AdminService = void 0;
 const AggregationBuilder_1 = __importDefault(require("../../builder/AggregationBuilder"));
 const user_model_1 = require("../user/user.model");
 const preference_card_model_1 = require("../preference-card/preference-card.model");
@@ -54,7 +54,6 @@ const getAdminDashboardStats = () => __awaiter(void 0, void 0, void 0, function*
         activeSubscriptions: formatMetric(activeSubscriptions),
     };
 });
-exports.getAdminDashboardStats = getAdminDashboardStats;
 // Monthly trend for total preference cards (each month’s count)
 const getPreferenceCardMonthlyTrend = () => __awaiter(void 0, void 0, void 0, function* () {
     const cardBuilder = new AggregationBuilder_1.default(preference_card_model_1.PreferenceCardModel);
@@ -64,7 +63,6 @@ const getPreferenceCardMonthlyTrend = () => __awaiter(void 0, void 0, void 0, fu
         count: s.transactionCount,
     }));
 });
-exports.getPreferenceCardMonthlyTrend = getPreferenceCardMonthlyTrend;
 // Monthly trend for active subscriptions (complex analytics shape)
 const getActiveSubscriptionMonthlyTrend = () => __awaiter(void 0, void 0, void 0, function* () {
     const subBuilder = new AggregationBuilder_1.default(subscription_model_1.Subscription);
@@ -145,4 +143,8 @@ const getActiveSubscriptionMonthlyTrend = () => __awaiter(void 0, void 0, void 0
         series: formattedSeries,
     };
 });
-exports.getActiveSubscriptionMonthlyTrend = getActiveSubscriptionMonthlyTrend;
+exports.AdminService = {
+    getAdminDashboardStats,
+    getPreferenceCardMonthlyTrend,
+    getActiveSubscriptionMonthlyTrend,
+};

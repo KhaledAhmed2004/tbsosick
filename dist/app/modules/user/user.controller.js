@@ -28,7 +28,6 @@ const http_status_codes_1 = require("http-status-codes");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const user_service_1 = require("./user.service");
-const user_1 = require("../../../enums/user");
 const preference_card_service_1 = require("../preference-card/preference-card.service");
 const createUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userData = __rest(req.body, []);
@@ -94,82 +93,71 @@ const updateProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
 const updateUserStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
     const { status } = req.body;
-    const result = yield user_service_1.UserService.updateUserStatus(userId, status);
+    const result = yield user_service_1.UserService.updateUserStatusInDB(userId, status);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: `User status updated to ${status}`,
+        message: 'User status updated',
         data: result,
     });
 }));
 const adminUpdateUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
     const payload = Object.assign({}, req.body);
-    const result = yield user_service_1.UserService.updateUserByAdmin(userId, payload);
+    const result = yield user_service_1.UserService.updateUserByAdminInDB(userId, payload);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'User updated successfully',
+        message: 'User updated',
         data: result,
     });
 }));
 const deleteUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
-    const result = yield user_service_1.UserService.deleteUserPermanently(userId);
+    const result = yield user_service_1.UserService.deleteUserPermanentlyFromDB(userId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'User permanently deleted',
+        message: 'User deleted',
         data: result,
     });
 }));
 const getAllUserRoles = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield user_service_1.UserService.getAllUserRoles(req.query);
+    const result = yield user_service_1.UserService.getAllUserRolesFromDB(req.query);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'User roles retrieved successfully',
+        message: 'User list fetched',
         meta: result.meta,
         data: result.data,
     });
 }));
-const blockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.params;
-    const result = yield user_service_1.UserService.updateUserStatus(userId, user_1.USER_STATUS.RESTRICTED);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'User blocked successfully',
-        data: result,
-    });
-}));
-const unblockUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { userId } = req.params;
-    const result = yield user_service_1.UserService.updateUserStatus(userId, user_1.USER_STATUS.ACTIVE);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'User unblocked successfully',
-        data: result,
-    });
-}));
 const getUserById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
-    const result = yield user_service_1.UserService.getUserById(userId);
+    const result = yield user_service_1.UserService.getUserByIdFromDB(userId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'User data retrieved successfully',
+        message: 'User data retrieved',
         data: result,
     });
 }));
 const getUserDetailsById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { userId } = req.params;
-    const result = yield user_service_1.UserService.getUserDetailsById(userId);
+    const result = yield user_service_1.UserService.getUserDetailsByIdFromDB(userId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'User details retrieved successfully',
+        data: result,
+    });
+}));
+const getUsersStats = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield user_service_1.UserService.getUsersStatsFromDB();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'User statistics retrieved',
         data: result,
     });
 }));
@@ -182,8 +170,7 @@ exports.UserController = {
     updateUserStatus,
     adminUpdateUser,
     deleteUser,
-    blockUser,
-    unblockUser,
     getUserById,
     getUserDetailsById,
+    getUsersStats,
 };

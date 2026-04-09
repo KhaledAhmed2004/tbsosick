@@ -16,6 +16,7 @@ const NotificationSchema = new mongoose_1.Schema({
     resourceType: { type: String },
     resourceId: { type: String },
     read: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
     icon: { type: String },
     expiresAt: { type: Date },
 }, { timestamps: true });

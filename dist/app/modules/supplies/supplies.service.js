@@ -17,62 +17,67 @@ const supplies_model_1 = require("./supplies.model");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const http_status_codes_1 = require("http-status-codes");
 const builder_1 = require("../../builder");
+const createSupplyToDB = (data) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield supplies_model_1.SupplyModel.create(data);
+});
+const updateSupplyInDB = (id, payload) => __awaiter(void 0, void 0, void 0, function* () {
+    const doc = yield supplies_model_1.SupplyModel.findById(id);
+    if (!doc)
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Supply not found');
+    if (payload.name !== undefined)
+        doc.name = payload.name;
+    yield doc.save();
+    return doc;
+});
+const deleteSupplyFromDB = (id) => __awaiter(void 0, void 0, void 0, function* () {
+    const doc = yield supplies_model_1.SupplyModel.findById(id);
+    if (!doc)
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Supply not found');
+    yield supplies_model_1.SupplyModel.findByIdAndDelete(id);
+    return { deleted: true };
+});
+const bulkCreateSuppliesToDB = (items) => __awaiter(void 0, void 0, void 0, function* () {
+    // Normalize names and remove empty
+    const normalized = items
+        .map(i => ({ name: i.name.trim() }))
+        .filter(i => i.name.length > 0);
+    const names = normalized.map(i => i.name);
+    // Find existing to avoid duplicates
+    const existingDocs = yield supplies_model_1.SupplyModel.find({
+        name: { $in: names },
+    }).select('name').lean();
+    const existingSet = new Set(existingDocs.map(d => d.name));
+    const toInsert = normalized.filter(i => !existingSet.has(i.name));
+    const duplicates = normalized
+        .filter(i => existingSet.has(i.name))
+        .map(i => i.name);
+    const created = toInsert.length > 0
+        ? yield supplies_model_1.SupplyModel.insertMany(toInsert, { ordered: true })
+        : [];
+    return {
+        createdCount: created.length,
+        created,
+        duplicates,
+    };
+});
+const listSuppliesFromDB = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    const qb = new builder_1.QueryBuilder(supplies_model_1.SupplyModel.find({}), query || {})
+        .search(['name'])
+        .filter()
+        .sort()
+        .paginate()
+        .fields();
+    const docs = yield qb.modelQuery.lean();
+    const paginationInfo = yield qb.getPaginationInfo();
+    return {
+        meta: paginationInfo,
+        data: docs,
+    };
+});
 exports.SuppliesService = {
-    createSupplyInDB: (data) => __awaiter(void 0, void 0, void 0, function* () {
-        return yield supplies_model_1.SupplyModel.create(data);
-    }),
-    updateSupplyInDB: (id, payload) => __awaiter(void 0, void 0, void 0, function* () {
-        const doc = yield supplies_model_1.SupplyModel.findById(id);
-        if (!doc)
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Supply not found');
-        if (payload.name !== undefined)
-            doc.name = payload.name;
-        yield doc.save();
-        return doc;
-    }),
-    deleteSupplyFromDB: (id) => __awaiter(void 0, void 0, void 0, function* () {
-        const doc = yield supplies_model_1.SupplyModel.findById(id);
-        if (!doc)
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Supply not found');
-        yield supplies_model_1.SupplyModel.findByIdAndDelete(id);
-        return { deleted: true };
-    }),
-    bulkCreateInDB: (items) => __awaiter(void 0, void 0, void 0, function* () {
-        // Normalize names and remove empty
-        const normalized = items
-            .map(i => ({ name: i.name.trim() }))
-            .filter(i => i.name.length > 0);
-        const names = normalized.map(i => i.name);
-        // Find existing to avoid duplicates
-        const existingDocs = yield supplies_model_1.SupplyModel.find({
-            name: { $in: names },
-        }).select('name').lean();
-        const existingSet = new Set(existingDocs.map(d => d.name));
-        const toInsert = normalized.filter(i => !existingSet.has(i.name));
-        const duplicates = normalized
-            .filter(i => existingSet.has(i.name))
-            .map(i => i.name);
-        const created = toInsert.length > 0
-            ? yield supplies_model_1.SupplyModel.insertMany(toInsert, { ordered: true })
-            : [];
-        return {
-            createdCount: created.length,
-            created,
-            duplicates,
-        };
-    }),
-    listSuppliesFromDB: (query) => __awaiter(void 0, void 0, void 0, function* () {
-        const qb = new builder_1.QueryBuilder(supplies_model_1.SupplyModel.find({}), query || {})
-            .search(['name'])
-            .filter()
-            .sort()
-            .paginate()
-            .fields();
-        const docs = yield qb.modelQuery.lean();
-        const paginationInfo = yield qb.getPaginationInfo();
-        return {
-            pagination: paginationInfo,
-            data: docs,
-        };
-    }),
+    createSupplyToDB,
+    updateSupplyInDB,
+    deleteSupplyFromDB,
+    bulkCreateSuppliesToDB,
+    listSuppliesFromDB,
 };

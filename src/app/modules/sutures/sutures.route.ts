@@ -3,12 +3,7 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { USER_ROLES } from '../../../enums/user';
 import { SuturesController } from './sutures.controller';
-import {
-  createSutureSchema,
-  updateSutureSchema,
-  paramIdSchema,
-  bulkCreateSchema,
-} from './sutures.validation';
+import { SuturesValidation } from './sutures.validation';
 
 const router = express.Router();
 
@@ -16,7 +11,7 @@ const router = express.Router();
 router.post(
   '/',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(createSutureSchema),
+  validateRequest(SuturesValidation.createSutureSchema),
   SuturesController.createSuture,
 );
 
@@ -31,7 +26,7 @@ router.get(
 router.patch(
   '/:id',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(updateSutureSchema),
+  validateRequest(SuturesValidation.updateSutureSchema),
   SuturesController.updateSuture,
 );
 
@@ -39,7 +34,7 @@ router.patch(
 router.delete(
   '/:id',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(paramIdSchema),
+  validateRequest(SuturesValidation.paramIdSchema),
   SuturesController.deleteSuture,
 );
 
@@ -47,7 +42,7 @@ router.delete(
 router.post(
   '/bulk',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(bulkCreateSchema),
+  validateRequest(SuturesValidation.bulkCreateSchema),
   SuturesController.bulkCreate,
 );
 

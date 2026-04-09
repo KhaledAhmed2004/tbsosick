@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateEventZodSchema = exports.createEventZodSchema = void 0;
+exports.EventValidation = void 0;
 const zod_1 = require("zod");
 const event_interface_1 = require("./event.interface");
 // Require date, time, durationHours and eventType
-exports.createEventZodSchema = zod_1.z.object({
+const createEventZodSchema = zod_1.z.object({
     body: zod_1.z.object({
         title: zod_1.z.string().min(1, 'Title is required'),
         date: zod_1.z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -22,7 +22,7 @@ exports.createEventZodSchema = zod_1.z.object({
             .optional(),
     }),
 });
-exports.updateEventZodSchema = zod_1.z.object({
+const updateEventZodSchema = zod_1.z.object({
     body: zod_1.z.object({
         title: zod_1.z.string().min(1).optional(),
         date: zod_1.z
@@ -48,3 +48,7 @@ exports.updateEventZodSchema = zod_1.z.object({
             .optional(),
     }),
 });
+exports.EventValidation = {
+    createEventZodSchema,
+    updateEventZodSchema,
+};
