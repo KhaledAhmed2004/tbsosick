@@ -344,8 +344,10 @@ Thin orchestration layer — delegates to providers + helpers.
 **Exports:**
 - `getMySubscription(userId)` — returns user's subscription (creates FREE default if none exists)
 - `setFreePlan(userId)` — manual switch to FREE
-- `verifyApplePurchase(userId, signedTransactionInfo)` — main initial purchase flow
+- `verifyApplePurchase(userId, signedTransactionInfo)` — Apple initial purchase flow
 - `processAppleWebhook(signedPayload)` — passthrough to `handleAppleNotification`
+- `verifyGooglePurchase(userId, purchaseToken, productId)` — Google initial purchase flow
+- `processGoogleWebhook(rawBody, authorizationHeader)` — passthrough to `handleGoogleNotification`
 
 **`verifyApplePurchase` flow:**
 1. Call `verifyAppleTransaction(signedTransactionInfo)` — cryptographic verification
@@ -354,6 +356,16 @@ Thin orchestration layer — delegates to providers + helpers.
 4. Reject unknown productIds with `400 Bad Request`
 5. `SubscriptionModel.upsertForUser()` with all fields populated
 6. Return updated subscription doc
+
+**`verifyGooglePurchase` flow:**
+1. Call `verifyGoogleSubscription(purchaseToken, productId)` — Android Publisher API call
+2. **Fraud check:** query `SubscriptionModel.findOne({ googlePurchaseToken })`. If exists and `userId` is different → throw `409 Conflict`
+3. Map `decoded.productId` → `SubscriptionPlan` via `mapGoogleProductToPlan()`
+4. Reject unknown productIds with `400 Bad Request`
+5. Translate Google's `subscriptionState` to local status (`ACTIVE` or `PAST_DUE`)
+6. Reject if subscription is not active or in grace period
+7. `SubscriptionModel.upsertForUser()` with all fields populated
+8. Return updated subscription doc
 
 **Removed from previous version:**
 - `verifyIapSubscription()` — the old fake verification that accepted any receipt string. Replaced by the new crypto-verified flow.
@@ -365,6 +377,7 @@ Zod schemas for request validation.
 
 **Exports:**
 - `SubscriptionValidation.appleVerifySchema` — requires `body.signedTransactionInfo: string`
+- `SubscriptionValidation.googleVerifySchema` — requires `body.purchaseToken: string` and `body.productId: string`
 
 The old `verifyIapSubscriptionSchema` is removed (the endpoint it validated is gone).
 
@@ -376,29 +389,34 @@ HTTP handlers using project conventions (`catchAsync`, `sendResponse`, `ApiError
 - `getMySubscriptionController` — `GET /me`
 - `verifyApplePurchaseController` — `POST /apple/verify`
 - `appleWebhookController` — `POST /apple/webhook` (special: handles raw Buffer body)
+- `verifyGooglePurchaseController` — `POST /google/verify`
+- `googleWebhookController` — `POST /google/webhook` (special: handles raw Buffer body + Pub/Sub JWT verification)
 - `chooseFreePlanController` — `POST /choose/free`
 
-**`appleWebhookController` special handling:**
-- Because the `/apple/webhook` route uses `express.raw()` middleware, `req.body` is a `Buffer`, not a parsed object
-- Manually `JSON.parse(req.body.toString('utf8'))` to extract `signedPayload`
-- Validates presence, then calls `SubscriptionService.processAppleWebhook()`
+**Webhook controller special handling:**
+- Both `/apple/webhook` and `/google/webhook` routes use `express.raw()` middleware, so `req.body` is a `Buffer`, not a parsed object
+- Apple: Manually `JSON.parse(req.body.toString('utf8'))` to extract `signedPayload`
+- Google: Passes raw body + `Authorization` header to `processGoogleWebhook()` for Pub/Sub JWT verification + RTDN decode
+- Validates presence, then calls the respective service method
 
 #### 12. `subscription.route.ts`
 
 Routes with middleware chain (rate limit → auth → validate → controller):
 
 ```
-GET  /api/v1/subscription/me              auth required
-POST /api/v1/subscription/apple/verify    auth + rate limit + validation
-POST /api/v1/subscription/apple/webhook   no auth (JWS self-verifies)
-POST /api/v1/subscription/choose/free     auth required
+GET  /api/v1/subscription/me               auth required
+POST /api/v1/subscription/apple/verify     auth + rate limit + validation
+POST /api/v1/subscription/apple/webhook    no auth (JWS self-verifies)
+POST /api/v1/subscription/google/verify    auth + rate limit + validation
+POST /api/v1/subscription/google/webhook   no auth (Pub/Sub JWT self-verifies)
+POST /api/v1/subscription/choose/free      auth required
 ```
 
 **Removed:** old `POST /iap/verify` route (the fake-verification endpoint).
 
 #### 13. `src/config/index.ts`
 
-Added `apple` config section:
+Added `apple` and `googlePlay` config sections:
 
 ```typescript
 apple: {
@@ -410,21 +428,32 @@ apple: {
   environment: (process.env.APPLE_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production',
   rootCertsDir: process.env.APPLE_ROOT_CERTS_DIR || './secrets/apple-root-certs',
 }
+
+googlePlay: {
+  packageName: process.env.GOOGLE_PLAY_PACKAGE_NAME || '',
+  serviceAccountPath: process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_PATH || './secrets/google-service-account.json',
+  pubsubAudience: process.env.GOOGLE_PLAY_PUBSUB_AUDIENCE || '',
+  pubsubServiceAccountEmail: process.env.GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL || '',
+}
 ```
 
 #### 14. `src/app.ts`
 
-Added raw body middleware for the Apple webhook route **before** the generic `express.json()`:
+Added raw body middleware for both webhook routes **before** the generic `express.json()`:
 
 ```typescript
 app.use(
   '/api/v1/subscription/apple/webhook',
   express.raw({ type: 'application/json' })
 );
+app.use(
+  '/api/v1/subscription/google/webhook',
+  express.raw({ type: 'application/json' })
+);
 app.use(express.json());
 ```
 
-**Why:** Apple's JWS signature is computed over the **original raw bytes** of the request body. If `express.json()` parses the body first, the bytes mutate (whitespace changes, field reordering, etc.) and signature verification fails. The raw parser preserves bytes as-is for the controller to JSON.parse manually.
+**Why:** Apple's JWS signature is computed over the **original raw bytes** of the request body. Google's Pub/Sub push also delivers raw JSON that needs to be parsed manually after JWT verification. If `express.json()` parses the body first, the bytes mutate (whitespace changes, field reordering, etc.) and signature verification fails. The raw parser preserves bytes as-is for the controllers to JSON.parse manually.
 
 ---
 
@@ -1032,8 +1061,9 @@ You can't fully test without sandbox, because the `SignedDataVerifier` requires 
 
 This module provides production-grade Apple IAP verification following Apple's current best practices (StoreKit 2, App Store Server API v2, Server Notifications V2). All security fundamentals are in place: cryptographic verification, fraud prevention via unique indexes, idempotent webhook handling, grace period support, and immediate refund revocation.
 
-**Missing:** Google Play integration (same pattern, pending implementation). Enterprise admin assignment UI.
+**Missing:** Enterprise admin assignment UI.
 
 **Ready for:**
-- Sandbox testing (once `.env` is filled and certs/keys are placed)
-- Production deployment (once real Apple Developer account is set up and server notifications URL is configured)
+- Apple sandbox testing (once `.env` is filled and certs/keys are placed)
+- Google Play sandbox testing (once service account + Pub/Sub are configured)
+- Production deployment (once Apple Developer account + Google Play Console are set up and webhook URLs are configured)
