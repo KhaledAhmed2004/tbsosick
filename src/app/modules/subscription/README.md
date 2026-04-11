@@ -944,18 +944,80 @@ ngrok http 5000
 
 ### Google Play Console + GCP setup
 
-1. **Google Play Console signup** — $25 one-time fee
-2. **Create app + subscription products** in Play Console with the same product IDs (`premium_monthly`, `premium_yearly`) — must match `helpers/plan.mapper.ts`
-3. **Create a GCP project** at https://console.cloud.google.com/
-4. **Enable** the **Google Play Android Developer API** in the GCP project
-5. **Create a Service Account** in GCP (IAM & Admin → Service Accounts) and download the JSON key
-6. **Save the JSON key** to `./secrets/google-service-account.json`
-7. **Link the service account in Play Console** → Users and Permissions → invite the service account email → grant **View financial data + Manage orders and subscriptions** permission
-8. **Create a Pub/Sub topic** in GCP, e.g. `play-rtdn`
-9. **Grant publish permission** to the Google Play developer notifications service account: `google-play-developer-notifications@system.gserviceaccount.com` (Pub/Sub Publisher role on the topic)
-10. **Create a Push subscription** on that topic with **endpoint URL** = `https://<your-domain>/api/v1/subscription/google/webhook`
-11. In the push subscription, **enable Authentication** and pick a service account — this is what signs the bearer JWT we verify
-12. In **Play Console** → Monetization setup → **Real-time developer notifications**: paste the Pub/Sub topic name and click **Send test notification** — your server should respond 200
+#### Step 1 — Google Play Console signup
+1. Go to https://play.google.com/console
+2. Pay $25 one-time registration fee
+3. Complete identity verification (takes 1-2 days)
+
+#### Step 2 — Create subscription products in Play Console
+1. Play Console → select your app
+2. Left sidebar: **Monetize with Play** → **Products** → **Subscriptions**
+3. Click **Create subscription**
+4. Product ID: `premium_monthly` → Name: "Premium Monthly" → click **Create**
+5. Inside the subscription, click **Add base plan** → set Duration to 1 Month, Price to $5.99 → **Activate**
+6. Repeat for `premium_yearly`, `enterprise_monthly`, `enterprise_yearly`
+7. Product IDs must match exactly with `helpers/plan.mapper.ts`
+
+#### Step 3 — Create a GCP project
+1. Go to https://console.cloud.google.com/
+2. Click project dropdown (top bar) → **New Project**
+3. Name it (e.g. `tbsosick-backend`) → **Create**
+
+#### Step 4 — Enable Google Play Android Developer API
+1. GCP Console → left sidebar: **APIs & Services** → **Library**
+2. Search for **"Google Play Android Developer API"**
+3. Click it → click **Enable**
+
+#### Step 5 — Create a Service Account + download key
+1. GCP Console → left sidebar: **IAM & Admin** → **Service Accounts**
+2. Click **Create Service Account**
+3. Name: e.g. `play-billing-service` → click **Create and Continue**
+4. Skip role assignment (not needed here) → **Done**
+5. Click the service account you just created → **Keys** tab → **Add Key** → **Create new key** → JSON → **Create**
+6. A `.json` file downloads — save it as `./secrets/google-service-account.json` in your project
+
+#### Step 6 — Link service account in Play Console
+1. Play Console → left sidebar: **Setup** → **API access**
+   - If prompted, link your GCP project here (select the project from Step 3)
+   - Your service account should appear in the list
+2. Play Console → left sidebar: **Users and permissions** → **Invite new users**
+3. Enter the service account email (from the JSON key, looks like `play-billing-service@your-project.iam.gserviceaccount.com`)
+4. Under **App permissions**, select your app
+5. Grant permissions: **View financial data** + **Manage orders and subscriptions**
+6. Click **Invite user** → **Send invite**
+
+#### Step 7 — Enable Cloud Pub/Sub API + create topic
+1. GCP Console → **APIs & Services** → **Library** → search **"Cloud Pub/Sub API"** → **Enable** (if not already)
+2. GCP Console → left sidebar: **Pub/Sub** → **Topics** (or search "Pub/Sub" in top bar)
+3. Click **Create topic**
+4. Topic ID: `play-rtdn` → **Create**
+
+#### Step 8 — Grant publish permission to Google Play
+1. GCP Console → **Pub/Sub** → **Topics** → click your `play-rtdn` topic
+2. In the info panel, click **Permissions** tab → **Add Principal**
+3. New principal: `google-play-developer-notifications@system.gserviceaccount.com`
+4. Role: **Pub/Sub Publisher**
+5. Click **Save**
+
+#### Step 9 — Create a Push subscription
+1. GCP Console → **Pub/Sub** → **Subscriptions** → **Create subscription**
+2. Subscription ID: e.g. `play-rtdn-push`
+3. Select topic: `play-rtdn`
+4. Delivery type: **Push**
+5. Endpoint URL: `https://<your-domain>/api/v1/subscription/google/webhook`
+6. Check **Enable authentication**
+7. Select a service account for signing push JWTs (can be the same service account from Step 5)
+8. Audience: paste the same webhook URL
+9. Click **Create**
+
+#### Step 10 — Configure RTDN in Play Console
+1. Play Console → select your app
+2. Left sidebar: **Monetize with Play** → **Monetization setup**
+3. Scroll to **Real-time developer notifications** section
+4. Enable notifications
+5. Paste the full topic name: `projects/YOUR_PROJECT_ID/topics/play-rtdn`
+6. Click **Save changes**
+7. Click **Send test notification** — your server should respond 200
 
 ### Google environment variables
 
