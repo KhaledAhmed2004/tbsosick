@@ -42,7 +42,7 @@ Dui platform er state machine same `Subscription` doc e converge kore — same `
 | Grace period support | ✅ Complete |
 | Refund immediate revoke | ✅ Complete |
 | Access gating helpers (`isUserPremium`) | ✅ Complete |
-| Enterprise admin assignment UI | ⏳ Pending |
+| Enterprise tier via store purchase | ✅ Complete |
 
 ---
 
@@ -1025,7 +1025,7 @@ Refunds are intentional actions (either by the user or by Apple support). Unlike
 
 ### What about Enterprise tier?
 
-Enterprise subscriptions are **not sold via Apple IAP**. Apple would take a 15-30% commission on enterprise purchases, which is unsustainable for B2B sales. Instead, an admin manually assigns the ENTERPRISE plan via a future admin dashboard (or direct DB update). The `SUBSCRIPTION_PLATFORM.ADMIN` enum value exists for this purpose.
+Enterprise is the highest paid tier ($9.99/month range), sold through Apple/Google stores like the Premium tier. It follows the same purchase → verify → webhook flow. The `plan.mapper.ts` already maps `enterprise_monthly` and `enterprise_yearly` product IDs to `SUBSCRIPTION_PLAN.ENTERPRISE`. No admin assignment needed — users purchase it directly from the store.
 
 ### How do I check if a user is premium in another module?
 
@@ -1060,8 +1060,6 @@ You can't fully test without sandbox, because the `SignedDataVerifier` requires 
 ## Summary
 
 This module provides production-grade Apple IAP verification following Apple's current best practices (StoreKit 2, App Store Server API v2, Server Notifications V2). All security fundamentals are in place: cryptographic verification, fraud prevention via unique indexes, idempotent webhook handling, grace period support, and immediate refund revocation.
-
-**Missing:** Enterprise admin assignment UI.
 
 **Ready for:**
 - Apple sandbox testing (once `.env` is filled and certs/keys are placed)
