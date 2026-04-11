@@ -772,18 +772,82 @@ GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL=your-pubsub-pusher@your-project.iam.gse
 
 ### Step 3 — Create Subscription Group + Products
 
-1. App Store Connect → your app → Features → In-App Purchases → Subscriptions
-2. Create Subscription Group (e.g., "Premium Membership")
-3. Inside the group, create subscriptions:
+**⚠️ Navigation path update:** Purano path chilo "Features → In-App Purchases → Subscriptions" — eita ekhon change hoyeche.
 
-   | Product ID | Duration | Price |
-   |---|---|---|
-   | `premium_monthly` | 1 Month | $5.99/mo |
-   | `premium_yearly` | 1 Year | $3.99/mo billed yearly |
-   | `enterprise_monthly` | 1 Month | $9.99/mo |
-   | `enterprise_yearly` | 1 Year | $5.99/mo billed yearly |
+#### Part A — Subscription Group banao
 
-4. **Product IDs must match exactly** with `helpers/plan.mapper.ts`
+1. App Store Connect → **My Apps** → tomar app select koro
+2. Left sidebar e **"Monetization"** section khujho → click **"Subscriptions"**
+   - (Purano "Features → In-App Purchases" path e jeo na — subscriptions ekhon "Monetization" er under e)
+3. **"Subscription Groups"** heading er pashe **"+"** button click koro
+4. **Reference Name**: `Premium Membership` (internal name — users dekhbe na)
+5. Click **"Create"** — group er detail page e land korba
+
+#### Part B — Premium Monthly subscription banao
+
+6. Group er detail page e **"Subscriptions"** section e **"+"** click koro
+7. Fill in:
+   - **Reference Name**: `Premium Monthly` (internal — users dekhbe na)
+   - **Product ID**: `premium_monthly`
+     - ⚠️ Eta **change ba reuse kora jay na** — ekbar create korle forever locked, delete korleo reuse hobe na
+8. Click **"Create"** — subscription detail page e land korba
+
+#### Part C — Duration set koro
+
+9. **"Subscription Duration"** dropdown theke select koro: **1 Month**
+
+#### Part D — Price set koro
+
+10. **"Subscription Pricing"** section e **"+"** ba **"Add Subscription Price"** click koro
+11. Base country select koro: **United States** (ba tomar primary market)
+12. Price select koro: **$5.99**
+    - Apple ekhon **900+ price points** support kore — purano Tier 1/2/3 system nai
+    - Prices $0.29 theke $10,000 porjonto set kora jay
+13. Confirm koro — Apple automatically baki shob country er price generate kore dibe
+    - Individual country er price manually override o korte paro
+14. Click **"Save"** ba **"Confirm"**
+
+#### Part E — Localization add koro (REQUIRED)
+
+15. **"App Store Localization"** section e **"+"** click koro
+16. Language select koro: **English (U.S.)**
+17. **Display Name**: `Premium Monthly` (eta users dekhbe App Store e)
+18. **Description**: `Unlimited access to all premium features. Billed monthly.`
+19. Click **"Save"**
+
+⚠️ Minimum 1 localization na dile subscription review te submit korte parba na.
+
+#### Part F — Review Information add koro (REQUIRED for submission)
+
+20. **"Review Information"** section e:
+    - **Screenshot**: Tomar app er paywall/subscription UI er ekta screenshot upload koro (REQUIRED)
+    - **Review Notes**: Optional but recommended — reviewer ke bolte paro kivabe test korbe
+21. Click **"Save"**
+
+#### Part G — Status check koro
+
+22. Shob field fill korar por subscription er status dekhabe: **"Ready to Submit"**
+    - **"Missing Metadata"** dekhale — kono required field miss hoyeche, check koro
+    - Sandbox testing er jonno **"Ready to Submit"** status e thakle-i cholbe — review submit korar dorkar nai
+
+#### Part H — Baki 3ta subscription banao
+
+23. Steps 6-22 repeat koro baki 3ta product er jonno:
+
+| Reference Name | Product ID | Duration | Price |
+|---|---|---|---|
+| Premium Yearly | `premium_yearly` | 1 Year | $3.99/mo billed yearly ($47.88/yr) |
+| Enterprise Monthly | `enterprise_monthly` | 1 Month | $9.99/mo |
+| Enterprise Yearly | `enterprise_yearly` | 1 Year | $5.99/mo billed yearly ($71.88/yr) |
+
+24. **Product IDs must match exactly** with `helpers/plan.mapper.ts`
+
+#### Part I — Billing Grace Period (recommended)
+
+25. Subscription group er detail page e fire jao
+26. Group settings e **"Billing Grace Period"** option khujho
+27. Enable koro — eta subscribers ke billing retry period e access dite dey (card expire hole immediately cancel hobe na)
+28. Tomar backend e `PAST_DUE` status eta handle kore — `entitlement.ts` e `ACTIVE_STATUSES` set e `PAST_DUE` include ache
 
 ### Step 4 — Generate API Key
 
