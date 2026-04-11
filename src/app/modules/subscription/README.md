@@ -1041,14 +1041,53 @@ Subscription (product — just a container, NO price here)
 6. A `.json` file downloads — save it as `./secrets/google-service-account.json` in your project
 
 #### Step 6 — Link service account in Play Console
-1. Play Console → left sidebar: **Setup** → **API access**
-   - If prompted, link your GCP project here (select the project from Step 3)
-   - Your service account should appear in the list
-2. Play Console → left sidebar: **Users and permissions** → **Invite new users**
-3. Enter the service account email (from the JSON key, looks like `play-billing-service@your-project.iam.gserviceaccount.com`)
-4. Under **App permissions**, select your app
-5. Grant permissions: **View financial data** + **Manage orders and subscriptions**
-6. Click **Invite user** → **Send invite**
+
+**Important:** Ei step er jonno tomar Play Console er **Account Owner** hote hobe. Owner chara "API access" menu dekhabe na.
+
+**Part A — GCP project link koro:**
+
+1. Play Console → left sidebar e niche **Setup** section khujho → click **"API access"**
+2. Page er upore **"Link a Google Cloud project"** section thakbe
+3. Du ta option dekhbe:
+   - **"Create a new Google Cloud project"** — Play Console nije ekta banabe
+   - **"Link an existing Google Cloud project"** — dropdown theke tomar Step 3 er project select koro
+4. Tomar existing project select koro dropdown theke → click **"Link"**
+5. Confirmation dialog asle confirm koro
+
+**Project dropdown e tomar project dekhachhe na?** Tomar Google account er oi GCP project e **Owner** ba **Editor** role thakte hobe. GCP Console → IAM → check koro.
+
+**Part B — Service account automatically appear hobe:**
+
+6. Link korar por page refresh hobe — niche **"Service accounts"** section e tomar GCP project er shob service account dekhabe
+7. Tomar `play-billing-service@your-project.iam.gserviceaccount.com` email ta ekhane dekhte pabe
+8. Service account er row er right side e **"Grant access"** ba **"Manage permissions"** link/button thakbe — click koro
+
+**Service account dekhachhe na?** Wrong GCP project link kora hoye thakte pare. Page refresh koro, ba 1-2 minute wait koro.
+
+**Part C — Permissions set koro:**
+
+9. Click korar por permissions page khulbe — dui level er permission thake:
+
+   **Account permissions (shob app er jonno):**
+   - "Financial data" section e 2ta checkbox khujho:
+     - ✅ **"View financial data, orders, and cancellation survey responses"** — purchase/subscription data read korar jonno
+     - ✅ **"Manage orders and subscriptions"** — purchase acknowledge, refund, subscription manage korar jonno
+   - Baki checkboxes (App information, Store presence, etc.) dorkar nai — uncheck rekho
+
+   **App permissions (specific app er jonno — optional):**
+   - Niche **"Add app"** section thakbe — chaile specific app select kore only sei app er jonno permission dite paro
+   - Shob app e access dite chaile account-level permission e enough, app-level skip koro
+
+10. Click **"Invite user"** ba **"Save changes"**
+11. Service account er jonno kono email accept step nai — instantly effect hobe
+
+**Part D — Verify koro:**
+
+12. **Setup** → **API access** page e fire gele service account ta "Access granted" dekhabe
+13. **Users and permissions** page e o service account email ta user list e dekhbe
+
+**⚠️ CRITICAL: 24-48 hour wait!**
+Permissions grant korar por API call immediately kaj na-o korte pare. Google er system e propagation delay ache — **24-48 hours wait koro** tarpor API test koro. Ei delay ta well-known issue, Google er documentation e o mention ache.
 
 #### Step 7 — Enable Cloud Pub/Sub API + create topic
 1. GCP Console → **APIs & Services** → **Library** → search **"Cloud Pub/Sub API"** → **Enable** (if not already)
