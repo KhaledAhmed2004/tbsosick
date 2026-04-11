@@ -24,6 +24,7 @@ import { allowedOrigins, maybeLogCors } from './app/logging/corsLogger';
 
 const app = express();
 
+
 // Morgan logging
 app.use(Morgan.successHandler);
 app.use(Morgan.errorHandler);
