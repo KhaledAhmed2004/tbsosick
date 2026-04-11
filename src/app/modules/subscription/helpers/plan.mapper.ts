@@ -13,11 +13,11 @@ import {
 // Play Console, add the exact product identifier here.
 const PRODUCT_ID_TO_PLAN: Record<string, SubscriptionPlanType> = {
   // Apple & Google share the same product identifiers by convention.
+  // PREMIUM — $5.99/mo, $3.99/mo billed yearly
   premium_monthly: SUBSCRIPTION_PLAN.PREMIUM,
   premium_yearly: SUBSCRIPTION_PLAN.PREMIUM,
 
-  // Enterprise is admin-assigned (no store product), kept here only so
-  // future store listings align with the same mapping table.
+  // ENTERPRISE — $9.99/mo, $5.99/mo billed yearly
   enterprise_monthly: SUBSCRIPTION_PLAN.ENTERPRISE,
   enterprise_yearly: SUBSCRIPTION_PLAN.ENTERPRISE,
 };

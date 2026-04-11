@@ -244,12 +244,19 @@ Explicit `productId → SUBSCRIPTION_PLAN` lookup table. Replaces the old brittl
 **Current mapping:**
 ```typescript
 {
-  premium_monthly:     PREMIUM,
-  premium_yearly:      PREMIUM,
-  enterprise_monthly:  ENTERPRISE,
-  enterprise_yearly:   ENTERPRISE,
+  premium_monthly:     PREMIUM,    // $5.99/mo
+  premium_yearly:      PREMIUM,    // $3.99/mo billed yearly
+  enterprise_monthly:  ENTERPRISE, // $9.99/mo
+  enterprise_yearly:   ENTERPRISE, // $5.99/mo billed yearly
 }
 ```
+
+**Pricing tiers:**
+| Plan | Monthly | Yearly (per month) |
+|---|---|---|
+| FREE | $0 | — |
+| PREMIUM | $5.99/mo | $3.99/mo billed yearly |
+| ENTERPRISE | $9.99/mo | $5.99/mo billed yearly |
 
 **When adding a new product** in App Store Connect / Play Console, add the exact product identifier here. Unknown product IDs resolve to `FREE` so verification code can detect and reject them cleanly.
 
@@ -768,8 +775,14 @@ GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL=your-pubsub-pusher@your-project.iam.gse
 1. App Store Connect → your app → Features → In-App Purchases → Subscriptions
 2. Create Subscription Group (e.g., "Premium Membership")
 3. Inside the group, create subscriptions:
-   - Product ID: `premium_monthly`, Duration: 1 Month
-   - Product ID: `premium_yearly`, Duration: 1 Year
+
+   | Product ID | Duration | Price |
+   |---|---|---|
+   | `premium_monthly` | 1 Month | $5.99/mo |
+   | `premium_yearly` | 1 Year | $3.99/mo billed yearly |
+   | `enterprise_monthly` | 1 Month | $9.99/mo |
+   | `enterprise_yearly` | 1 Year | $5.99/mo billed yearly |
+
 4. **Product IDs must match exactly** with `helpers/plan.mapper.ts`
 
 ### Step 4 — Generate API Key
@@ -994,10 +1007,13 @@ Subscription (product — just a container, NO price here)
 10. Click **"Save"** on the base plan
 11. **IMPORTANT:** Base plan starts in **Draft** status — click **"Activate"** to make it live
 
-12. Repeat steps 3-11 for:
-    - `premium_yearly` (Duration: 1 year, e.g. $49.99)
-    - `enterprise_monthly` (Duration: 1 month, e.g. $9.99)
-    - `enterprise_yearly` (Duration: 1 year, e.g. $79.99)
+12. Repeat steps 3-11 for the remaining 3 products:
+
+    | Product ID | Name | Duration | Price |
+    |---|---|---|---|
+    | `premium_yearly` | Premium Yearly | 1 year | $3.99/mo billed yearly ($47.88/yr) |
+    | `enterprise_monthly` | Enterprise Monthly | 1 month | $9.99/mo |
+    | `enterprise_yearly` | Enterprise Yearly | 1 year | $5.99/mo billed yearly ($71.88/yr) |
 
 13. Product IDs must match exactly with `helpers/plan.mapper.ts`
 
@@ -1135,7 +1151,7 @@ Refunds are intentional actions (either by the user or by Apple support). Unlike
 
 ### What about Enterprise tier?
 
-Enterprise is the highest paid tier ($9.99/month range), sold through Apple/Google stores like the Premium tier. It follows the same purchase → verify → webhook flow. The `plan.mapper.ts` already maps `enterprise_monthly` and `enterprise_yearly` product IDs to `SUBSCRIPTION_PLAN.ENTERPRISE`. No admin assignment needed — users purchase it directly from the store.
+Enterprise is the highest paid tier ($9.99/mo, $5.99/mo billed yearly), sold through Apple/Google stores like the Premium tier. It follows the same purchase → verify → webhook flow. The `plan.mapper.ts` already maps `enterprise_monthly` and `enterprise_yearly` product IDs to `SUBSCRIPTION_PLAN.ENTERPRISE`. No admin assignment needed — users purchase it directly from the store.
 
 ### How do I check if a user is premium in another module?
 
