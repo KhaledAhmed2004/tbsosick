@@ -950,13 +950,61 @@ ngrok http 5000
 3. Complete identity verification (takes 1-2 days)
 
 #### Step 2 — Create subscription products in Play Console
+
+**Google Play er subscription model ta 3-tier hierarchy:**
+```
+Subscription (product — just a container, NO price here)
+  └── Base Plan (actual pricing + duration lives HERE)
+        └── Offer (optional — free trial, intro discount, etc.)
+```
+- **Subscription** = container with a Product ID + name. Price set kora jay NA directly.
+- **Base Plan** = price, duration, grace period — shob ekhane. Ekta subscription e multiple base plan thakte pare (e.g., monthly + yearly).
+- **Offer** = optional promotional discount attached to a base plan.
+
+**Base Plan types:**
+| Type | Description |
+|---|---|
+| **Auto-renewing** | Monthly/yearly charge, auto-renews until cancel. Most common. |
+| **Prepaid** | One-time payment, NO auto-renew. User manually top-up kore extend korte hoy. |
+| **Installments** | Commitment-based (e.g., 12 monthly payments). Select countries only. |
+
+**Now create the products:**
+
 1. Play Console → select your app
 2. Left sidebar: **Monetize with Play** → **Products** → **Subscriptions**
-3. Click **Create subscription**
-4. Product ID: `premium_monthly` → Name: "Premium Monthly" → click **Create**
-5. Inside the subscription, click **Add base plan** → set Duration to 1 Month, Price to $5.99 → **Activate**
-6. Repeat for `premium_yearly`, `enterprise_monthly`, `enterprise_yearly`
-7. Product IDs must match exactly with `helpers/plan.mapper.ts`
+3. Click **"Create subscription"** button (top-right)
+4. Fill in:
+   - Product ID: `premium_monthly`
+   - Name: "Premium Monthly"
+5. Click **"Create"** — you land on the **subscription detail page**
+
+6. Scroll to the **"Base plans and offers"** section (this is INSIDE the subscription detail page, not a separate tab)
+7. Click **"Add base plan"**
+8. Fill in:
+   - Base Plan ID: e.g. `monthly-autorenew`
+   - Type: **Auto-renewing**
+   - Billing period: **1 month**
+   - Grace period: **7 days** (recommended — retry failed payments before cancelling)
+   - Account hold: enable if you want (user loses access but subscription isn't fully cancelled)
+   - Resubscribe: enable (let cancelled users resubscribe from Play Store)
+9. Click **"Set prices"** → enter price in your default currency (e.g. $5.99 USD)
+   - Google auto-generates converted prices for all other countries
+   - You can manually override individual country prices
+   - Click **"Update"** to confirm
+10. Click **"Save"** on the base plan
+11. **IMPORTANT:** Base plan starts in **Draft** status — click **"Activate"** to make it live
+
+12. Repeat steps 3-11 for:
+    - `premium_yearly` (Duration: 1 year, e.g. $49.99)
+    - `enterprise_monthly` (Duration: 1 month, e.g. $9.99)
+    - `enterprise_yearly` (Duration: 1 year, e.g. $79.99)
+
+13. Product IDs must match exactly with `helpers/plan.mapper.ts`
+
+**Common confusion points:**
+- "Subscription create korlam but price field nai!" → Price subscription e na, **base plan e** set hoy. "Add base plan" click koro.
+- "Base plan kothay?" → Subscription er detail page er vitore **"Base plans and offers"** section e. Alada tab/page na.
+- "Subscription app e dekhachhe na!" → Base plan probably still **Draft** — **"Activate"** click koro.
 
 #### Step 3 — Create a GCP project
 1. Go to https://console.cloud.google.com/
