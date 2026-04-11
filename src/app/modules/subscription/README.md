@@ -994,9 +994,9 @@ Subscription (product — just a container, NO price here)
 6. Scroll to the **"Base plans and offers"** section (this is INSIDE the subscription detail page, not a separate tab)
 7. Click **"Add base plan"**
 8. Fill in:
-   - Base Plan ID: e.g. `monthly-autorenew`
+   - Base Plan ID: e.g. `monthly-autorenew` (monthly er jonno) or `yearly-autorenew` (yearly er jonno)
    - Type: **Auto-renewing**
-   - Billing period: **1 month**
+   - Billing period: **1 month** (monthly) or **1 year** (yearly)
    - Grace period: **7 days** (recommended — retry failed payments before cancelling)
    - Account hold: enable if you want (user loses access but subscription isn't fully cancelled)
    - Resubscribe: enable (let cancelled users resubscribe from Play Store)
@@ -1009,11 +1009,11 @@ Subscription (product — just a container, NO price here)
 
 12. Repeat steps 3-11 for the remaining 3 products:
 
-    | Product ID | Name | Duration | Price |
-    |---|---|---|---|
-    | `premium_yearly` | Premium Yearly | 1 year | $3.99/mo billed yearly ($47.88/yr) |
-    | `enterprise_monthly` | Enterprise Monthly | 1 month | $9.99/mo |
-    | `enterprise_yearly` | Enterprise Yearly | 1 year | $5.99/mo billed yearly ($71.88/yr) |
+    | Product ID | Base Plan ID | Name | Duration | Price |
+    |---|---|---|---|---|
+    | `premium_yearly` | `yearly-autorenew` | Premium Yearly | 1 year | $3.99/mo billed yearly ($47.88/yr) |
+    | `enterprise_monthly` | `monthly-autorenew` | Enterprise Monthly | 1 month | $9.99/mo |
+    | `enterprise_yearly` | `yearly-autorenew` | Enterprise Yearly | 1 year | $5.99/mo billed yearly ($71.88/yr) |
 
 13. Product IDs must match exactly with `helpers/plan.mapper.ts`
 
