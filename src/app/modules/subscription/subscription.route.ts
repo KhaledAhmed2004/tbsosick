@@ -40,6 +40,32 @@ router.post(
   SubscriptionController.appleWebhookController
 );
 
+// POST /subscription/google/verify
+// Android client passes the Google Play purchase token + productId from
+// the BillingClient — server verifies via Android Publisher API and
+// upserts the subscription record.
+router.post(
+  '/google/verify',
+  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  rateLimitMiddleware({
+    windowMs: 60_000,
+    max: 30,
+    routeName: 'subscription-google-verify',
+  }),
+  validateRequest(SubscriptionValidation.googleVerifySchema),
+  SubscriptionController.verifyGooglePurchaseController
+);
+
+// POST /subscription/google/webhook
+// Google Play Real-Time Developer Notifications — Pub/Sub push.
+// No app-level auth: the service verifies the bearer JWT signed by
+// Google Cloud Pub/Sub against the configured audience.
+// Raw body parsing for this route is configured in src/app.ts.
+router.post(
+  '/google/webhook',
+  SubscriptionController.googleWebhookController
+);
+
 // POST /subscription/choose/free
 // লোকালি Free প্ল্যানে সুইচ করে
 router.post(

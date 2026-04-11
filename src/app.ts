@@ -120,6 +120,14 @@ app.use(
   express.raw({ type: 'application/json' })
 );
 
+// Google Play RTDN webhook (Pub/Sub push) — keep raw bytes so the
+// service can decode the base64 message.data exactly as sent. Must be
+// registered before express.json() below.
+app.use(
+  '/api/v1/subscription/google/webhook',
+  express.raw({ type: 'application/json' })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

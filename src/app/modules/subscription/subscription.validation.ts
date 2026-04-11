@@ -12,4 +12,15 @@ export const SubscriptionValidation = {
       query: z.object({}).optional(),
     })
     .describe('AppleVerifyPurchaseSchema'),
+
+  googleVerifySchema: z
+    .object({
+      body: z.object({
+        purchaseToken: z.string().min(1, 'purchaseToken is required'),
+        productId: z.string().min(1, 'productId is required'),
+      }),
+      params: z.object({}).optional(),
+      query: z.object({}).optional(),
+    })
+    .describe('GoogleVerifyPurchaseSchema'),
 };

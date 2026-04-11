@@ -11,7 +11,13 @@ import {
 import { verifyAppleTransaction } from './providers/apple/apple.verify';
 import { handleAppleNotification } from './providers/apple/apple.webhook';
 import { AppleWebhookResult } from './providers/apple/apple.types';
-import { mapAppleProductToPlan } from './helpers/plan.mapper';
+import { verifyGoogleSubscription } from './providers/google/google.verify';
+import { handleGoogleNotification } from './providers/google/google.webhook';
+import { GoogleWebhookResult } from './providers/google/google.types';
+import {
+  mapAppleProductToPlan,
+  mapGoogleProductToPlan,
+} from './helpers/plan.mapper';
 
 const ensureSubscriptionDoc = async (
   userId: string
@@ -99,11 +105,95 @@ export const processAppleWebhook = async (
   return handleAppleNotification(signedPayload);
 };
 
+export const verifyGooglePurchase = async (
+  userId: string,
+  purchaseToken: string,
+  productId: string
+): Promise<ISubscription> => {
+  // 1. Pull the authoritative subscription state from Google.
+  const decoded = await verifyGoogleSubscription(purchaseToken, productId);
+
+  // 2. Fraud guard: a purchase token must not be linked to a different user.
+  const existingByToken = await SubscriptionModel.findOne({
+    googlePurchaseToken: decoded.purchaseToken,
+  });
+  if (existingByToken && existingByToken.userId.toString() !== userId) {
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      'This Google purchase is already linked to another account'
+    );
+  }
+
+  // 3. Map productId → local plan.
+  const plan = mapGoogleProductToPlan(decoded.productId);
+  if (plan === SUBSCRIPTION_PLAN.FREE) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Unknown or unsupported productId: ${decoded.productId}`
+    );
+  }
+
+  // 4. Translate Google's subscriptionState into our local status.
+  const isActiveState =
+    decoded.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE' ||
+    decoded.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD';
+  if (!isActiveState) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      `Google subscription is not active (state: ${decoded.subscriptionState})`
+    );
+  }
+  const localStatus =
+    decoded.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
+      ? SUBSCRIPTION_STATUS.PAST_DUE
+      : SUBSCRIPTION_STATUS.ACTIVE;
+
+  // 5. Persist for this user.
+  const updated = await SubscriptionModel.upsertForUser(
+    new Types.ObjectId(userId),
+    {
+      plan,
+      status: localStatus,
+      platform: SUBSCRIPTION_PLATFORM.GOOGLE,
+      environment: decoded.environment,
+      productId: decoded.productId,
+      autoRenewing: decoded.autoRenewing,
+      googlePurchaseToken: decoded.purchaseToken,
+      googleOrderId: decoded.orderId,
+      startedAt: decoded.startTime ? new Date(decoded.startTime) : null,
+      currentPeriodEnd: decoded.expiryTime
+        ? new Date(decoded.expiryTime)
+        : null,
+      canceledAt: null,
+      gracePeriodEndsAt:
+        localStatus === SUBSCRIPTION_STATUS.PAST_DUE && decoded.expiryTime
+          ? new Date(decoded.expiryTime)
+          : null,
+      metadata: {
+        acknowledgementState: decoded.acknowledgementState,
+        linkedPurchaseToken: decoded.linkedPurchaseToken,
+        testPurchase: decoded.testPurchase,
+      },
+    }
+  );
+
+  return updated;
+};
+
+export const processGoogleWebhook = async (
+  rawBody: Buffer | string,
+  authorizationHeader: string | undefined
+): Promise<GoogleWebhookResult> => {
+  return handleGoogleNotification(rawBody, authorizationHeader);
+};
+
 const SubscriptionService = {
   getMySubscription,
   setFreePlan,
   verifyApplePurchase,
   processAppleWebhook,
+  verifyGooglePurchase,
+  processGoogleWebhook,
 };
 
 export default SubscriptionService;

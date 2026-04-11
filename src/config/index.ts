@@ -77,6 +77,21 @@ export default {
       process.env.APPLE_ROOT_CERTS_DIR || './secrets/apple-root-certs',
   },
 
+  // Google Play Billing (Android Publisher API + RTDN via Pub/Sub)
+  googlePlay: {
+    packageName: process.env.GOOGLE_PLAY_PACKAGE_NAME || '',
+    serviceAccountPath:
+      process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_PATH ||
+      './secrets/google-service-account.json',
+    // Audience used to verify Pub/Sub push JWTs (set to your webhook URL).
+    // If empty, JWT verification is skipped — only do that in dev.
+    pubsubAudience: process.env.GOOGLE_PLAY_PUBSUB_AUDIENCE || '',
+    // Service account email allowed to send push messages (optional extra
+    // check on the verified JWT issuer/email).
+    pubsubServiceAccountEmail:
+      process.env.GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL || '',
+  },
+
   // 🆕 NEW: Tracing capture configuration
   tracing: {
     capture: {
