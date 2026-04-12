@@ -10,10 +10,11 @@ Amader system e main collections gulo holo:
 
 1.  **Users**: Central user management (Admin, Doctors/Users).
 2.  **Preference Cards**: Doctors der surgery-specific preferences.
-3.  **Subscriptions**: User-er billing plans ebong access levels.
-4.  **Supplies & Sutures**: Inventory items ja preference card e use hoy.
-5.  **Payments & StripeAccounts**: Billing transactions ebong vendor onboarding info.
+3.  **Subscriptions**: IAP-based (Apple/Google) billing plans + access levels.
+4.  **Supplies & Sutures**: Catalog items ja preference card e embed hoy.
+5.  **Events**: Calendar/surgery scheduling (optionally linked to a PrefCard).
 6.  **Notifications**: In-app ebong push notification tracking.
+7.  **Legal**: Admin-managed legal pages (TOS, privacy, etc).
 
 ---
 
@@ -21,18 +22,14 @@ Amader system e main collections gulo holo:
 
 ```mermaid
 erDiagram
-    USER ||--o{ PREFERENCE_CARD : "creates (createdBy)"
-    USER ||--o| SUBSCRIPTION : "has (userId)"
-    USER ||--o{ PAYMENT : "makes/receives (posterId/freelancerId)"
-    USER ||--o| STRIPE_ACCOUNT : "onboards (userId)"
-    USER ||--o{ NOTIFICATION : "receives (userId)"
-    USER ||--o{ EVENT : "owns (userId)"
+    USER ||--o{ PREFERENCE_CARD : "createdBy (ObjectId)"
+    USER ||--o| SUBSCRIPTION : "userId (unique)"
+    USER ||--o{ NOTIFICATION : "userId"
+    USER ||--o{ EVENT : "userId"
 
-    PREFERENCE_CARD ||--o{ SUPPLY : "contains (supplies.name)"
-    PREFERENCE_CARD ||--o{ SUTURE : "contains (sutures.name)"
-    EVENT ||--o| PREFERENCE_CARD : "links (preferenceCard)"
-    
-    SUBSCRIPTION }|--|| PAYMENT : "linked via Stripe"
+    PREFERENCE_CARD }o--o{ SUPPLY : "supplies[].name -> Supply._id"
+    PREFERENCE_CARD }o--o{ SUTURE : "sutures[].name -> Suture._id"
+    EVENT ||--o| PREFERENCE_CARD : "preferenceCard"
 ```
 
 ---
@@ -47,19 +44,19 @@ System er primary entity. Role-based access control (RBAC) eikhan theke managed 
 ### 2. Preference Card Model (`preferencecards`)
 Surgery workflow optimize korar jonno main data entity.
 - **Relationships**:
-  - `createdBy`: String (User ID) — Reference to `User`.
-  - `supplies.name`: ObjectId — Reference to `Supply`.
-  - `sutures.name`: ObjectId — Reference to `Suture`.
-- **Embedded Data**: `surgeon` info (name, handPreference, specialty) sub-schema hisebe embed kora hoyeche performance er jonno.
+  - `createdBy`: ObjectId — Reference to `User` (indexed).
+  - `supplies[].name`: ObjectId — Reference to `Supply` (field name misleading — actually holds a Supply `_id`).
+  - `sutures[].name`: ObjectId — Reference to `Suture` (same — holds a Suture `_id`).
+- **Embedded Data**: `surgeon` sub-schema with `fullName`, `handPreference`, `specialty`, `contactNumber`, `musicPreference` (all required, `_id: false`).
 
 ### 3. Subscription Model (`subscriptions`)
-User-er access control ebong billing logic handle kore.
-- **Relationship**: `userId` — Reference to `User` (Unique).
-- **Fields**: `plan` (FREE, PREMIUM), `status` (ACTIVE, EXPIRED), `stripeSubscriptionId`.
-
-### 4. Payment & StripeAccount (`payments`, `stripeaccounts`)
-- **Payment**: `taskId`, `posterId`, `freelancerId`, `amount`, `status`.
-- **StripeAccount**: `userId`, `stripeAccountId`, `onboardingCompleted`.
+IAP (Apple/Google) based subscription + access control. **No Stripe** — in-app purchase only.
+- **Relationship**: `userId` — Reference to `User` (unique, one-sub-per-user).
+- **Core fields**: `plan` (`FREE`, `PREMIUM`, `ENTERPRISE`), `status` (`active`, `trialing`, `past_due`, `canceled`, `inactive`).
+- **Platform fields**: `platform` (`apple`, `google`, `admin`), `environment` (`sandbox`, `production`), `productId`, `autoRenewing`.
+- **Apple fields**: `appleOriginalTransactionId` (unique + sparse — fraud prevention, blocks same Apple purchase being linked to multiple users), `appleLatestTransactionId`.
+- **Google fields**: `googlePurchaseToken` (unique + sparse), `googleOrderId`.
+- **Lifecycle**: `startedAt`, `currentPeriodEnd`, `gracePeriodEndsAt`, `canceledAt`, `metadata` (Mixed).
 
 ---
 
@@ -88,17 +85,26 @@ System er sob users (Admin ebong Doctors) er data eikhane thake.
 | Field | Type | Required | Description / Enum |
 | :--- | :--- | :---: | :--- |
 | `name` | String | ✅ | User er full name |
-| `email` | String | ✅ | Unique email address |
-| `password` | String | ⚠️ | Required for non-OAuth users (select: false) |
-| `role` | String | ✅ | `SUPER_ADMIN`, `USER` (Doctor) |
-| `status` | String | ✅ | `ACTIVE`, `INACTIVE`, `RESTRICTED`, `DELETE` |
-| `verified` | Boolean | ✅ | Email verification status |
+| `email` | String | ✅ | Unique, lowercase, indexed |
+| `password` | String | ⚠️ | Required for non-OAuth users only (hidden via `select: false`, min 8) |
+| `role` | String | ❌ | Enum `SUPER_ADMIN`, `USER` — default `USER` |
+| `status` | String | ❌ | Enum `ACTIVE`, `INACTIVE`, `RESTRICTED`, `DELETE` — default `ACTIVE` |
+| `verified` | Boolean | ❌ | Email verification status — default `true` |
 | `country` | String | ✅ | User's country |
 | `phone` | String | ✅ | Contact number |
-| `specialty` | String | ❌ | Doctor's specialty (optional) |
-| `hospital` | String | ❌ | Hospital name (optional) |
-| `tokenVersion`| Number | ✅ | Security token rotation er jonno |
-| `deviceTokens`| String[] | ❌ | Push notification tokens |
+| `location` | String | ❌ | Freeform location |
+| `gender` | String | ❌ | Enum `male`, `female` |
+| `dateOfBirth` | String | ❌ | DOB (stored as string) |
+| `specialty` | String | ❌ | Doctor's specialty |
+| `hospital` | String | ❌ | Hospital name |
+| `profilePicture` | String | ❌ | URL — default placeholder |
+| `about` | String | ❌ | Bio text |
+| `isFirstLogin` | Boolean | ❌ | Default `true` — cleared on first successful login |
+| `favoriteCards` | String[] | ❌ | Array of PreferenceCard IDs (stored as strings) |
+| `deviceTokens` | String[] | ❌ | Push notification tokens (deduped via `$addToSet`) |
+| `googleId` | String | ❌ | OAuth ID (sparse index — allows multiple nulls) |
+| `authentication` | Object | ❌ | Hidden sub-doc: `{ isResetPassword, oneTimeCode, expireAt }` (select: false) |
+| `tokenVersion`| Number | ❌ | Default `0` — incremented for token rotation / forced logout |
 
 ---
 
@@ -107,14 +113,21 @@ Surgery-specific preference data.
 
 | Field | Type | Required | Description |
 | :--- | :--- | :---: | :--- |
-| `createdBy` | String | ✅ | Creator User ID (Reference) |
+| `createdBy` | ObjectId (ref `User`) | ✅ | Creator — indexed |
 | `cardTitle` | String | ✅ | Title of the card |
-| `surgeon` | Object | ✅ | Embedded Surgeon info (Name, Specialty, etc.) |
+| `surgeon` | Sub-doc | ✅ | Embedded `{ fullName, handPreference, specialty, contactNumber, musicPreference }` — all required, `_id: false` |
 | `medication` | String | ✅ | Required medication list |
-| `supplies` | Array | ✅ | Items from `Supply` collection |
-| `sutures` | Array | ✅ | Items from `Suture` collection |
-| `published` | Boolean | ✅ | Default: `false` |
-| `verificationStatus` | String | ✅ | `VERIFIED`, `UNVERIFIED` |
+| `supplies` | `[{ name: ObjectId(Supply), quantity: Number(min 1) }]` | ✅ | Embedded array, `_id: false` — `name` is actually a Supply `_id` |
+| `sutures` | `[{ name: ObjectId(Suture), quantity: Number(min 1) }]` | ✅ | Embedded array, `_id: false` — `name` is actually a Suture `_id` |
+| `instruments` | String | ✅ | Instrument list / notes |
+| `positioningEquipment` | String | ✅ | Positioning equipment notes |
+| `prepping` | String | ✅ | Prepping notes |
+| `workflow` | String | ✅ | Workflow notes |
+| `keyNotes` | String | ✅ | Key notes |
+| `photoLibrary` | String[] | ✅ | Image URLs |
+| `downloadCount` | Number | ❌ | Default `0` |
+| `published` | Boolean | ❌ | Default `false` |
+| `verificationStatus` | String | ❌ | Enum `VERIFIED`, `UNVERIFIED` — default `UNVERIFIED` |
 
 ---
 
@@ -123,53 +136,78 @@ User access control logic.
 
 | Field | Type | Required | Description / Enum |
 | :--- | :--- | :---: | :--- |
-| `userId` | ObjectId | ✅ | Reference to `User` (Unique) |
-| `plan` | String | ✅ | `FREE`, `PREMIUM`, `ENTERPRISE` |
-| `status` | String | ✅ | `active`, `trialing`, `past_due`, `canceled`, `inactive` |
-| `currentPeriodEnd`| Date | ❌ | Expiry date for the plan |
+| `userId` | ObjectId (ref `User`) | ✅ | Unique — one subscription per user |
+| `plan` | String | ❌ | Enum `FREE`, `PREMIUM`, `ENTERPRISE` — default `FREE` |
+| `status` | String | ❌ | Enum `active`, `trialing`, `past_due`, `canceled`, `inactive` — default `active` |
+| `platform` | String | ❌ | Enum `apple`, `google`, `admin` |
+| `environment` | String | ❌ | Enum `sandbox`, `production` |
+| `productId` | String | ❌ | Store product ID (indexed) |
+| `autoRenewing` | Boolean | ❌ | Auto-renew flag from store |
+| `appleOriginalTransactionId` | String | ❌ | **Unique + sparse** — fraud guard (one Apple purchase → one user) |
+| `appleLatestTransactionId` | String | ❌ | Most recent Apple txn ID |
+| `googlePurchaseToken` | String | ❌ | **Unique + sparse** — Google Play purchase token |
+| `googleOrderId` | String | ❌ | Google Play order ID |
+| `startedAt` | Date | ❌ | Subscription start |
+| `currentPeriodEnd` | Date | ❌ | Current billing period end |
+| `gracePeriodEndsAt` | Date | ❌ | Grace period end (past_due) |
+| `canceledAt` | Date | ❌ | Cancellation timestamp |
+| `metadata` | Mixed | ❌ | Free-form store payload |
 
 ---
 
-### 4. Payment Model (`payments`)
-Billing transactions tracking.
-
-| Field | Type | Required | Description / Enum |
-| :--- | :--- | :---: | :--- |
-| `taskId` | ObjectId | ✅ | Reference to `Task` |
-| `posterId` | ObjectId | ✅ | Reference to `User` (Payer) |
-| `freelancerId` | ObjectId | ✅ | Reference to `User` (Receiver) |
-| `amount` | Number | ✅ | Total amount |
-| `platformFee`| Number | ✅ | System fee |
-| `status` | String | ✅ | `pending`, `held`, `released`, `refunded`, `failed` |
-| `stripePaymentIntentId` | String | ✅ | Stripe transaction ID |
-
----
-
-### 5. Notification Model (`notifications`)
+### 4. Notification Model (`notifications`)
 In-app and push notification tracking.
 
+> **Schema note**: `type`, `title`, `subtitle` are **not** enforced as required in the model — notification records can be created without them. Application code is expected to always supply them.
+
 | Field | Type | Required | Description / Enum |
 | :--- | :--- | :---: | :--- |
-| `userId` | String | ✅ | Target User ID |
-| `type` | String | ✅ | `PREFERENCE_CARD_CREATED`, `EVENT_SCHEDULED`, etc. |
-| `title` | String | ✅ | Notification header |
+| `userId` | ObjectId (ref `User`) | ✅ | Target user |
+| `type` | String | ❌ | e.g. `PREFERENCE_CARD_CREATED`, `EVENT_SCHEDULED` |
+| `title` | String | ❌ | Notification header |
 | `subtitle` | String | ❌ | Detailed message |
-| `read` | Boolean | ✅ | Read status (default: false) |
-| `resourceType`| String | ❌ | `PreferenceCard`, `Event`, etc. |
+| `referenceId` | ObjectId | ❌ | Generic reference |
+| `metadata` | Mixed | ❌ | Free-form payload |
+| `link` | `{ label, url }` | ❌ | Optional CTA |
+| `resourceType` | String | ❌ | e.g. `PreferenceCard`, `Event` |
 | `resourceId` | String | ❌ | ID of the linked resource |
+| `read` | Boolean | ❌ | Default `false` |
+| `isDeleted` | Boolean | ❌ | Default `false` |
+| `icon` | String | ❌ | Icon URL/name |
+| `expiresAt` | Date | ❌ | TTL — auto-removed after this time |
+
+**Indexes**: `{ userId: 1, read: 1, createdAt: -1 }` compound, `{ expiresAt: 1 }` TTL (`expireAfterSeconds: 0`).
 
 ---
 
-### 6. Event Model (`events`)
+### 5. Event Model (`events`)
 Surgery or meeting scheduling.
 
 | Field | Type | Required | Description / Enum |
 | :--- | :--- | :---: | :--- |
-| `userId` | String | ✅ | Owner User ID |
+| `userId` | ObjectId (ref `User`) | ✅ | Owner |
 | `title` | String | ✅ | Event name |
 | `date` | Date | ✅ | Scheduled date |
-| `eventType` | String | ✅ | `SURGERY`, `MEETING`, `CONSULTATION`, `OTHER` |
-| `preferenceCard` | ObjectId | ❌ | Linked `PreferenceCard` reference |
+| `time` | String | ✅ | Scheduled time (stored as string) |
+| `durationHours` | Number | ✅ | Duration in hours |
+| `eventType` | String | ✅ | Enum `SURGERY`, `MEETING`, `CONSULTATION`, `OTHER` |
+| `location` | String | ❌ | Event location |
+| `preferenceCard` | ObjectId (ref `PreferenceCard`) | ❌ | Optional linked card |
+| `notes` | String | ❌ | Free-form notes |
+| `personnel` | `{ leadSurgeon: String, surgicalTeam: String[] }` | ❌ | Embedded sub-doc (`_id: false`) |
+
+**Indexes**: `{ userId: 1, date: -1 }` compound.
+
+---
+
+### 6. Supply / Suture Models (`supplies`, `sutures`)
+Shared catalog collections referenced by `PreferenceCard.supplies[].name` / `sutures[].name`.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `name` | String | ✅ | Unique, trimmed, indexed |
+
+*(Both models are identical — single `name` field, unique index, timestamps.)*
 
 ---
 
@@ -182,9 +220,12 @@ Surgery or meeting scheduling.
   - `ACTIVE`: Normal access.
   - `RESTRICTED`: System block kore rakhle (Doctor block flow). Login korte parbe na.
   - `DELETE`: Soft-delete logic er jonno.
-- **Payment Status**:
-  - `pending`: Payment process hocche.
-  - `released`: Fund receiver ke deya hoyeche.
+- **Subscription Status**:
+  - `active`: Current, paid, access allowed.
+  - `trialing`: Inside a trial period.
+  - `past_due`: Renewal failed — in grace window (`gracePeriodEndsAt`).
+  - `canceled`: User canceled, may still have access until `currentPeriodEnd`.
+  - `inactive`: No access.
 - **Event Types**:
   - `SURGERY`: Operation schedule.
   - `CONSULTATION`: Patient meeting.
@@ -201,7 +242,6 @@ Surgery or meeting scheduling.
 | **User** | [user.model.ts](file:///src/app/modules/user/user.model.ts) |
 | **PreferenceCard** | [preference-card.model.ts](file:///src/app/modules/preference-card/preference-card.model.ts) |
 | **Subscription** | [subscription.model.ts](file:///src/app/modules/subscription/subscription.model.ts) |
-| **Payment** | [payment.model.ts](file:///src/app/modules/payment/payment.model.ts) |
 | **Notification** | [notification.model.ts](file:///src/app/modules/notification/notification.model.ts) |
 | **Event** | [event.model.ts](file:///src/app/modules/event/event.model.ts) |
 | **Supply** | [supplies.model.ts](file:///src/app/modules/supplies/supplies.model.ts) |

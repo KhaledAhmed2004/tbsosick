@@ -1045,56 +1045,322 @@ Ei project e amra `@apple/app-store-server-library` use kori jeta ei JWT generat
 | **Sandbox Server URL** | Staging/dev server URL (ba ngrok URL local test er jonno) | Sandbox testers fake purchase korle |
 | **Version** | Version 2 Notifications | Always — V1 purano, V2 use korte hobe |
 
-### Step 7 — Create Sandbox Tester
+### Step 7 — Create Sandbox Tester (Fake Apple Account for Testing)
 
-1. App Store Connect → Users and Access → Sandbox → Testers
-2. Add a new tester (fake email OK, doesn't need to be real)
-3. On a physical iPhone: Settings → App Store → Sandbox Account → sign in
-4. Test purchase flow in your app
+#### Eta ki ar keno dorkar?
+
+**Sandbox Tester** holo Apple er deya ekta **fake Apple ID** — eita diye tomar app e fake purchase korte parba **kintu real taka kata hobe na**. Real Apple ID diye sandbox e purchase kora jay na — Apple eta block kore.
+
+**Keno alada account?**
+- Real Apple ID → real money charge → tumi nijer kena jiniser jonno taka diye fele dewar risk
+- Sandbox Apple ID → fake transactions, free, auto-renewal accelerated (yearly = 1 hour, monthly = 5 min)
+- Apple webhooks production environment ar sandbox environment alada vabe handle kore
+
+#### Part A — App Store Connect e Sandbox Tester banao
+
+1. https://appstoreconnect.apple.com/ e login koro
+2. Top right e **"Users and Access"** click koro
+3. Top tab e **"Sandbox"** select koro (Users / Integrations / Sandbox tab er moddhe)
+4. Left sidebar e **"Test Accounts"** click koro
+5. Top right e **"+"** button click koro
+6. Form fill koro:
+   - **First Name** / **Last Name**: jekono nam (e.g. `Test User`)
+   - **Email**: ⚠️ **Eta ekta fake email diteo cholbe** (e.g. `test1@tbsosick.test`) — Apple verify korbe na, kintu eita tomar real Apple ID er email **na hote hobe**
+   - **Password**: minimum 8 char, uppercase + number + special char (e.g. `Test@1234`)
+   - **Country/Region**: **United States** (recommended — IAP product gulo $USD price e kora)
+   - **Date of Birth**: jekono adult age (18+)
+7. **"Create"** click koro
+8. Account create hoye gele list e show korbe — email + password kothao note kore rakho
+
+⚠️ **CRITICAL Warnings:**
+- Ei email tumi **iCloud login e use korbe na, kothao kora jabe na** — sandbox tester shudhu **App Store sandbox** er jonno
+- Ei email diye Apple ID password reset / 2FA setup **kichu korte cesta korbe na** — eita real account na
+- Sandbox tester account **shudhu testing er jonno** — production e purchase korle reject hobe
+
+#### Part B — Physical iPhone e Sign In koro
+
+⚠️ **Simulator e IAP test kora JAY NA** — physical iPhone lagbe.
+
+**iOS 12 ar newer e (recommended path):**
+
+1. iPhone unlock koro
+2. **Settings** app khulo
+3. Scroll down → **"App Store"** tap koro
+4. Scroll down → **"Sandbox Account"** section khujho (page er nicher dike)
+   - ⚠️ **Eta tomar app theke purchase try korar age dekhabe na** — initially eita hidden thake
+   - Jodi na dekho, age tomar app theke ekta purchase try koro (cancel korleo cholbe) — tarpor "Sandbox Account" appear korbe
+5. **"Sign In"** tap koro
+6. Sandbox tester er email + password type koro (Part A te ja banaiyecho)
+7. Sign in hobe — ekhane real Apple ID password chai na
+
+**Alternative path (jodi upor er ta kaj na kore):**
+- Just tomar app khulo → purchase button tap koro → Apple er purchase sheet ashbe → ekhane sandbox tester credentials diye sign in koro
+- Ei flow e Apple automatically sandbox account use korbe
+
+#### Part C — Verify Setup
+
+Sandbox account properly configured ki check korte:
+
+1. iPhone Settings → App Store → niche scroll → "Sandbox Account" section e tomar tester email dekha jacche ki?
+2. Tomar app khulo → ekta `premium_monthly` purchase try koro
+3. Apple er purchase sheet er **niche** chhoto kore lekha thakbe: **`[Environment: Sandbox]`** ba **`Sandbox`** label
+   - Eita dekha mane setup correct
+   - Eita na dekha mane production environment use hocche → setup wrong
+
+#### Part D — Sandbox Tester Reset (jodi atke jay)
+
+Kokhono kokhono sandbox account stuck hoye jay (e.g. "subscription already active" error). Reset korar nyom:
+
+1. App Store Connect → Users and Access → Sandbox → Test Accounts
+2. Tomar tester er row e click koro
+3. **"Edit Subscription Renewal Rate"** ba **"Clear Purchase History"** option khujho
+4. Click kore reset koro
+5. Backend e bhi tomar `Subscription` document ti delete kore dao (jodi orphan thake)
 
 ---
 
 ## Testing Guide
 
-### iOS Sandbox Testing
+### Overview — testing flow ki rokom
 
-Requirements:
-- Physical iPhone (Simulator doesn't support real IAP)
-- Sandbox tester account created in App Store Connect
-- App signed with development certificate
-
-**Accelerated timing in sandbox:**
-- 1 day = 5 minutes
-- 1 month = 10 minutes
-- 1 year = 1 hour
-- Auto-renews up to 6 times, then stops
-
-**Test scenarios to validate:**
-1. **Initial purchase:** Subscribe → check `GET /me` shows active
-2. **Auto-renewal:** Wait 10 minutes → webhook fires `DID_RENEW` → `currentPeriodEnd` extends
-3. **Cancel:** Settings → Subscriptions → Cancel → webhook `DID_CHANGE_RENEWAL_STATUS` (autoRenewing: false). User still has access until period ends.
-4. **Expire:** Let subscription expire → webhook `EXPIRED` → status becomes `inactive`, plan `FREE`
-5. **Refund:** Use Sandbox App e request refund → webhook `REFUND` → status `canceled`, immediate plan `FREE`
-6. **Restore:** On a new device with same Apple ID, subscription should be recovered
-
-### Webhook Testing
-
-**From App Store Connect:**
-- App Information → App Store Server Notifications → "Send Test Notification" button
-- Server should respond 200 with `{ processed: true, notificationType: "TEST" }`
-
-**From your own code:**
-- Apple library `SignedDataVerifier` rejects unsigned test payloads, so you can't easily fake webhooks locally
-- Use actual sandbox purchases to trigger real webhooks
-
-**Local dev with ngrok:**
-```bash
-npm install -g ngrok
-ngrok http 5000
-# Copy the https://abc123.ngrok-free.app URL
-# Temporarily set this URL in App Store Connect Server Notifications
-# Test sandbox purchase — webhook will hit your local server
 ```
+[Sandbox Tester banao]  (Step 7)
+        ↓
+[Physical iPhone e sign in]  (Step 7 Part B)
+        ↓
+[ngrok up rakho + backend run koro]
+        ↓
+[App theke purchase test koro]
+        ↓
+[Backend log + DB verify koro]
+        ↓
+[Each lifecycle event test koro: renewal, cancel, expire, refund]
+```
+
+### Pre-flight Checklist (test shuru korar age)
+
+| Check | Verify by |
+|---|---|
+| Backend running | `npm run dev` — log e "Server is listening" |
+| MongoDB connected | Startup log e "MongoDB connected successfully" |
+| ngrok up | `ngrok http <PORT>` chalano ache, https URL show korche |
+| Sandbox Server URL set | App Store Connect → App Information → App Store Server Notifications → Sandbox URL = `<ngrok-url>/api/v1/subscription/apple/webhook`, Version 2 |
+| Sandbox tester logged in | iPhone Settings → App Store → Sandbox Account section e tester email |
+| Subscription products created | App Store Connect → Monetization → Subscriptions → 4 products **"Ready to Submit"** status |
+| Test notification baseline kora | `npx ts-node scripts/send-apple-test-notification.ts` chalanor por backend log e "Apple TEST notification received — webhook reachable" deya jay |
+
+Sob green hole tarpor real testing shuru koro.
+
+### Sandbox Accelerated Timing — eta jana joruri
+
+Apple sandbox e timing **drastically accelerated** — production er moto wait korte hobe na:
+
+| Production timing | Sandbox timing |
+|---|---|
+| 1 month subscription | **5 minutes** |
+| 1 year subscription | **1 hour** |
+| 3 day trial | **2 minutes** |
+| 1 week | **3 minutes** |
+| Grace period (16 days) | **~16 minutes** |
+
+**Auto-renewal max 6 times** — 6 ta renewal er por sandbox automatic stop hoy. Manei monthly subscription test korle ~30 minute e shob 6 ta renewal cycle dekhte parba.
+
+### Test Scenarios — step by step
+
+#### Scenario 1: Initial Purchase (most important)
+
+**Goal:** User app e subscribe korle backend properly create kore subscription doc, plan upgrade hoy.
+
+**Steps:**
+1. iPhone e tomar app khulo
+2. Subscribe button tap koro (jeta `premium_monthly` product trigger kore)
+3. Apple er purchase sheet ashbe — bottom e "Sandbox" label confirm koro
+4. Face ID / passcode diye confirm koro
+5. Apple "Purchase Successful" dekhabe
+
+**Backend e ki hoye expect korba:**
+1. Flutter app `POST /api/v1/subscription/apple/verify` call korbe `signedTransactionInfo` body diye
+2. Backend log e dekhbe:
+   ```
+   POST /api/v1/subscription/apple/verify 200
+   ```
+3. MongoDB `subscriptions` collection e notun document create hobe:
+   - `userId`: tomar user
+   - `platform`: `"apple"`
+   - `plan`: `"PREMIUM"`
+   - `status`: `"active"`
+   - `appleOriginalTransactionId`: numeric string
+   - `currentPeriodEnd`: ~5 min future (sandbox accelerated)
+4. **Sathe sathe** Apple ekta webhook o pathate pare (`SUBSCRIBED` notification) — backend log e dekhbe:
+   ```
+   Apple notification SUBSCRIBED applied to subscription <id>
+   ```
+
+**Verify:**
+- `GET /api/v1/me` (ba je endpoint user info return kore) → user er `plan` field `PREMIUM` show korche ki?
+- MongoDB e document ache ki: `db.subscriptions.findOne({ userId: <id> })`
+
+**Common issues:**
+| Issue | Cause |
+|---|---|
+| `409 Conflict` "already linked to another account" | Same sandbox tester diye age onno user account theke purchase kora hoyechilo. Sandbox tester reset koro (Step 7 Part D). |
+| Verify endpoint hit hocche na | Flutter app side — Apple `signedTransactionInfo` backend e pathay ki check koro |
+| `verifyAppleTransaction` fail | Bundle ID mismatch — `.env` `APPLE_BUNDLE_ID` ar app er bundle ID same ki |
+
+---
+
+#### Scenario 2: Auto-Renewal (5 min wait)
+
+**Goal:** Subscription period shesh hole Apple automatically renew kore — backend `currentPeriodEnd` extend kore, plan active thake.
+
+**Steps:**
+1. Scenario 1 successful purchase er por **5 minutes wait koro** (sandbox monthly = 5 min)
+2. Phone e kichu korar dorkar nai — Apple background e renew korbe
+3. Apple webhook pathabe tomar backend e
+
+**Backend e expected log:**
+```
+Apple notification DID_RENEW applied to subscription <id>
+```
+
+**Verify in MongoDB:**
+- `currentPeriodEnd` ekhon **purono value er theke 5 min agee** (notun period start)
+- `status` = `"active"` (unchanged)
+- `appleLatestTransactionId` notun transactionId e update hoye geche
+- `metadata.lastAppleNotificationType` = `"DID_RENEW"`
+- `metadata.lastAppleNotificationAt` recent timestamp
+
+---
+
+#### Scenario 3: Cancel (subscription stop, but keep access until period ends)
+
+**Goal:** User cancel korle immediately access lose **na**, period end porjonto access thake (industry standard behavior)
+
+**Steps:**
+1. iPhone e: **Settings** → **[Tomar Apple Account name top]** → **Subscriptions**
+2. Tomar app er subscription khujho → tap koro
+3. **"Cancel Subscription"** tap koro → confirm koro
+
+**Backend e expected log:**
+```
+Apple notification DID_CHANGE_RENEWAL_STATUS/AUTO_RENEW_DISABLED applied to subscription <id>
+```
+
+**Verify in MongoDB:**
+- `autoRenewing` = `false` (changed)
+- `status` = `"active"` (**unchanged** — user still has access)
+- `plan` = `"PREMIUM"` (**unchanged**)
+- `currentPeriodEnd`: same hisabe future date
+
+⚠️ **Important:** Status `canceled` **na** ekhon — user period end porjonto premium feature use korte parbe. Eta correct industry standard behavior.
+
+---
+
+#### Scenario 4: Expire (period shesh, no renewal)
+
+**Goal:** Cancel korar por period shesh holo — ekhon access revoke hobe.
+
+**Steps:**
+1. Scenario 3 (cancel) er por **`currentPeriodEnd` porjonto wait koro** (max 5 min)
+2. Apple automatically `EXPIRED` notification pathabe
+
+**Backend e expected log:**
+```
+Apple notification EXPIRED applied to subscription <id>
+```
+
+**Verify in MongoDB:**
+- `status` = `"inactive"` (changed)
+- `plan` = `"FREE"` (downgraded)
+- `gracePeriodEndsAt` = `null`
+
+User ekhon FREE plan e — premium feature lock hoye gelo.
+
+---
+
+#### Scenario 5: Refund (immediate revoke)
+
+**Goal:** User refund nile **shongey shongey** access revoke hobe (cancel er moto wait kora hoy na — refund mane intentional reversal)
+
+**Steps:**
+
+Sandbox e refund test kora ektu trickier. Duita way ache:
+
+**Option A — Apple's official Sandbox refund tool:**
+1. Apple er sandbox refund test page e jao: https://developer.apple.com/help/app-store-connect/test-in-app-purchases-with-sandbox/test-refund-requests-in-the-sandbox/
+2. Sandbox tester credentials diye login koro
+3. Tomar transaction khujho → "Request Refund" click koro
+
+**Option B — TestFlight build e StoreKit refund API:**
+- Tomar Flutter app e StoreKit `requestRefund()` API call koro (iOS 15+)
+
+**Backend e expected log:**
+```
+Apple notification REFUND applied to subscription <id>
+```
+
+**Verify in MongoDB:**
+- `status` = `"canceled"` (immediate)
+- `plan` = `"FREE"` (downgraded immediately)
+- `canceledAt` = current timestamp
+- User immediately premium feature lose korbe
+
+---
+
+#### Scenario 6: Restore Purchases (cross-device)
+
+**Goal:** Same Apple ID e onno device e login korle subscription restore hoye jabe.
+
+**Steps:**
+1. Onno ekta iPhone e tomar app install koro
+2. Same sandbox tester account diye sign in koro (App Store)
+3. App er "Restore Purchases" button tap koro (Flutter side e implement kora thakbe)
+4. StoreKit Apple er kache jay → existing subscription er signed transaction return kore
+5. Flutter app abar `POST /api/v1/subscription/apple/verify` call kore
+
+**Backend e expected:**
+- Same `appleOriginalTransactionId` ashbe
+- Backend dekhbe ei transaction tomar same user er sathe linked
+- Subscription doc unchanged thakbe (idempotent — duplicate create hobe na)
+
+---
+
+### Webhook Testing (Production e jawar age)
+
+**Sob test successful holey** ei verify koro:
+
+| Verify | How |
+|---|---|
+| TEST notification end-to-end works | `npx ts-node scripts/send-apple-test-notification.ts` (already done ✅) |
+| Real purchase verify works | Scenario 1 |
+| Auto-renewal webhook handling | Scenario 2 |
+| Cancel webhook handling | Scenario 3 |
+| Expire webhook handling | Scenario 4 |
+| Refund webhook handling | Scenario 5 |
+| Restore (multi-device) | Scenario 6 |
+
+**Important notes:**
+- Apple library `SignedDataVerifier` real Apple-signed payload chai — locally hand-crafted fake webhook send kora jay na
+- Tai actual sandbox purchases-i tomar real testing tool
+- Each scenario er por ngrok URL e dekho POST request ashche ki na (`http://localhost:4040` ngrok inspector)
+
+### Local Dev with ngrok — quick reference
+
+```bash
+# Terminal 1
+npm run dev
+
+# Terminal 2
+ngrok http 5009    # tomar PORT
+
+# Copy https URL → App Store Connect Sandbox Server URL e save koro
+# (URL ngrok restart korle change hoy — paid plan e static URL pawa jay)
+
+# Terminal 3 — anytime trigger
+npx ts-node scripts/send-apple-test-notification.ts
+```
+
+⚠️ **ngrok free tier:** URL restart korle change hoy. Manei prottek bar ngrok restart korar por App Store Connect e new URL save korte hobe. Paid ngrok plan e static subdomain pawa jay — production-like testing easier.
 
 ---
 

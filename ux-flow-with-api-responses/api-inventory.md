@@ -2,6 +2,9 @@
 
 Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon backend endpoint use hocche ta eikhane pawa jabe.
 
+> Mount prefixes (see `src/routes/index.ts`): `/users`, `/auth`, `/notifications`, `/subscription`, `/events`, `/preference-cards`, `/dashboard`, `/supplies`, `/sutures`, `/legal`.
+> **Note:** No `payments` module exists in the codebase.
+
 ---
 
 ## 🖥️ Dashboard Screens (Admin-Facing)
@@ -30,21 +33,25 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | 3.1 | `/users` | `GET` | SUPER_ADMIN | `user.route.ts` | ✅ |
 | 3.2 | `/users` | `POST` | Public | `user.route.ts` | ✅ |
-| 3.3 | `/users/:userId` | `GET` | SUPER_ADMIN | `user.route.ts` | ✅ |
-| 3.4 | `/users/:userId` | `PATCH` | SUPER_ADMIN | `user.route.ts` | ✅ |
-| 3.5 | `/users/:userId` | `DELETE` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.3 | `/users/stats` | `GET` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.4 | `/users/:userId` | `GET` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.5 | `/users/:userId` | `PATCH` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.6 | `/users/:userId/status` | `PATCH` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.7 | `/users/:userId` | `DELETE` | SUPER_ADMIN | `user.route.ts` | ✅ |
+| 3.8 | `/users/:userId/user` | `GET` | All Auth | `user.route.ts` | ✅ |
 
-### 4. Other Admin Controls (Doc Missing)
+### 4. Preference Card Moderation (Doc Missing)
 | Module | Endpoint | Method | Roles | Implementation | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | **PrefCard** | `/preference-cards/:cardId/approve` | `PATCH` | SUPER_ADMIN | `preference-card.route.ts` | ✅ |
 | **PrefCard** | `/preference-cards/:cardId/reject` | `PATCH` | SUPER_ADMIN | `preference-card.route.ts` | ✅ |
+
+### 5. Legal Management (Doc Missing)
+| Module | Endpoint | Method | Roles | Implementation | Status |
+| :--- | :--- | :---: | :--- | :--- | :---: |
 | **Legal** | `/legal` | `POST` | SUPER_ADMIN | `legal.route.ts` | ✅ |
 | **Legal** | `/legal/:slug` | `PATCH` | SUPER_ADMIN | `legal.route.ts` | ✅ |
 | **Legal** | `/legal/:slug` | `DELETE` | SUPER_ADMIN | `legal.route.ts` | ✅ |
-| **Payment** | `/payments` | `GET` | SUPER_ADMIN | `payment.routes.ts` | ✅ |
-| **Payment** | `/payments/stats` | `GET` | SUPER_ADMIN | `payment.routes.ts` | ✅ |
-| **Payment** | `/payments/account/:accountId` | `DELETE` | SUPER_ADMIN | `payment.routes.ts` | ✅ |
 
 ### 6. Catalog Management (Supplies/Sutures)
 | Module | Endpoint | Method | Roles | Implementation | Status |
@@ -91,9 +98,10 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 ### 3. [Preference Card Details](./app-screens/03-preference-card-details.md)
 | ID | Endpoint | Method | Roles | Implementation | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
-| 3.1 | `/preference-cards/:cardId` | `GET` | User | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
-| 3.2 | `/preference-cards/:cardId` | `PATCH` | User | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
-| 3.3 | `/preference-cards/:cardId` | `DELETE` | User | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.1 | `/preference-cards` | `POST` | User | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.2 | `/preference-cards/:cardId` | `GET` | User | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.3 | `/preference-cards/:cardId` | `PATCH` | User | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.4 | `/preference-cards/:cardId` | `DELETE` | User | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
 
 ### 4. [Library (Mobile)](./app-screens/04-library.md)
 | ID | Endpoint | Method | Roles | Implementation | Status |
@@ -127,15 +135,15 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | 7.3 | `/notifications/read-all` | `PATCH` | User/Admin | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
 | 7.4 | `/notifications/:id` | `DELETE` | User/Admin | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
 
-### 8. Payment & Wallet (Doc Missing)
+### 8. Subscription / IAP (Doc Missing)
 | ID | Endpoint | Method | Roles | Implementation | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
-| 8.1 | `/payments/history` | `GET` | All Auth | `payment.routes.ts` | ✅ |
-| 8.2 | `/payments/stripe/account` | `POST` | All Auth | `payment.routes.ts` | ✅ |
-| 8.3 | `/payments/stripe/onboarding` | `GET` | All Auth | `payment.routes.ts` | ✅ |
-| 8.4 | `/payments/stripe/onboarding-status` | `GET` | All Auth | `payment.routes.ts` | ✅ |
-| 8.5 | `/payments/:paymentId` | `GET` | All Auth | `payment.routes.ts` | ✅ |
-| 8.6 | `/payments/refund/:paymentId` | `POST` | All Auth | `payment.routes.ts` | ✅ |
+| 8.1 | `/subscription/me` | `GET` | All Auth | `subscription.route.ts` | ✅ |
+| 8.2 | `/subscription/apple/verify` | `POST` | All Auth | `subscription.route.ts` | ✅ |
+| 8.3 | `/subscription/apple/webhook` | `POST` | Apple JWS | `subscription.route.ts` | ✅ |
+| 8.4 | `/subscription/google/verify` | `POST` | All Auth | `subscription.route.ts` | ✅ |
+| 8.5 | `/subscription/google/webhook` | `POST` | Google Pub/Sub JWT | `subscription.route.ts` | ✅ |
+| 8.6 | `/subscription/choose/free` | `POST` | All Auth | `subscription.route.ts` | ✅ |
 
 ---
 
@@ -143,7 +151,7 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 
 | Module | Endpoint | Method | Reason | Priority |
 | :--- | :--- | :---: | :--- | :---: |
-| **Subscription** | `/subscription/iap/verify` | `POST` | Doc missing screen context but route exists | Medium |
-| **Subscription** | `/subscription/choose/free` | `POST` | Doc missing screen context but route exists | Medium |
-| **Payment** | `/payments/webhook` | `POST` | Needs proper testing with Stripe CLI | High |
-| **Payment** | `/payments/by-bid/:bidId/current-intent` | `GET` | Bid flow documentation missing | Medium |
+| **Subscription** | `/subscription/apple/webhook` | `POST` | Needs end-to-end testing with App Store Server Notifications V2 | High |
+| **Subscription** | `/subscription/google/webhook` | `POST` | Needs end-to-end testing with Google Pub/Sub push | High |
+| **Docs** | Subscription IAP screens | — | No UX flow doc for apple/google verify + choose-free flows | Medium |
+| **Docs** | Preference card moderation | — | No UX flow doc for `/preference-cards/:cardId/approve` and `/reject` | Medium |
