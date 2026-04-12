@@ -849,13 +849,57 @@ GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL=your-pubsub-pusher@your-project.iam.gse
 27. Enable koro — eta subscribers ke billing retry period e access dite dey (card expire hole immediately cancel hobe na)
 28. Tomar backend e `PAST_DUE` status eta handle kore — `entitlement.ts` e `ACTIVE_STATUSES` set e `PAST_DUE` include ache
 
-### Step 4 — Generate API Key
+### Step 4 — Generate API Key (`.p8`) + Find Key ID & Issuer ID
 
-1. App Store Connect → Users and Access → Integrations → In-App Purchase
-2. Click "Generate API Key"
-3. Download the `.p8` file (**only downloads once**)
-4. Note the Key ID and Issuer ID
-5. Save `.p8` file as `./secrets/apple-key.p8` in the project
+Ei step e tumi 3 ta jinish pabe: **`.p8` file**, **Key ID** (10 char), **Issuer ID** (UUID). Tinta-i `.env` e lagbe.
+
+#### Part A — API Key Generate koro
+
+1. https://appstoreconnect.apple.com/ e login koro
+2. Top right e **"Users and Access"** click koro
+3. Top tab e **"Integrations"** click koro
+4. Left sidebar theke select koro:
+   - **"In-App Purchase"** — jodi shudhu IAP API access dorkar (recommended for this module)
+   - **"App Store Connect API"** — jodi pura App Store Connect API access dorkar (Team Key)
+5. **"Generate API Key"** ba **"+"** button click koro
+6. **Name** dao (e.g. `tbsosick-iap-key`) — internal reference
+7. **Access** select koro: **In-App Purchase** (minimum dorkari)
+8. **"Generate"** click koro
+9. Notun row create hobe — **"Download API Key"** link click kore `.p8` file download koro
+   - ⚠️ **Eta shudhu ek baar download hoy.** Lose korle abar generate korte hobe.
+10. Download kora file ti rename kore project e save koro: `./secrets/apple-key.p8`
+
+#### Part B — Key ID copy koro
+
+11. Same page e (Users and Access → Integrations → In-App Purchase) tomar key er row te **"Key ID"** column dekhbe
+12. Eta 10 character er code (e.g. `ABC1234DEF`) — copy koro
+13. Eta hobe tomar `.env` er **`APPLE_KEY_ID`** value
+
+#### Part C — Issuer ID copy koro
+
+14. Same page er **upore** (key list er ageeee) **"Issuer ID"** label diye ekta UUID dekhbe
+    - Format: `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`
+    - Pashe ekta **"Copy"** button thake
+15. Click kore copy koro
+16. Eta hobe tomar `.env` er **`APPLE_ISSUER_ID`** value
+
+#### Part D — Bundle ID + Apple ID o note kore rakho
+
+17. Top left **"Apps"** e jao → tomar app click koro
+18. Left sidebar e **"App Information"** click koro
+19. **"General Information"** section e ei duita field dekhbe:
+    - **Bundle ID**: e.g. `com.tbsosick.app` → `.env` er **`APPLE_BUNDLE_ID`**
+    - **Apple ID**: numeric (e.g. `1234567890`) → `.env` er **`APPLE_APP_APPLE_ID`** (optional but recommended)
+
+#### Summary — Step 4 er por tomar ja thakbe
+
+| Item | Value | `.env` variable |
+|---|---|---|
+| `.p8` file | `./secrets/apple-key.p8` | `APPLE_PRIVATE_KEY_PATH` |
+| Key ID | 10 char (e.g. `ABC1234DEF`) | `APPLE_KEY_ID` |
+| Issuer ID | UUID | `APPLE_ISSUER_ID` |
+| Bundle ID | `com.tbsosick.app` | `APPLE_BUNDLE_ID` |
+| Apple ID | numeric | `APPLE_APP_APPLE_ID` |
 
 ### Step 5 — Download Apple Root Certificates
 
@@ -938,19 +982,58 @@ Tomar local machine e dev server chalachcho (`npm run dev` → `http://localhost
 
 #### Part D — Test Notification pathiye verify koro
 
-1. App Store Connect er oi same **"App Store Server Notifications"** section e **"Send Test Notification"** button khujho
-2. Click koro
-3. Apple tomar URL e ekta TEST notification pathabe
-4. Tomar backend er logs check koro — dekhbe:
+> **IMPORTANT:** App Store Connect UI te kono `"Send Test Notification"` button **nai**. Apple ei feature ti shudhu **App Store Server API** er endpoint diye expose koreche:
+> ```
+> POST https://api.storekit-sandbox.itunes.apple.com/inApps/v1/notifications/test   (sandbox)
+> POST https://api.storekit.itunes.apple.com/inApps/v1/notifications/test            (production)
+> ```
+> Auth — `ES256` JWT (max 20 min lifetime), `.p8` key + `KEY_ID` + `ISSUER_ID` + `BUNDLE_ID` diye sign kora.
+
+Ei project e amra `@apple/app-store-server-library` use kori jeta ei JWT generate ar API call internally handle kore. Tai tomar shudhu ekta chhoto script run korte hobe — ja ache: **`scripts/send-apple-test-notification.ts`**.
+
+**Steps:**
+
+1. Confirm koro tomar `.env` e ei value gulo set ache:
+   - `APPLE_KEY_ID`
+   - `APPLE_ISSUER_ID`
+   - `APPLE_PRIVATE_KEY_PATH` (`./secrets/apple-key.p8`)
+   - `APPLE_BUNDLE_ID`
+   - `APPLE_ENVIRONMENT` (`sandbox` ba `production`)
+   - `APPLE_ROOT_CERTS_DIR` (`./secrets/apple-root-certs`)
+
+2. Confirm koro App Store Connect → tomar app → App Information → "App Store Server Notifications" section e **Sandbox Server URL** set up kora ache (ngrok URL + `/api/v1/subscription/apple/webhook`, Version 2)
+
+3. Backend running rakho (`npm run dev`) ar ngrok up rakho
+
+4. Script run koro:
+   ```bash
+   npx ts-node scripts/send-apple-test-notification.ts
    ```
-   Apple notification: TEST
-   Response: 200 { processed: true, notificationType: "TEST" }
-   ```
-5. Jodi error ashe ba 200 response na ashe:
-   - URL wrong ki check koro
-   - Backend running ache ki check koro
-   - Raw body middleware correctly configured ki check koro (`src/app.ts`)
-   - Firewall/CORS issue nai to
+
+5. Ki hobe:
+   - Script Apple er API te `requestTestNotification()` call kore
+   - Apple immediately tomar configured Sandbox Server URL e ekta JWS-signed `TEST` notification POST kore
+   - Tomar `appleWebhookController` hit hobe → `handleAppleNotification()` chalbe
+   - Backend log e dekhbe:
+     ```
+     Apple TEST notification received — webhook reachable
+     ```
+   - HTTP response shape:
+     ```json
+     {
+       "success": true,
+       "statusCode": 200,
+       "message": "Apple webhook processed",
+       "data": { "processed": true, "notificationType": "TEST", "subtype": null }
+     }
+     ```
+   - Script terminal e `testNotificationToken` print korbe — ei token diye chaile pore Apple er kache delivery status check korte paro `getTestNotificationStatus(token)` diye
+
+6. Jodi script error deye ba webhook hit na hoy:
+   - **`401`/`403` from Apple:** JWT credentials wrong — `APPLE_KEY_ID`, `APPLE_ISSUER_ID`, ba `.p8` file mismatch
+   - **`URL not configured`:** App Store Connect e Sandbox Server URL save koro ni
+   - **Backend log e kichu nai:** ngrok down, ngrok URL App Store Connect er save kora URL er sathe match korche na, ba raw body middleware order wrong (`express.raw()` `express.json()` er **age** thakte hobe, `src/app.ts` check koro)
+   - **`Apple notification verification failed`:** Root certs missing — `./secrets/apple-root-certs/` e `AppleRootCA-G3.cer` ar `AppleIncRootCertificate.cer` ache ki check koro
 
 **Test notification success mane — Apple tomar backend find korte parche ar tumi ready real events receive korar jonno.**
 
