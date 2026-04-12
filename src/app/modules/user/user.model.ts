@@ -127,6 +127,10 @@ const userSchema = new Schema<IUser>(
   { timestamps: true },
 );
 
+// Index on the embedded device token field — makes the cross-user
+// rebinding guard in `addDeviceToken` cheap even at scale.
+userSchema.index({ 'deviceTokens.token': 1 });
+
 //exist user check
 userSchema.statics.isExistUserById = async (id: string) => {
   const isExist = await User.findById(id);
@@ -174,7 +178,17 @@ userSchema.statics.addDeviceToken = async (
   platform?: 'ios' | 'android' | 'web',
   appVersion?: string,
 ) => {
-  // Try to refresh metadata on an existing token first
+  // Step 1: Cross-user rebinding guard. Same physical device can get
+  // re-used by a different account (User A logs out → User B logs in on
+  // the same phone). FCM sends back the same token. If User A still has
+  // it, pushes meant for User A land on User B's device. Strip the token
+  // from any other user before attaching it here.
+  await User.updateMany(
+    { _id: { $ne: userId }, 'deviceTokens.token': token },
+    { $pull: { deviceTokens: { token } } },
+  );
+
+  // Step 2: Try to refresh metadata on an existing token first.
   const updated = await User.findOneAndUpdate(
     { _id: userId, 'deviceTokens.token': token },
     {
@@ -188,7 +202,7 @@ userSchema.statics.addDeviceToken = async (
   );
   if (updated) return updated;
 
-  // Not present — push a new sub-document
+  // Step 3: Not present — push a new sub-document.
   return await User.findByIdAndUpdate(
     userId,
     {

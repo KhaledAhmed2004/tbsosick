@@ -57,6 +57,38 @@ const PreferenceCardSchema = new Schema<PreferenceCard>(
   { timestamps: true },
 );
 
+// ─── Indexes ─────────────────────────────────────────────────────────────
+// Owner dashboards: "list my cards sorted by most-recently updated."
+PreferenceCardSchema.index({ createdBy: 1, updatedAt: -1 });
+
+// Home / public list: `{ published: true }` base filter + sort by createdAt.
+// ESR rule — equality on `published` + `verificationStatus`, then sort on
+// `createdAt` — so the index directly serves the home screen query plan.
+PreferenceCardSchema.index({ published: 1, verificationStatus: 1, createdAt: -1 });
+
+// Specialty facet filter (Library screen, public list).
+PreferenceCardSchema.index({ 'surgeon.specialty': 1, published: 1 });
+
+// Full-text search — replaces the old `$regex` scan in QueryBuilder.search().
+// Weighted so title matches rank above body/specialty matches.
+PreferenceCardSchema.index(
+  {
+    cardTitle: 'text',
+    medication: 'text',
+    'surgeon.fullName': 'text',
+    'surgeon.specialty': 'text',
+  },
+  {
+    weights: {
+      cardTitle: 10,
+      'surgeon.fullName': 5,
+      'surgeon.specialty': 3,
+      medication: 2,
+    },
+    name: 'card_text_idx',
+  },
+);
+
 // Export model
 export const PreferenceCardModel = model<PreferenceCard>(
   'PreferenceCard',

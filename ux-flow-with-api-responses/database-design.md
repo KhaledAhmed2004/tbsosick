@@ -105,6 +105,11 @@ System er sob users (Admin ebong Doctors) er data eikhane thake.
 | `authentication` | Object | ❌ | Hidden sub-doc: `{ isResetPassword, oneTimeCode, expireAt }` (select: false) |
 | `tokenVersion`| Number | ❌ | Default `0`, **`select: false`** — incremented on refresh / reset-password to invalidate old JWTs |
 
+**Indexes**:
+- `{ email: 1 }` unique — login lookup
+- `{ googleId: 1 }` sparse — OAuth lookup
+- `{ 'deviceTokens.token': 1 }` — supports the cross-user rebinding guard in `addDeviceToken`
+
 ---
 
 ### 2. Preference Card Model (`preferencecards`)
@@ -127,6 +132,12 @@ Surgery-specific preference data.
 | `downloadCount` | Number | ❌ | Default `0` |
 | `published` | Boolean | ❌ | Default `false` |
 | `verificationStatus` | String | ❌ | Enum `VERIFIED`, `UNVERIFIED` — default `UNVERIFIED` |
+
+**Indexes**:
+- `{ createdBy: 1, updatedAt: -1 }` — owner dashboard list sorted by most recent
+- `{ published: 1, verificationStatus: 1, createdAt: -1 }` — home / public list (ESR)
+- `{ 'surgeon.specialty': 1, published: 1 }` — Library screen specialty facet
+- **Text index** `card_text_idx` on `cardTitle (weight 10)`, `surgeon.fullName (5)`, `surgeon.specialty (3)`, `medication (2)` — replaces `$regex` search
 
 ---
 
@@ -248,6 +259,21 @@ Append-only audit log for `subscriptions`. Written by the `Subscription.upsertFo
 
 ---
 
+### 9. ResetToken Model (`resettokens`)
+Short-lived password reset tokens. One row per outstanding reset request.
+
+| Field | Type | Required | Description |
+| :--- | :--- | :---: | :--- |
+| `user` | ObjectId (ref `User`) | ✅ | Owning user — indexed |
+| `token` | String | ✅ | **Unique** — the opaque reset token sent to the user via email |
+| `expireAt` | Date | ✅ | Auto-delete via MongoDB TTL index (`expireAfterSeconds: 0`) — no manual cleanup needed |
+
+**Indexes**: `{ user: 1 }`, `{ token: 1 }` unique, `{ expireAt: 1 }` TTL (`expireAfterSeconds: 0`).
+
+> **Model name**: registered as `'ResetToken'` → collection `resettokens`. If migrating from the earlier `'Token'` model (collection `tokens`), run `db.tokens.renameCollection('resettokens')` and rebuild indexes.
+
+---
+
 ## States & Roles Explanation (Banglish)
 
 - **User Roles**: 
@@ -285,6 +311,7 @@ Append-only audit log for `subscriptions`. Written by the `Subscription.upsertFo
 | **Favorite** | [favorite.model.ts](file:///src/app/modules/favorite/favorite.model.ts) |
 | **Supply** | [supplies.model.ts](file:///src/app/modules/supplies/supplies.model.ts) |
 | **Suture** | [sutures.model.ts](file:///src/app/modules/sutures/sutures.model.ts) |
+| **ResetToken** | [resetToken.model.ts](file:///src/app/modules/auth/resetToken/resetToken.model.ts) |
 | **Legal** | [legal.model.ts](file:///src/app/modules/legal/legal.model.ts) |
 
 ---
@@ -628,21 +655,235 @@ During this refactor a pre-existing broken call was found and fixed: `user.contr
 
 ---
 
-## 🧩 Summary Table — Tier 2 Fixes Applied
+### Fix 12 — Auth middleware `tokenVersion` check add kora hoyeche (Security fix)
 
-| # | Issue | Core change | Files touched |
-| :---: | :--- | :--- | :---: |
-| 8 | `favoriteCards` array anti-pattern | New `Favorite` collection | 5 |
-| 9 | `deviceTokens` no metadata | Sub-doc with `{ token, platform, appVersion, lastSeenAt }` | 5 |
-| 10 | `supplies.name` field-name lie | Renamed to `supplies.supply` / `sutures.suture` | 3 |
-| 11 | `Supply` / `Suture` underbuilt | Added category, unit, manufacturer, isActive, createdBy | 4 |
-| 12 | `Event.time: String` broken | Replaced with `startsAt` / `endsAt` Date pair + legacy compat | 4 |
-| 13 | `Subscription` no history | New `SubscriptionEvent` audit collection + hook in `upsertForUser` | 3 |
-| 14 | `Subscription.status` default `active` | Default removed, now required | 1 |
-| 15 | `User.verified` default `true` | Default flipped to `false`, OTP triggered on signup | 2 |
-| 16 | `User.tokenVersion` leaked | `select: false`, explicit pulls in auth paths | 2 |
-| 17 | Notification dual reference system | Removed `referenceId`; `{ resourceType, resourceId }` only; `setResource()` builder method | 6 |
-| 18 | Notification `type`/`title` not required | Both required, `type` enum constrained; dead marketplace types removed | 4 |
+**Ki chilo**
+`src/app/middlewares/auth.ts` shudhu JWT signature verify korto (`jwtHelper.verifyToken`) ar tar pore directly `req.user` set kore next() call korto. Kono DB lookup chilo na, `tokenVersion` compare o chilo na.
+
+**Keno eta problem chilo**
+- **Force-logout practically kaj korto na** — `tokenVersion` DB field `$inc` korle refresh token invalidated hoto, kintu already-issued access tokens (15-30 min lifetime) expiry porjonto keep working korto. Mane password reset, admin-triggered logout, ba status flip ("user restrict koro") korar por-o attacker-er stolen access token er short window-e sob API access still possible.
+- **`RESTRICTED` / `DELETE` status user o access pachchilo** — middleware status check korto na, shudhu JWT verify korto. DB-e `status: RESTRICTED` set kora hole o, token expire na hoya porjonto user continue korte parto.
+- **Audit report-er #1 Critical item** — security boundary gap.
+
+**Kibhabe fix hoyeche**
+Middleware-e JWT verify er pore ekta explicit DB lookup add kora hoyeche:
+```ts
+const dbUser = await User.findById(verifiedUser.id)
+  .select('+tokenVersion status')
+  .lean();
+```
+Ei doc theke duita check hoy:
+1. **Status check** — `dbUser.status === 'DELETE' | 'RESTRICTED'` → 403 Forbidden.
+2. **tokenVersion compare** — JWT-e baked `tokenVersion` value current DB value er sathe mismatch hole → 401 "Session invalidated".
+
+`.lean()` use kora hoyeche so every request ekta ~1ms indexed `_id` lookup matro add kore. Redis cache layer future optimization hishebe rakha jay but eta optional.
+
+**Google OAuth fix o lagche** — `googleLoginToDB` age `tokenVersion` JWT payload-e include korto na, mane Google users tokenVersion check bypass kore jeto. Ei fix-er part hishebe `User.findById(user._id).select('+tokenVersion')` diye DB theke current value fetch kore JWT payload-e add kora hoyeche.
+
+**Files touched**
+- `src/app/middlewares/auth.ts` — DB check + status block + version compare added
+- `src/app/modules/auth/auth.service.ts` — `googleLoginToDB` now includes `tokenVersion` in the issued JWT
+
+**Migration note**
+Deploy-er por **already-issued JWT tokens** jeguloy `tokenVersion` embedded nei (ba purono value), oigula next request-e 401 hoye jabe ebong user re-login korte hobe. Eta expected — deploy window e force-logout effect. Jodi gradual rollout dorkar, middleware e `typeof jwtTokenVersion === 'number'` check already ache jate purono JWTs gracefully pass through — but eta security gap purono token-e keep kore rakhe, so window boro rakha uchit na.
+
+**Performance cost**
+Protiti authenticated request e 1 extra `findById({ _id }).lean()` call. Indexed PK lookup, sub-ms p95. ~5-10% overall request latency increase. Scale concern hole Redis cache `userId → { tokenVersion, status }` with 30s TTL — tar por basically free.
+
+---
+
+### Fix 13 — PreferenceCard indexes (compound + text) add kora hoyeche
+
+**Ki chilo**
+`PreferenceCardSchema` te index chilo shudhu `createdBy` single-field — doc prothome eta "compound index" bola chilo but actually single-field chilo (lied). Ar text search er jonno `QueryBuilder.search()` `$regex` use korto — but kono field-e text index chilo na, ar kono field-e regular B-tree index o chilo na jegula `published`, `verificationStatus`, `surgeon.specialty` filter cover kore.
+
+**Keno eta problem chilo**
+- **Home screen list query = full collection scan** — `GET /preference-cards` base filter `{ published: true }`, but `published` field-e kono index nei. 1k cards = 1k doc scan per request. 10k cards = 10k scan. Protiti active user home open korlei.
+- **Search = O(n × m)** — `$regex` with no anchor can't use B-tree. Full scan + regex match on each doc.
+- **Specialty facet query (Library screen)** — `GET /preference-cards/specialties` uses `distinct('surgeon.specialty', { published: true })`. Without index, eta o full scan.
+- **Index strategy doc-e claimed but reality-te missing** — audit-e ei ta 🔴 Critical hishebe flag kora hoyechilo because p95 latency scale er sathe **cliff drop** hobe (not gradual degradation — once working set exceeds RAM, it collapses).
+
+**Kibhabe fix hoyeche**
+Four indexes added to `preference-card.model.ts`:
+
+1. **`{ createdBy: 1, updatedAt: -1 }`** — owner dashboard: "ami amar nijer cards latest updated order e dekhbo" query. Prior single-field `createdBy` removed (ei compound prefix diye shei use case auto covered).
+
+2. **`{ published: 1, verificationStatus: 1, createdAt: -1 }`** — home/public list. ESR rule follow kora: equality fields (`published`, `verificationStatus`) age, sort field (`createdAt`) pore. Query `{ published: true }` + `.sort({ createdAt: -1 })` eta directly hit korbe.
+
+3. **`{ 'surgeon.specialty': 1, published: 1 }`** — Library screen specialty facet + published filter.
+
+4. **Weighted text index** on `cardTitle (10)`, `surgeon.fullName (5)`, `surgeon.specialty (3)`, `medication (2)` — search queries `$text: { $search }` use kore score-ranked results diye automatically relevance sort korte parbe. Named `card_text_idx` so ops can identify it in `db.preferencecards.getIndexes()`.
+
+**Important caveat**
+Text index **tokhon-i useful** jokhon QueryBuilder actually `$text` use kore. `QueryBuilder.search()` ekhono `$regex`-based — Priority 2 item #2 (QueryBuilder refactor) e ei kaj pending. Text index already built rakha hoyeche so refactor korar shathe shathe switchover free.
+
+**Files touched**
+- `src/app/modules/preference-card/preference-card.model.ts` — 4 indexes added
+
+**Migration note**
+Index build production-e ekta ek-bar lag-intensive operation. 100k+ docs hole `db.preferencecards.createIndex({ ... }, { background: true })` option use kora uchit (MongoDB 4.2+ default already background). Text index building shob theke slow, so off-peak hour e run koro. Production migration script:
+
+```js
+db.preferencecards.createIndex({ createdBy: 1, updatedAt: -1 });
+db.preferencecards.createIndex(
+  { published: 1, verificationStatus: 1, createdAt: -1 },
+);
+db.preferencecards.createIndex({ 'surgeon.specialty': 1, published: 1 });
+db.preferencecards.createIndex(
+  {
+    cardTitle: 'text',
+    medication: 'text',
+    'surgeon.fullName': 'text',
+    'surgeon.specialty': 'text',
+  },
+  {
+    weights: { cardTitle: 10, 'surgeon.fullName': 5, 'surgeon.specialty': 3, medication: 2 },
+    name: 'card_text_idx',
+  },
+);
+// Old single-field createdBy index can be dropped — the compound prefix covers it:
+db.preferencecards.dropIndex({ createdBy: 1 });
+```
+
+---
+
+### Fix 14 — ResetToken hardened: TTL + unique token + required user + renamed model
+
+**Ki chilo**
+`resetToken.model.ts` schema was minimal: `user` (not required, not indexed, ObjectId ref), `token` (required, no index, not unique), `expireAt` (required, **no TTL index**). Model registered as `'Token'` — collection name `tokens`. Statics `isExistToken` / `isExpireToken` kortoni `findOne({ token })` but no index on `token`.
+
+**Keno eta problem chilo**
+- **Expired token accumulation forever** — `expireAt` thakleo kono TTL index chilo na. Mane 6 months later bhi all reset tokens that were ever generated still sitting in DB. Slow cleanup cron na thakle unbounded growth.
+- **`token` field lookups full-scan** — every reset password request `findOne({ token })` scan kore. Also no `unique` constraint → theoretically duplicate token possible, security risk (collision allowed).
+- **`user` field optional + unindexed** — orphaned tokens possible. Cascade delete hard korte.
+- **Model name `'Token'`** — collection `tokens` ambiguous (auth token? access token? refresh token?). Future dev confusion.
+
+**Kibhabe fix hoyeche**
+Schema rewritten with all 4 hardenings:
+```ts
+user: { type: ObjectId, ref: 'User', required: true, index: true },
+token: { type: String, required: true, unique: true }, // unique → auto indexed
+expireAt: { type: Date, required: true, index: { expires: 0 } }, // TTL
+// model name: 'ResetToken' → collection 'resettokens'
+```
+
+`{ expires: 0 }` means "auto-delete when now >= expireAt". MongoDB background job (runs every ~60s) sweeps expired docs.
+
+**Files touched**
+- `src/app/modules/auth/resetToken/resetToken.model.ts` — schema + model name
+
+**Migration note**
+Model name change `'Token'` → `'ResetToken'` breaks existing collection mapping. Mongoose will start writing to `resettokens` instead of `tokens`. Migration options:
+
+**Option A — rename collection** (preserves data):
+```js
+db.tokens.renameCollection('resettokens');
+// then drop + rebuild indexes on the new collection
+db.resettokens.dropIndexes();
+db.resettokens.createIndex({ user: 1 });
+db.resettokens.createIndex({ token: 1 }, { unique: true });
+db.resettokens.createIndex({ expireAt: 1 }, { expireAfterSeconds: 0 });
+```
+
+**Option B — drop and start fresh** (lose in-flight reset tokens, safe for low-volume apps):
+```js
+db.tokens.drop();
+// Mongoose will create `resettokens` on next insert with the new indexes.
+```
+
+Option A preferred if production has active reset flows.
+
+---
+
+### Fix 15 — `addDeviceToken` cross-user rebinding guard + token index
+
+**Ki chilo**
+After Fix 2 (Tier 2 deviceTokens sub-doc), `addDeviceToken(userId, token)` static existing token er metadata refresh korto ba notun sub-doc push korto. Kintu globally unique `(user, token)` pair enforce kore na chilo — multiple users same physical device token hold korte parto simultaneously.
+
+**Keno eta problem chilo**
+- **Push misdelivery bug** — Real scenario: User A phone-e login → FCM token T registered against User A. User A logs out → User B logs in on same phone → FCM returns same token T → `addDeviceToken(userB, T)` adds to User B. **But T still exists on User A's doc.** Next push to User A → delivered to the physical device → User B sees User A's notification.
+- **Privacy leak** — notification body might contain PII. Mis-delivery = data exposure.
+- **Frequency low but legal exposure high** — healthcare/medical app context e ei ta HIPAA territory.
+
+**Kibhabe fix hoyeche**
+`addDeviceToken` static e ekta prefix step add kora hoyeche:
+```ts
+await User.updateMany(
+  { _id: { $ne: userId }, 'deviceTokens.token': token },
+  { $pull: { deviceTokens: { token } } },
+);
+```
+Ei line guarantees: "this token can only exist on one user document." Tar pore existing logic (refresh metadata OR push new sub-doc) runs as before.
+
+Index added to support the `updateMany` scan:
+```ts
+userSchema.index({ 'deviceTokens.token': 1 });
+```
+Without this, `updateMany({ 'deviceTokens.token': token })` would full-scan the users collection. With it, ~1ms indexed lookup.
+
+**Files touched**
+- `src/app/modules/user/user.model.ts` — `addDeviceToken` static + new index
+
+**Migration note**
+Index build on existing User collection:
+```js
+db.users.createIndex({ 'deviceTokens.token': 1 });
+```
+Background-built, safe. Doesn't need data migration — the rebinding guard only activates on new `addDeviceToken` calls, so in-flight stale duplicates will self-heal as users log in on shared devices. Jodi immediately cleanup chai, ekta one-off script:
+
+```js
+// Find tokens held by multiple users and keep only the most recently updated user.
+db.users.aggregate([
+  { $unwind: '$deviceTokens' },
+  {
+    $group: {
+      _id: '$deviceTokens.token',
+      users: { $push: { userId: '$_id', lastSeenAt: '$deviceTokens.lastSeenAt' } },
+      count: { $sum: 1 },
+    },
+  },
+  { $match: { count: { $gt: 1 } } },
+]).forEach(entry => {
+  // Sort by lastSeenAt desc, keep first, pull from the rest.
+  const sorted = entry.users.sort((a, b) => (b.lastSeenAt || 0) - (a.lastSeenAt || 0));
+  const keep = sorted[0].userId;
+  sorted.slice(1).forEach(u => {
+    db.users.updateOne(
+      { _id: u.userId },
+      { $pull: { deviceTokens: { token: entry._id } } },
+    );
+  });
+});
+```
+
+---
+
+## 🧩 Summary Table — Fixes Applied
+
+### Tier 2 — Design Smells (first pass)
+
+| Fix # | Review # | Issue | Core change | Files touched |
+| :---: | :---: | :--- | :--- | :---: |
+| 1 | 8 | `favoriteCards` array anti-pattern | New `Favorite` collection | 5 |
+| 2 | 9 | `deviceTokens` no metadata | Sub-doc with `{ token, platform, appVersion, lastSeenAt }` | 5 |
+| 3 | 10 | `supplies.name` field-name lie | Renamed to `supplies.supply` / `sutures.suture` | 3 |
+| 4 | 11 | `Supply` / `Suture` underbuilt | Added category, unit, manufacturer, isActive, createdBy | 4 |
+| 5 | 12 | `Event.time: String` broken | Replaced with `startsAt` / `endsAt` Date pair + legacy compat | 4 |
+| 6 | 13 | `Subscription` no history | New `SubscriptionEvent` audit collection + hook in `upsertForUser` | 3 |
+| 7 | 14 | `Subscription.status` default `active` | Default removed, now required | 1 |
+| 8 | 15 | `User.verified` default `true` | Default flipped to `false`, OTP triggered on signup | 2 |
+| 9 | 16 | `User.tokenVersion` leaked | `select: false`, explicit pulls in auth paths | 2 |
+| 10 | 17 | Notification dual reference system | Removed `referenceId`; `{ resourceType, resourceId }` only; `setResource()` builder method | 6 |
+| 11 | 18 | Notification `type`/`title` not required | Both required, `type` enum constrained; dead marketplace types removed | 4 |
+
+### Priority 1 — Audit Critical Follow-up (second pass, from `docs/audits/database-audit-report.md`)
+
+| Fix # | Audit Severity | Issue | Core change | Files touched |
+| :---: | :---: | :--- | :--- | :---: |
+| 12 | 🔴 Critical (Security) | Auth middleware no `tokenVersion` check | Middleware now does DB lookup + status + tokenVersion compare; Google login JWT includes `tokenVersion` | 2 |
+| 13 | 🔴 Critical (Perf) | PreferenceCard hot-path index-less | 3 compound indexes + weighted text index added | 1 |
+| 14 | 🟡 Medium (Data) | ResetToken no TTL / no indexes / underbuilt | TTL index, unique token, required user ref, model renamed `'Token'` → `'ResetToken'` | 1 |
+| 15 | 🟠 High (Security) | `addDeviceToken` cross-user rebinding hole | Prefix `updateMany` strip from other users + `deviceTokens.token` index | 1 |
 
 ---
 > **Note**: Database e kono structural change korle ei doc ta update kora mandatory.

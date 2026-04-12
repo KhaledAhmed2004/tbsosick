@@ -364,9 +364,22 @@ const googleLoginToDB = async (user: any) => {
     );
   }
 
+  // Pull `tokenVersion` (hidden via `select: false`) so the issued JWT
+  // carries the current rotation counter — required for the auth
+  // middleware's tokenVersion check to apply to Google-signed-in users.
+  const dbUser = await User.findById(user._id).select('+tokenVersion');
+  if (!dbUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'User not found');
+  }
+
   // Create JWT token
   const createToken = jwtHelper.createToken(
-    { id: user._id, role: user.role, email: user.email },
+    {
+      id: dbUser._id,
+      role: dbUser.role,
+      email: dbUser.email,
+      tokenVersion: dbUser.tokenVersion,
+    },
     config.jwt.jwt_secret as Secret,
     config.jwt.jwt_expire_in as string
   );
