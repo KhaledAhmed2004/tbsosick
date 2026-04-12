@@ -867,11 +867,100 @@ GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL=your-pubsub-pusher@your-project.iam.gse
 
 ### Step 6 — Configure Server Notifications V2
 
-1. App Store Connect → your app → App Information → scroll to App Store Server Notifications
-2. Production Server URL: `https://<your-domain>/api/v1/subscription/apple/webhook`
-3. Sandbox Server URL: same URL (library auto-detects)
-4. Version: **Version 2 Notifications**
-5. Click "Send Test Notification" to verify reachability — should return 200 OK
+**Eta ki jinish?** — Shobar age concept bujhe nao:
+
+Jokhon kono user tomar app e subscribe kore, ba cancel kore, ba renew hoy, ba refund hoy — **Apple tomar backend ke automatically janay** je "ei event hoyeche." Eita holo **Server Notification** (webhook). Tomar backend ei notification receive kore subscription state update kore.
+
+Ei notifications **keno dorkar?**
+- User Apple Settings theke cancel korlo → tomar backend janto na → ekhon Apple janay diye "ei user cancel korlo"
+- Apple credit card charge korte parlo na → Apple janay "payment failed"
+- Auto-renewal hoyeche → Apple janay "notun period start, expiry extend koro"
+- User refund nilo → Apple janay "immediately access revoke koro"
+
+**Apple ei notifications 2 ta environment er jonno alada pathay:**
+
+| Environment | Kobe use hoy | URL dorkar? |
+|---|---|---|
+| **Sandbox** | Testing time e — sandbox tester account diye test purchase korle | Hae — development/staging URL |
+| **Production** | Real users real money diye kinle — live app e | Hae — production domain URL |
+
+**Eida keno alada?** Sandbox e fake purchase hoy (real taka charge hoy na) — tai Apple sandbox events ar production events ek jaygay mix korte cay na. Tumi chaile duitai same URL e pathate paro, ba alada URL e pathate paro.
+
+#### Part A — App Store Connect e Notification URL set koro
+
+1. App Store Connect → **My Apps** → tomar app select koro
+2. Left sidebar e **"App Information"** click koro
+3. Scroll down kore **"App Store Server Notifications"** section khujho
+4. Duita URL field dekhbe:
+   - **Production Server URL**
+   - **Sandbox Server URL**
+5. Duitai fill koro:
+   - **Production Server URL**: `https://<your-production-domain>/api/v1/subscription/apple/webhook`
+     - Example: `https://api.tbsosick.com/api/v1/subscription/apple/webhook`
+     - Eta tomar LIVE server er URL hobe — jekhane real users real taka diye kinbe
+   - **Sandbox Server URL**: `https://<your-staging-domain>/api/v1/subscription/apple/webhook`
+     - Example: `https://staging-api.tbsosick.com/api/v1/subscription/apple/webhook`
+     - Eta tomar TESTING/STAGING server er URL — jekhane sandbox testers fake purchase test korbe
+
+6. **Version**: **Version 2 Notifications** select koro (purano V1 na, V2 tomar code e support kora ache)
+
+7. Click **"Save"**
+
+#### Part B — URL ekta-i thakle?
+
+**Tomar ekhon jodi ektai server thake** (separate staging nai), tahole duita URL e same URL dite paro:
+```
+Production: https://api.tbsosick.com/api/v1/subscription/apple/webhook
+Sandbox:    https://api.tbsosick.com/api/v1/subscription/apple/webhook
+```
+
+**Eita ki problem?** Na, kono problem nai — tomar backend er Apple library **automatically detect** kore kon environment theke notification ashche (sandbox vs production). `apple.verify.ts` e eita handle kora ache already.
+
+But recommended holo — **sandbox ar production alada rakha**, karon:
+- Sandbox e onek test data thakbe (accelerated renewals, test purchases)
+- Production DB te test data mix hoye jabe na
+- Debug korte easy
+
+#### Part C — Local development e test korte chaile (ngrok)
+
+Tomar local machine e dev server chalachcho (`npm run dev` → `http://localhost:5000`). Kintu Apple tomar localhost e notification pathate parbe na — public URL dorkar.
+
+**Solution: ngrok** — eta tomar localhost ke public URL e expose kore dey.
+
+1. Install ngrok: `npm install -g ngrok` ba https://ngrok.com/download theke download koro
+2. Terminal e: `ngrok http 5000` (5000 = tomar backend port)
+3. Ngrok ekta URL debe: `https://abc123.ngrok-free.app`
+4. App Store Connect e **Sandbox Server URL** e paste koro: `https://abc123.ngrok-free.app/api/v1/subscription/apple/webhook`
+5. Save koro
+6. Ekhon tomar iPhone theke sandbox purchase korle — Apple notification tomar ngrok URL e pathabe → jeta tomar localhost e forward hobe
+
+⚠️ ngrok URL restart korle change hoy (free plan e). Paid plan e static URL pawa jay.
+
+#### Part D — Test Notification pathiye verify koro
+
+1. App Store Connect er oi same **"App Store Server Notifications"** section e **"Send Test Notification"** button khujho
+2. Click koro
+3. Apple tomar URL e ekta TEST notification pathabe
+4. Tomar backend er logs check koro — dekhbe:
+   ```
+   Apple notification: TEST
+   Response: 200 { processed: true, notificationType: "TEST" }
+   ```
+5. Jodi error ashe ba 200 response na ashe:
+   - URL wrong ki check koro
+   - Backend running ache ki check koro
+   - Raw body middleware correctly configured ki check koro (`src/app.ts`)
+   - Firewall/CORS issue nai to
+
+**Test notification success mane — Apple tomar backend find korte parche ar tumi ready real events receive korar jonno.**
+
+#### Summary
+
+| Field | Ki dite hobe | Kobe use hobe |
+|---|---|---|
+| **Production Server URL** | Live production server URL | Real users real taka diye kinle |
+| **Sandbox Server URL** | Staging/dev server URL (ba ngrok URL local test er jonno) | Sandbox testers fake purchase korle |
+| **Version** | Version 2 Notifications | Always — V1 purano, V2 use korte hobe |
 
 ### Step 7 — Create Sandbox Tester
 
