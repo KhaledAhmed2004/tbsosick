@@ -63,7 +63,7 @@ const auth =
       // Block access for deleted / restricted accounts at the middleware
       // level so every protected route gets the guarantee for free.
       if (
-        dbUser.status === USER_STATUS.DELETE ||
+        dbUser.status === USER_STATUS.DELETED ||
         dbUser.status === USER_STATUS.RESTRICTED
       ) {
         throw new ApiError(

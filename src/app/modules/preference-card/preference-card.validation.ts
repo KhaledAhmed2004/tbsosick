@@ -21,19 +21,25 @@ const sutureItemSchema = z.object({
 });
 
 // Create Preference Card
+//
+// NOTE: Only the structural fields (`cardTitle`, `surgeon`) are required
+// at the API level. Long-form workflow text (`medication`, `instruments`,
+// `prepping`, `workflow`, `keyNotes`, `positioningEquipment`) is optional
+// so that drafts can be saved. Service layer enforces completeness only
+// when `published: true` is set or when an admin verifies the card.
 const createPreferenceCardSchema = z.object({
   body: z.object({
     cardTitle: z.string().min(3),
     surgeon: surgeonSchema,
-    medication: z.string().min(1),
-    supplies: z.array(supplyItemSchema).min(1),
-    sutures: z.array(sutureItemSchema).min(1),
-    instruments: z.string().min(1),
-    positioningEquipment: z.string().min(1),
-    prepping: z.string().min(1),
-    workflow: z.string().min(1),
-    keyNotes: z.string().min(1),
-    photoLibrary: z.array(z.string()).optional(),
+    medication: z.string().optional(),
+    supplies: z.array(supplyItemSchema).optional().default([]),
+    sutures: z.array(sutureItemSchema).optional().default([]),
+    instruments: z.string().optional(),
+    positioningEquipment: z.string().optional(),
+    prepping: z.string().optional(),
+    workflow: z.string().optional(),
+    keyNotes: z.string().optional(),
+    photoLibrary: z.array(z.string()).max(10).optional(),
     published: z.boolean().optional(),
   }),
 });
@@ -52,7 +58,7 @@ const updatePreferenceCardSchema = z.object({
     prepping: z.string().optional(),
     workflow: z.string().optional(),
     keyNotes: z.string().optional(),
-    photoLibrary: z.array(z.string()).optional(),
+    photoLibrary: z.array(z.string()).max(10).optional(),
     published: z.boolean().optional(),
   }),
 });

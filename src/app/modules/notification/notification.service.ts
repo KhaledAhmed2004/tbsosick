@@ -4,27 +4,49 @@ import { StatusCodes } from 'http-status-codes';
 import { sendNotifications } from './notificationsHelper';
 import { Types } from 'mongoose';
 
-const listForUser = async (userId: string, query: { page?: string; limit?: string } = {}) => {
+/**
+ * Fetches notifications + total count + unread count in a single
+ * aggregation. Previously this used 3 separate queries (find + 2x
+ * countDocuments). `$facet` runs all three pipelines over the same
+ * `$match` result, so we go from 3 round trips → 1.
+ *
+ * The compound index `{ userId: 1, read: 1, createdAt: -1 }` covers
+ * every facet.
+ */
+const listForUser = async (
+  userId: string,
+  query: { page?: string; limit?: string } = {},
+) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 10;
   const skip = (page - 1) * limit;
 
-  const result = await NotificationModel.find({ userId, isDeleted: false })
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean();
-
-  const total = await NotificationModel.countDocuments({ userId, isDeleted: false });
-  const unreadCount = await NotificationModel.countDocuments({ userId, isDeleted: false, read: false });
+  const [result] = await NotificationModel.aggregate<{
+    notifications: any[];
+    totalCount: { n: number }[];
+    unreadCount: { n: number }[];
+  }>([
+    { $match: { userId: new Types.ObjectId(userId), isDeleted: false } },
+    {
+      $facet: {
+        notifications: [
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+        ],
+        totalCount: [{ $count: 'n' }],
+        unreadCount: [{ $match: { read: false } }, { $count: 'n' }],
+      },
+    },
+  ]);
 
   return {
-    notifications: result,
+    notifications: result?.notifications ?? [],
     meta: {
       page,
       limit,
-      total,
-      unreadCount,
+      total: result?.totalCount?.[0]?.n ?? 0,
+      unreadCount: result?.unreadCount?.[0]?.n ?? 0,
     },
   };
 };

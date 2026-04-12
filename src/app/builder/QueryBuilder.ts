@@ -33,11 +33,29 @@ class QueryBuilder<T> {
     return this;
   }
 
-  // 🔎 Text search using MongoDB text indexes (for models with text index)
+  /**
+   * 🔎 Full-text search using a MongoDB text index.
+   *
+   * Prefer this over `.search()` when the target collection has a text
+   * index defined — it turns O(n) regex scans into O(log n) index hits
+   * and gives relevance scoring for free.
+   *
+   * When a search term is present the results are automatically
+   * re-sorted by `textScore` descending, which overrides any client
+   * `?sort=` (relevance wins over recency for a typed search). If no
+   * term is present this is a no-op and downstream `.sort()` applies.
+   */
   textSearch() {
     if (this?.query?.searchTerm) {
-      const term = this.query.searchTerm as string;
-      this.modelQuery = this.modelQuery.find({ $text: { $search: term } } as FilterQuery<T>);
+      const term = String(this.query.searchTerm).trim();
+      if (term.length > 0) {
+        this.modelQuery = this.modelQuery
+          .find(
+            { $text: { $search: term } } as FilterQuery<T>,
+            { score: { $meta: 'textScore' } },
+          )
+          .sort({ score: { $meta: 'textScore' } } as any);
+      }
     }
     return this;
   }
@@ -353,7 +371,21 @@ class QueryBuilder<T> {
 
   // ↕️ Sorting
   sort() {
-    let sort = (this?.query?.sort as string) || '-createdAt';
+    // If `.textSearch()` was chained earlier it already set a
+    // `{ score: { $meta: 'textScore' } }` sort — relevance should win
+    // over the default `-createdAt` when the caller actually typed a
+    // search term. Skip the default sort override in that case.
+    const hasSearchTerm =
+      typeof this?.query?.searchTerm === 'string' &&
+      String(this.query.searchTerm).trim().length > 0;
+    const explicitSort = this?.query?.sort as string | undefined;
+
+    if (hasSearchTerm && !explicitSort) {
+      // Keep the textScore sort that `textSearch()` installed.
+      return this;
+    }
+
+    const sort = explicitSort || '-createdAt';
     this.modelQuery = this.modelQuery.sort(sort);
     return this;
   }

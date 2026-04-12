@@ -11,7 +11,9 @@ const FavoriteSchema = new Schema<IFavorite>(
       index: true,
     },
   },
-  { timestamps: true },
+  // Favorites are never "updated" — they exist or they're deleted. No
+  // need to carry an `updatedAt` field that will always equal `createdAt`.
+  { timestamps: { createdAt: true, updatedAt: false } },
 );
 
 // One favorite per (user, card) pair — idempotent favorite action.

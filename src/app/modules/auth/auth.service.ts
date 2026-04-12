@@ -31,7 +31,7 @@ const loginUserFromDB = async (
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
   }
 
-  if (isExistUser.status === USER_STATUS.DELETE) {
+  if (isExistUser.status === USER_STATUS.DELETED) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Your account has been deleted. Contact support.'
@@ -140,7 +140,7 @@ const forgetPasswordToDB = async (email: string) => {
     expireAt: new Date(Date.now() + OTP_TTL_MS),
   };
   await User.findOneAndUpdate(
-    { email, status: { $ne: USER_STATUS.DELETE } },
+    { email, status: { $ne: USER_STATUS.DELETED } },
     { $set: { authentication } }
   );
 };
@@ -159,7 +159,7 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
     email,
     'authentication.oneTimeCode': otp,
     'authentication.expireAt': { $gt: new Date() },
-    status: { $ne: USER_STATUS.DELETE },
+    status: { $ne: USER_STATUS.DELETED },
   };
 
   const isExistUser = await User.findOne(filter).select('+authentication +tokenVersion');
@@ -266,7 +266,7 @@ const resetPasswordToDB = async (
   const isExistUser = await User.findOne({
     _id: isExistToken.user,
     'authentication.isResetPassword': true,
-    status: { $ne: USER_STATUS.DELETE },
+    status: { $ne: USER_STATUS.DELETED },
   }).select('+authentication');
 
   if (!isExistUser) {
@@ -356,7 +356,7 @@ const googleLoginToDB = async (user: any) => {
   }
 
   // Check user status
-  if (user.status === USER_STATUS.DELETE) {
+  if (user.status === USER_STATUS.DELETED) {
     console.error('❌ User account is deleted');
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
@@ -411,7 +411,7 @@ const refreshTokenToDB = async (token: string) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid refresh token');
   }
 
-  if (user.status === USER_STATUS.DELETE) {
+  if (user.status === USER_STATUS.DELETED) {
     throw new ApiError(StatusCodes.FORBIDDEN, 'User account is deleted');
   }
 

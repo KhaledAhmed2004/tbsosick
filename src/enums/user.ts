@@ -7,5 +7,8 @@ export enum USER_STATUS {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
   RESTRICTED = 'RESTRICTED',
-  DELETE = 'DELETE',
+  // Key renamed to `DELETED` (past-participle — consistent with other
+  // terminal states like `CANCELED` / `EXPIRED`). The stored string value
+  // stays `'DELETE'` so no DB migration is needed.
+  DELETED = 'DELETE',
 }

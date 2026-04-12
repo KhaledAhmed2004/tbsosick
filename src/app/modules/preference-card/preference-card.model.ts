@@ -31,21 +31,45 @@ const SutureItemSchema = new Schema(
   { _id: false },
 );
 
-// Main PreferenceCard schema
+// Maximum number of photos allowed per card. Keeps the embedded array
+// bounded — without this cap, `photoLibrary` would be an unbounded array
+// anti-pattern (see audit report).
+const MAX_PHOTOS_PER_CARD = 10;
+
+// Main PreferenceCard schema.
+//
+// NOTE on required-ness: only the structural fields (`createdBy`, `cardTitle`,
+// `surgeon`, `supplies`, `sutures`) are schema-required. The long-form
+// workflow fields (`medication`, `instruments`, `prepping`, ...) are
+// intentionally optional so that clients can save drafts. The completeness
+// check for publishable cards runs in the service layer — see
+// `assertCardIsPublishable` in `preference-card.service.ts`.
 const PreferenceCardSchema = new Schema<PreferenceCard>(
   {
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     cardTitle: { type: String, required: true, trim: true },
     surgeon: { type: SurgeonSchema, required: true },
-    medication: { type: String, required: true },
-    supplies: { type: [SupplyItemSchema], required: true },
-    sutures: { type: [SutureItemSchema], required: true },
-    instruments: { type: String, required: true },
-    positioningEquipment: { type: String, required: true },
-    prepping: { type: String, required: true },
-    workflow: { type: String, required: true },
-    keyNotes: { type: String, required: true },
-    photoLibrary: { type: [String], required: true },
+    supplies: { type: [SupplyItemSchema], default: [] },
+    sutures: { type: [SutureItemSchema], default: [] },
+
+    // Long-form workflow fields — optional at the schema level so drafts
+    // can be saved. Service layer enforces completeness before publish.
+    medication: { type: String, trim: true },
+    instruments: { type: String, trim: true },
+    positioningEquipment: { type: String, trim: true },
+    prepping: { type: String, trim: true },
+    workflow: { type: String, trim: true },
+    keyNotes: { type: String, trim: true },
+
+    photoLibrary: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: (arr: string[]) => !arr || arr.length <= MAX_PHOTOS_PER_CARD,
+        message: `A preference card can hold at most ${MAX_PHOTOS_PER_CARD} photos`,
+      },
+    },
+
     downloadCount: { type: Number, default: 0 },
     published: { type: Boolean, default: false },
     verificationStatus: {

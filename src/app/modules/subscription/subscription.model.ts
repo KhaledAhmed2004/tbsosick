@@ -68,7 +68,7 @@ const subscriptionSchema = new Schema<ISubscription>(
     gracePeriodEndsAt: { type: Date, default: null },
     canceledAt: { type: Date, default: null },
 
-    metadata: { type: Object },
+    metadata: { type: Schema.Types.Mixed },
   },
   { timestamps: true }
 );

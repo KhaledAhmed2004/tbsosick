@@ -33,7 +33,7 @@ passport.use(
           // Blocked/Deleted check
           if (
             user.status === USER_STATUS.RESTRICTED ||
-            user.status === USER_STATUS.DELETE
+            user.status === USER_STATUS.DELETED
           ) {
             console.warn(`🚫 Restricted/Deleted user tried to login: ${email}`);
             return done(new Error('Account is deactivated.'));

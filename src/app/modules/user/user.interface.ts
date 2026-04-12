@@ -9,7 +9,9 @@ export enum USER_STATUS {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
   RESTRICTED = 'RESTRICTED',
-  DELETE = 'DELETE',
+  // Key renamed to `DELETED` (past-participle). Stored value stays
+  // `'DELETE'` for DB backwards compatibility.
+  DELETED = 'DELETE',
 }
 
 export type DevicePlatform = 'ios' | 'android' | 'web';

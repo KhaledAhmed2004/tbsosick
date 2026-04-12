@@ -1,9 +1,7 @@
 import bcrypt from 'bcrypt';
-import { StatusCodes } from 'http-status-codes';
 import { model, Schema } from 'mongoose';
 import config from '../../../config';
 import { USER_ROLES, USER_STATUS } from '../../../enums/user';
-import ApiError from '../../../errors/ApiError';
 import { IDeviceToken, IUser, UserModal } from './user.interface';
 
 const DeviceTokenSchema = new Schema<IDeviceToken>(
@@ -104,7 +102,8 @@ const userSchema = new Schema<IUser>(
     },
     googleId: {
       type: String,
-      sparse: true, // allows multiple null values but unique non-null values
+      sparse: true, // allows multiple null values
+      unique: true, // but each non-null googleId must be unique — one Google account → one user
     },
     authentication: {
       type: {
@@ -150,19 +149,13 @@ userSchema.statics.isMatchPassword = async (
   return await bcrypt.compare(password, hashPassword);
 };
 
-//check user
+// Hash password only when it has been set or changed. Email uniqueness
+// is enforced by the `{ unique: true }` index on the email field — no
+// manual `findOne` check is needed (the DB guarantees atomicity, which
+// a "check then write" cannot). Duplicate-key errors are translated in
+// the global error handler.
 userSchema.pre('save', async function (next) {
-  //check user - exclude current user from email uniqueness check
-  const isExist = await User.findOne({
-    email: this.email,
-    _id: { $ne: this._id }, // exclude current user
-  });
-  if (isExist) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'Email already exist!');
-  }
-
-  //password hash - only hash if password is provided (not for OAuth users)
-  if (this.password) {
+  if (this.password && this.isModified('password')) {
     this.password = await bcrypt.hash(
       this.password,
       Number(config.bcrypt_salt_rounds),

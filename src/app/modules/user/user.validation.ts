@@ -91,7 +91,7 @@ export const UserValidation = {
         USER_STATUS.ACTIVE,
         USER_STATUS.INACTIVE,
         USER_STATUS.RESTRICTED,
-        USER_STATUS.DELETE,
+        USER_STATUS.DELETED,
       ]).optional(),
       role: z.enum([USER_ROLES.SUPER_ADMIN, USER_ROLES.USER]).optional(),
     }),
