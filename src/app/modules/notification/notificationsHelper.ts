@@ -15,18 +15,18 @@ export const sendNotifications = async (data: Partial<INotification>): Promise<I
 
   const user = await User.findById(data?.userId);
 
-  // Check if user has device tokens and the array is not empty
-  if (
-    user?.deviceTokens &&
-    Array.isArray(user.deviceTokens) &&
-    user.deviceTokens.length > 0
-  ) {
+  // Extract raw token strings from the deviceTokens sub-document array.
+  const tokens = Array.isArray(user?.deviceTokens)
+    ? user!.deviceTokens.map(entry => entry?.token).filter(Boolean) as string[]
+    : [];
+
+  if (tokens.length > 0) {
     const message = {
       notification: {
         title: data?.title || 'TBSosick Notification',
         body: data?.subtitle || data?.title || '',
       },
-      tokens: user.deviceTokens,
+      tokens,
     };
 
     try {

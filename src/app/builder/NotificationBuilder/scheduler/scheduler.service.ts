@@ -101,7 +101,12 @@ export class NotificationScheduler {
         if (scheduled.title) builder = builder.setTitle(scheduled.title);
         if (scheduled.text) builder = builder.setText(scheduled.text);
         if (scheduled.type) builder = builder.setType(scheduled.type as any);
-        if (scheduled.referenceId) builder = builder.setReference(scheduled.referenceId);
+        if (scheduled.resourceType && scheduled.resourceId) {
+          builder = builder.setResource(
+            scheduled.resourceType,
+            scheduled.resourceId,
+          );
+        }
         if (scheduled.data) builder = builder.setData(scheduled.data);
       }
 

@@ -1,5 +1,19 @@
 import { Model, Types } from 'mongoose';
 
+export const NOTIFICATION_TYPES = [
+  'PREFERENCE_CARD_CREATED',
+  'EVENT_SCHEDULED',
+  'GENERAL',
+  'ADMIN',
+  'SYSTEM',
+  'MESSAGE',
+  'REMINDER',
+] as const;
+
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
+
+export type NotificationResourceType = 'PreferenceCard' | 'Event' | 'User' | string;
+
 export type NotificationLink = {
   label: string;
   url: string;
@@ -8,35 +22,21 @@ export type NotificationLink = {
 export type INotification = {
   _id?: Types.ObjectId;
   userId: Types.ObjectId;
-  referenceId?: Types.ObjectId;
-  metadata?: Record<string, unknown> | undefined;
-  type?:
-    | 'PREFERENCE_CARD_CREATED'
-    | 'EVENT_SCHEDULED'
-    | 'GENERAL'
-    | 'ADMIN'
-    | 'BID'
-    | 'BID_ACCEPTED'
-    | 'BOOKING'
-    | 'TASK'
-    | 'SYSTEM'
-    | 'DELIVERY_SUBMITTED'
-    | 'PAYMENT_PENDING'
-    | 'MESSAGE'
-    | 'RATING'
-    | 'PAYMENT'
-    | 'REMINDER';
-  title?: string;
+  type: NotificationType;
+  title: string;
   subtitle?: string;
-  link?: NotificationLink;
-  resourceType?: 'PreferenceCard' | 'Event' | string;
+
+  // Polymorphic reference — use these two fields together to point at a
+  // resource. `resourceId` intentionally holds a string so non-ObjectId keys
+  // (e.g. slugs) are supported, while `resourceType` tags the owning model.
+  resourceType?: NotificationResourceType;
   resourceId?: string;
+
+  link?: NotificationLink;
+  metadata?: Record<string, unknown>;
   read?: boolean;
   isDeleted?: boolean;
   icon?: string;
-
-
-  // Timestamps (Mongoose)
   expiresAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;

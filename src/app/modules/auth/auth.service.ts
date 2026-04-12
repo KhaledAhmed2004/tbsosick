@@ -24,7 +24,9 @@ const loginUserFromDB = async (
   payload: ILoginData & { deviceToken?: string }
 ) => {
   const { email, password, deviceToken } = payload;
-  const isExistUser = await User.findOne({ email }).select('+password');
+  // `tokenVersion` is `select: false` on the schema — pull it explicitly
+  // here so the issued JWT carries the current rotation counter.
+  const isExistUser = await User.findOne({ email }).select('+password +tokenVersion');
   if (!isExistUser) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
   }
@@ -160,7 +162,7 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
     status: { $ne: USER_STATUS.DELETE },
   };
 
-  const isExistUser = await User.findOne(filter).select('+authentication');
+  const isExistUser = await User.findOne(filter).select('+authentication +tokenVersion');
 
   if (!isExistUser) {
     throw new ApiError(
@@ -389,7 +391,9 @@ const refreshTokenToDB = async (token: string) => {
   const userId = decoded.id as string;
   const tokenVersion = decoded.tokenVersion as number;
 
-  const user = await User.findById(userId);
+  // Pull the hidden `tokenVersion` so we can compare against the
+  // version baked into the refresh token.
+  const user = await User.findById(userId).select('+tokenVersion');
   if (!user) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid refresh token');
   }

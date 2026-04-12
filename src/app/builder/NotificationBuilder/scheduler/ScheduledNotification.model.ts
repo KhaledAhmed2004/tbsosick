@@ -21,7 +21,10 @@ export interface IScheduledNotification extends Document {
   title?: string;
   text?: string;
   type?: string;
-  referenceId?: Types.ObjectId;
+  // Polymorphic reference — aligns with the Notification schema so a
+  // scheduled notification carries the same link shape as a persisted one.
+  resourceType?: string;
+  resourceId?: string;
   data?: Record<string, any>;
 
   // Channels
@@ -86,23 +89,21 @@ const ScheduledNotificationSchema = new Schema<IScheduledNotification>(
     type: {
       type: String,
       enum: [
+        'PREFERENCE_CARD_CREATED',
+        'EVENT_SCHEDULED',
+        'GENERAL',
         'ADMIN',
-        'BID',
-        'BID_ACCEPTED',
-        'BOOKING',
-        'TASK',
         'SYSTEM',
-        'DELIVERY_SUBMITTED',
-        'PAYMENT_PENDING',
-        'ORDER',
-        'PAYMENT',
         'MESSAGE',
         'REMINDER',
       ],
       default: 'SYSTEM',
     },
-    referenceId: {
-      type: Schema.Types.ObjectId,
+    resourceType: {
+      type: String,
+    },
+    resourceId: {
+      type: String,
     },
     data: {
       type: Schema.Types.Mixed,

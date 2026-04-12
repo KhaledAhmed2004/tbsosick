@@ -12,23 +12,24 @@ export enum USER_STATUS {
   DELETE = 'DELETE',
 }
 
-export type AchievementType =
-  | 'Founder Titne'
-  | 'Fast 100 Titten'
-  | 'Top Rated Tittens'
-  | '100 plus Tasks Completed'
-  | 'Founder Poster'
-  | 'Top Rated Poster';
+export type DevicePlatform = 'ios' | 'android' | 'web';
+
+export type IDeviceToken = {
+  token: string;
+  platform?: DevicePlatform;
+  appVersion?: string;
+  lastSeenAt?: Date;
+};
 
 export type IUser = {
   name: string;
   role: USER_ROLES;
   email: string;
   password: string;
-  location: string;
+  location?: string;
   country: string;
-  gender: 'male' | 'female';
-  dateOfBirth: string;
+  gender?: 'male' | 'female';
+  dateOfBirth?: string;
   phone: string;
   specialty?: string;
   hospital?: string;
@@ -36,12 +37,8 @@ export type IUser = {
   status: USER_STATUS;
   verified: boolean;
   isFirstLogin?: boolean;
-  deviceTokens?: string[];
-  favoriteCards?: string[];
-  averageRating: number;
-  ratingsCount: number;
+  deviceTokens?: IDeviceToken[];
   about?: string;
-  achievements?: AchievementType[];
   googleId?: string;
   authentication?: {
     isResetPassword: boolean;
@@ -56,6 +53,11 @@ export type UserModal = {
   isExistUserByEmail(email: string): any;
   isMatchPassword(password: string, hashPassword: string): boolean;
 
-  addDeviceToken(userId: string, token: string): Promise<IUser | null>;
+  addDeviceToken(
+    userId: string,
+    token: string,
+    platform?: DevicePlatform,
+    appVersion?: string,
+  ): Promise<IUser | null>;
   removeDeviceToken(userId: string, token: string): Promise<IUser | null>;
 } & Model<IUser>;

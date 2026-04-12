@@ -9,12 +9,12 @@ export type SurgeonInfo = {
 };
 
 export type SupplyItem = {
-  name: Types.ObjectId;
+  supply: Types.ObjectId;
   quantity: number;
 };
 
 export type SutureItem = {
-  name: Types.ObjectId;
+  suture: Types.ObjectId;
   quantity: number;
 };
 

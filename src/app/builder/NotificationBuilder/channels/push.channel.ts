@@ -7,9 +7,16 @@
 
 import { pushNotificationHelper } from '../../../modules/notification/pushNotificationHelper';
 
+interface IDeviceTokenEntry {
+  token: string;
+  platform?: 'ios' | 'android' | 'web';
+  appVersion?: string;
+  lastSeenAt?: Date;
+}
+
 interface IUser {
   _id: any;
-  deviceTokens?: string[];
+  deviceTokens?: IDeviceTokenEntry[];
 }
 
 interface PushContent {
@@ -39,8 +46,12 @@ export const sendPush = async (
 
   for (const user of users) {
     if (user.deviceTokens && Array.isArray(user.deviceTokens) && user.deviceTokens.length > 0) {
-      for (const token of user.deviceTokens) {
-        tokensWithUsers.push({ token, userId: user._id.toString() });
+      for (const entry of user.deviceTokens) {
+        // `deviceTokens` is now an array of sub-documents; pull the raw
+        // token string out of each entry.
+        if (entry?.token) {
+          tokensWithUsers.push({ token: entry.token, userId: user._id.toString() });
+        }
       }
     }
   }

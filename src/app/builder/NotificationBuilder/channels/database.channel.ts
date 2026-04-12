@@ -8,15 +8,7 @@
 import { Notification } from '../../../modules/notification/notification.model';
 import { Types } from 'mongoose';
 
-type NotificationType =
-  | 'ADMIN'
-  | 'BID'
-  | 'BID_ACCEPTED'
-  | 'BOOKING'
-  | 'TASK'
-  | 'SYSTEM'
-  | 'DELIVERY_SUBMITTED'
-  | 'PAYMENT_PENDING';
+type NotificationType = string;
 
 interface IUser {
   _id: any;
@@ -25,8 +17,11 @@ interface IUser {
 interface DatabaseContent {
   title?: string;
   text: string;
-  type: NotificationType | string;
-  referenceId?: string | Types.ObjectId;
+  type: NotificationType;
+  // Polymorphic reference — both are stored together so readers can
+  // route back to the source entity.
+  resourceType?: string;
+  resourceId?: string | Types.ObjectId;
 }
 
 interface DatabaseResult {
@@ -39,9 +34,16 @@ interface DatabaseResult {
  */
 export const saveToDatabase = async (
   users: IUser[],
-  content: DatabaseContent
+  content: DatabaseContent,
 ): Promise<DatabaseResult> => {
   const result: DatabaseResult = { sent: 0, failed: [] };
+
+  const resolvedResourceId =
+    content.resourceId !== undefined && content.resourceId !== null
+      ? typeof content.resourceId === 'string'
+        ? content.resourceId
+        : content.resourceId.toString()
+      : undefined;
 
   // Prepare notification documents
   const notifications = users.map(user => ({
@@ -49,7 +51,8 @@ export const saveToDatabase = async (
     subtitle: content.text,
     userId: user._id,
     type: content.type || 'SYSTEM',
-    referenceId: content.referenceId,
+    resourceType: content.resourceType,
+    resourceId: resolvedResourceId,
     read: false,
   }));
 
@@ -65,7 +68,7 @@ export const saveToDatabase = async (
       result.sent = error.insertedDocs.length;
       // Remaining are failed
       const insertedIds = new Set(
-        error.insertedDocs.map((d: any) => d.userId.toString())
+        error.insertedDocs.map((d: any) => d.userId.toString()),
       );
       result.failed = users
         .filter(u => !insertedIds.has(u._id.toString()))

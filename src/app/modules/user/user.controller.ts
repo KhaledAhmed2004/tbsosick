@@ -39,7 +39,7 @@ const getFavoriteCards = catchAsync(async (req: Request, res: Response) => {
     req.query,
   );
 
-  const favoriteCardIds = await PreferenceCardService.getFavoriteCardIdsForUser((user as any).id);
+  const favoriteCardIds = await PreferenceCardService.getFavoriteCardIdsForUserFromDB((user as any).id);
   const favoriteSet = new Set(
     (favoriteCardIds as string[]).map(id => id.toString()),
   );

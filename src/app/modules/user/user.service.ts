@@ -7,6 +7,7 @@ import { Subscription as SubscriptionModel } from '../subscription/subscription.
 import ApiError from '../../../errors/ApiError';
 import { emailHelper } from '../../../helpers/emailHelper';
 import { emailTemplate } from '../../../shared/emailTemplate';
+import { sendVerificationOTP } from '../../../helpers/authHelpers';
 import unlinkFile from '../../../shared/unlinkFile';
 import generateOTP from '../../../util/generateOTP';
 import { User } from './user.model';
@@ -15,9 +16,22 @@ import AggregationBuilder from '../../builder/AggregationBuilder';
 import { IUser } from './user.interface';
 
 const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
-  const createUser = await User.create({ ...payload, verified: true });
+  // Users start unverified. The verify-OTP flow flips `verified: true`
+  // once the user enters the code emailed below. Do NOT pass
+  // `verified: true` here — it bypasses email verification and defeats
+  // the auth flow.
+  const createUser = await User.create({ ...payload });
   if (!createUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user');
+  }
+
+  // Fire and forget OTP email. Signup must still succeed even if the
+  // email transport has a transient failure — the user can request a
+  // resend via /auth/resend-verify-email.
+  try {
+    await sendVerificationOTP(createUser.email);
+  } catch (err) {
+    console.error('Signup OTP send failed:', err);
   }
 
   return createUser;

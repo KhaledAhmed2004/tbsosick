@@ -4,7 +4,17 @@ import { model, Schema } from 'mongoose';
 import config from '../../../config';
 import { USER_ROLES, USER_STATUS } from '../../../enums/user';
 import ApiError from '../../../errors/ApiError';
-import { IUser, UserModal } from './user.interface';
+import { IDeviceToken, IUser, UserModal } from './user.interface';
+
+const DeviceTokenSchema = new Schema<IDeviceToken>(
+  {
+    token: { type: String, required: true },
+    platform: { type: String, enum: ['ios', 'android', 'web'] },
+    appVersion: { type: String },
+    lastSeenAt: { type: Date, default: () => new Date() },
+  },
+  { _id: false },
+);
 
 const userSchema = new Schema<IUser>(
   {
@@ -78,19 +88,16 @@ const userSchema = new Schema<IUser>(
     },
     verified: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     deviceTokens: {
-      type: [String],
-      default: [],
-    },
-    favoriteCards: {
-      type: [String],
+      type: [DeviceTokenSchema],
       default: [],
     },
     tokenVersion: {
       type: Number,
       default: 0,
+      select: false,
     },
     about: {
       type: String,
@@ -160,23 +167,52 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
-// ✅ add device token
-userSchema.statics.addDeviceToken = async (userId: string, token: string) => {
+// ✅ add device token (upsert: refresh lastSeenAt / metadata if token already exists)
+userSchema.statics.addDeviceToken = async (
+  userId: string,
+  token: string,
+  platform?: 'ios' | 'android' | 'web',
+  appVersion?: string,
+) => {
+  // Try to refresh metadata on an existing token first
+  const updated = await User.findOneAndUpdate(
+    { _id: userId, 'deviceTokens.token': token },
+    {
+      $set: {
+        'deviceTokens.$.lastSeenAt': new Date(),
+        ...(platform ? { 'deviceTokens.$.platform': platform } : {}),
+        ...(appVersion ? { 'deviceTokens.$.appVersion': appVersion } : {}),
+      },
+    },
+    { new: true },
+  );
+  if (updated) return updated;
+
+  // Not present — push a new sub-document
   return await User.findByIdAndUpdate(
     userId,
-    { $addToSet: { deviceTokens: token } }, // prevent duplicates
+    {
+      $push: {
+        deviceTokens: {
+          token,
+          platform,
+          appVersion,
+          lastSeenAt: new Date(),
+        },
+      },
+    },
     { new: true },
   );
 };
 
-// ✅ remove device token
+// ✅ remove device token (match the token field inside the sub-document)
 userSchema.statics.removeDeviceToken = async (
   userId: string,
   token: string,
 ) => {
   return await User.findByIdAndUpdate(
     userId,
-    { $pull: { deviceTokens: token } },
+    { $pull: { deviceTokens: { token } } },
     { new: true },
   );
 };

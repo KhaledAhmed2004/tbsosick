@@ -15,9 +15,8 @@ export interface IPersonnel {
 export interface IEvent extends Document {
   userId: Types.ObjectId;
   title: string;
-  date: Date;
-  time: string;
-  durationHours: number;
+  startsAt: Date;
+  endsAt: Date;
   eventType: EVENT_TYPE;
   location?: string;
   preferenceCard?: Types.ObjectId;

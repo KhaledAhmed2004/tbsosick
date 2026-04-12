@@ -13,9 +13,8 @@ const EventSchema = new Schema<IEvent>(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     title: { type: String, required: true },
-    date: { type: Date, required: true },
-    time: { type: String, required: true },
-    durationHours: { type: Number, required: true },
+    startsAt: { type: Date, required: true },
+    endsAt: { type: Date, required: true },
     eventType: {
       type: String,
       enum: Object.values(EVENT_TYPE),
@@ -31,7 +30,8 @@ const EventSchema = new Schema<IEvent>(
   },
 );
 
-EventSchema.index({ userId: 1, date: -1 });
+// Primary calendar query: "events for user X between T1 and T2".
+EventSchema.index({ userId: 1, startsAt: 1 });
 
 const EventModel = model<IEvent>('Event', EventSchema);
 

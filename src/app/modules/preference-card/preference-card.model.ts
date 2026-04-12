@@ -13,19 +13,19 @@ const SurgeonSchema = new Schema(
   { _id: false }, // prevents _id generation for subdocuments
 );
 
-// Supply item subdocument schema
+// Supply item subdocument schema — holds a Supply FK + quantity.
 const SupplyItemSchema = new Schema(
   {
-    name: { type: Schema.Types.ObjectId, ref: 'Supply', required: true },
+    supply: { type: Schema.Types.ObjectId, ref: 'Supply', required: true },
     quantity: { type: Number, required: true, min: 1 },
   },
   { _id: false },
 );
 
-// Suture item subdocument schema
+// Suture item subdocument schema — holds a Suture FK + quantity.
 const SutureItemSchema = new Schema(
   {
-    name: { type: Schema.Types.ObjectId, ref: 'Suture', required: true },
+    suture: { type: Schema.Types.ObjectId, ref: 'Suture', required: true },
     quantity: { type: Number, required: true, min: 1 },
   },
   { _id: false },

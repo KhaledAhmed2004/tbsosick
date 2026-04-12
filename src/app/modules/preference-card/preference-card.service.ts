@@ -1,12 +1,12 @@
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { PreferenceCardModel } from './preference-card.model';
 import ApiError from '../../../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
 import { USER_ROLES } from '../../../enums/user';
 import { QueryBuilder } from '../../builder';
-import { User } from '../user/user.model';
 import { SupplyModel } from '../supplies/supplies.model';
 import { SutureModel } from '../sutures/sutures.model';
+import { Favorite } from '../favorite/favorite.model';
 
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 
@@ -66,21 +66,23 @@ const resolveMixedItemsWithQuantity = async (
 };
 
 /**
- * Flattens populated supplies/sutures from { name: { name: "X" }, quantity: N }
- * to { name: "X", quantity: N } for clean API response.
+ * Flattens populated supplies/sutures.
+ * After populate, `supply` / `suture` holds the referenced doc `{ name }`.
+ * We flatten to `{ name, quantity }` for the API response so clients keep
+ * seeing a stable `name` label regardless of internal FK field naming.
  */
 const flattenCard = (doc: any) => {
   if (!doc) return doc;
   const obj = doc.toObject ? doc.toObject() : doc;
   if (obj.supplies) {
     obj.supplies = obj.supplies.map((item: any) => ({
-      name: item.name?.name || item.name,
+      name: item.supply?.name || item.supply,
       quantity: item.quantity,
     }));
   }
   if (obj.sutures) {
     obj.sutures = obj.sutures.map((item: any) => ({
-      name: item.name?.name || item.name,
+      name: item.suture?.name || item.suture,
       quantity: item.quantity,
     }));
   }
@@ -105,11 +107,8 @@ const getDistinctSpecialtiesFromDB = async () => {
 };
 
 const getFavoriteCardIdsForUserFromDB = async (userId: string) => {
-  const user = await User.findById(userId).select('favoriteCards').lean();
-  if (!user || !Array.isArray(user.favoriteCards)) {
-    return [];
-  }
-  return user.favoriteCards;
+  const favorites = await Favorite.find({ userId }).select('cardId -_id').lean();
+  return favorites.map(f => f.cardId.toString());
 };
 
 const incrementDownloadCountInDB = async (
@@ -135,18 +134,38 @@ const incrementDownloadCountInDB = async (
   return { downloadCount: doc.downloadCount };
 };
 
+/**
+ * Accepts client payloads that still use `{ name, quantity }` (backwards
+ * compat with the API contract) and normalises them into the schema's
+ * `{ supply|suture, quantity }` shape.
+ */
+const normaliseClientRefField = (
+  items: Array<Record<string, any>>,
+  targetField: 'supply' | 'suture',
+): Array<Record<string, any>> => {
+  return items.map(item => {
+    if (item && item[targetField] === undefined && item.name !== undefined) {
+      const { name, ...rest } = item;
+      return { ...rest, [targetField]: name };
+    }
+    return item;
+  });
+};
+
 const createPreferenceCardInDB = async (userId: string, data: any) => {
   if (data.supplies && Array.isArray(data.supplies)) {
+    const normalised = normaliseClientRefField(data.supplies, 'supply');
     data.supplies = await resolveMixedItemsWithQuantity(
-      data.supplies,
-      'name',
+      normalised,
+      'supply',
       SupplyModel,
     );
   }
   if (data.sutures && Array.isArray(data.sutures)) {
+    const normalised = normaliseClientRefField(data.sutures, 'suture');
     data.sutures = await resolveMixedItemsWithQuantity(
-      data.sutures,
-      'name',
+      normalised,
+      'suture',
       SutureModel,
     );
   }
@@ -164,8 +183,8 @@ const listPreferenceCardsForUserFromDB = async (userId: string) => {
   const docs = await PreferenceCardModel.find({
     createdBy: userId,
   })
-    .populate('supplies.name', 'name -_id')
-    .populate('sutures.name', 'name -_id')
+    .populate('supplies.supply', 'name -_id')
+    .populate('sutures.suture', 'name -_id')
     .sort({
       updatedAt: -1,
     })
@@ -190,9 +209,9 @@ const listPrivatePreferenceCardsForUserFromDB = async (
     .sort()
     .paginate()
     .fields()
-    .populate(['supplies.name', 'sutures.name'], {
-      'supplies.name': 'name -_id',
-      'sutures.name': 'name -_id',
+    .populate(['supplies.supply', 'sutures.suture'], {
+      'supplies.supply': 'name -_id',
+      'sutures.suture': 'name -_id',
     });
 
   const docs = await qb.modelQuery;
@@ -210,8 +229,8 @@ const getPreferenceCardByIdFromDB = async (
   role?: string,
 ) => {
   const doc = await PreferenceCardModel.findById(id)
-    .populate('supplies.name', 'name -_id')
-    .populate('sutures.name', 'name -_id')
+    .populate('supplies.supply', 'name -_id')
+    .populate('sutures.suture', 'name -_id')
     .lean();
 
   if (!doc) {
@@ -258,16 +277,18 @@ const updatePreferenceCardInDB = async (
 
   // Resolve mixed supplies/sutures if present
   if (payload.supplies && Array.isArray(payload.supplies)) {
+    const normalised = normaliseClientRefField(payload.supplies, 'supply');
     payload.supplies = await resolveMixedItemsWithQuantity(
-      payload.supplies,
-      'name',
+      normalised,
+      'supply',
       SupplyModel,
     );
   }
   if (payload.sutures && Array.isArray(payload.sutures)) {
+    const normalised = normaliseClientRefField(payload.sutures, 'suture');
     payload.sutures = await resolveMixedItemsWithQuantity(
-      payload.sutures,
-      'name',
+      normalised,
+      'suture',
       SutureModel,
     );
   }
@@ -343,9 +364,9 @@ const listPublicPreferenceCardsFromDB = async (query?: Record<string, any>) => {
     .sort()
     .paginate()
     .fields()
-    .populate(['supplies.name', 'sutures.name'], {
-      'supplies.name': 'name -_id',
-      'sutures.name': 'name -_id',
+    .populate(['supplies.supply', 'sutures.suture'], {
+      'supplies.supply': 'name -_id',
+      'sutures.suture': 'name -_id',
     });
 
   const cards = await qb.modelQuery;
@@ -361,12 +382,10 @@ const listFavoritePreferenceCardsForUserFromDB = async (
   userId: string,
   query?: Record<string, any>,
 ) => {
-  const user = await User.findById(userId).select('favoriteCards').lean();
-  if (
-    !user ||
-    !Array.isArray(user.favoriteCards) ||
-    user.favoriteCards.length === 0
-  ) {
+  const favorites = await Favorite.find({ userId }).select('cardId -_id').lean();
+  const cardIds = favorites.map(f => f.cardId);
+
+  if (cardIds.length === 0) {
     return {
       meta: {
         total: 0,
@@ -382,7 +401,7 @@ const listFavoritePreferenceCardsForUserFromDB = async (
 
   const qb = new QueryBuilder(
     PreferenceCardModel.find({
-      _id: { $in: user.favoriteCards },
+      _id: { $in: cardIds },
     }),
     query || {},
   )
@@ -391,9 +410,9 @@ const listFavoritePreferenceCardsForUserFromDB = async (
     .sort()
     .paginate()
     .fields()
-    .populate(['supplies.name', 'sutures.name'], {
-      'supplies.name': 'name -_id',
-      'sutures.name': 'name -_id',
+    .populate(['supplies.supply', 'sutures.suture'], {
+      'supplies.supply': 'name -_id',
+      'sutures.suture': 'name -_id',
     });
 
   const docs = await qb.modelQuery;
@@ -418,10 +437,12 @@ const favoritePreferenceCardInDB = async (cardId: string, userId: string) => {
     );
   }
 
-  await User.findByIdAndUpdate(
-    userId,
-    { $addToSet: { favoriteCards: cardId } },
-    { new: true },
+  // Upsert — idempotent, unique index on { userId, cardId } makes double
+  // favorite a no-op.
+  await Favorite.updateOne(
+    { userId: new Types.ObjectId(userId), cardId: new Types.ObjectId(cardId) },
+    { $setOnInsert: { userId, cardId } },
+    { upsert: true },
   );
 
   return { favorited: true };
@@ -433,11 +454,10 @@ const unfavoritePreferenceCardInDB = async (cardId: string, userId: string) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
   }
 
-  await User.findByIdAndUpdate(
-    userId,
-    { $pull: { favoriteCards: cardId } },
-    { new: true },
-  );
+  await Favorite.deleteOne({
+    userId: new Types.ObjectId(userId),
+    cardId: new Types.ObjectId(cardId),
+  });
 
   return { favorited: false };
 };
