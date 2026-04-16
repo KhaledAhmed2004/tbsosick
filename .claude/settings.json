@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -40 {}')"
+      "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -40 {}')",
+      "Bash(npm list:*)",
+      "Bash(ls \"d:/web projects/office-sta/re-fector/tbsosick/node_modules/apple-signin-auth/\"*.d.ts)"
     ]
   }
 }

@@ -10,20 +10,11 @@ const auth_1 = __importDefault(require("../../middlewares/auth"));
 const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
 const auth_controller_1 = require("./auth.controller");
 const auth_validation_1 = require("./auth.validation");
-const passport_1 = __importDefault(require("passport"));
 const router = express_1.default.Router();
 // User login
 router.post('/login', (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createLoginZodSchema), auth_controller_1.AuthController.loginUser);
-// Google OAuth login — redirect with profile/email scopes
-router.get('/google', (req, res, next) => {
-    passport_1.default.authenticate('google', {
-        scope: ['profile', 'email'],
-    })(req, res, next);
-});
-// Google OAuth callback — handle sign-in after Google returns
-router.get('/google/callback', (req, res, next) => {
-    next();
-}, passport_1.default.authenticate('google', { session: false }), auth_controller_1.AuthController.googleCallback);
+// Social login (Google / Apple ID token verification)
+router.post('/social-login', (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createSocialLoginZodSchema), auth_controller_1.AuthController.socialLogin);
 // User logout — invalidate active sessions/tokens
 router.post('/logout', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER), auth_controller_1.AuthController.logoutUser);
 // Password reset request — send OTP via email

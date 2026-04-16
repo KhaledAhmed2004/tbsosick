@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.processAppleWebhook = exports.verifyApplePurchase = exports.setFreePlan = exports.getMySubscription = void 0;
+exports.processGoogleWebhook = exports.verifyGooglePurchase = exports.processAppleWebhook = exports.verifyApplePurchase = exports.setFreePlan = exports.getMySubscription = void 0;
 const mongoose_1 = require("mongoose");
 const http_status_1 = __importDefault(require("http-status"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
@@ -20,6 +20,8 @@ const subscription_model_1 = require("./subscription.model");
 const subscription_interface_1 = require("./subscription.interface");
 const apple_verify_1 = require("./providers/apple/apple.verify");
 const apple_webhook_1 = require("./providers/apple/apple.webhook");
+const google_verify_1 = require("./providers/google/google.verify");
+const google_webhook_1 = require("./providers/google/google.webhook");
 const plan_mapper_1 = require("./helpers/plan.mapper");
 const ensureSubscriptionDoc = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const id = new mongoose_1.Types.ObjectId(userId);
@@ -85,10 +87,67 @@ const processAppleWebhook = (signedPayload) => __awaiter(void 0, void 0, void 0,
     return (0, apple_webhook_1.handleAppleNotification)(signedPayload);
 });
 exports.processAppleWebhook = processAppleWebhook;
+const verifyGooglePurchase = (userId, purchaseToken, productId) => __awaiter(void 0, void 0, void 0, function* () {
+    // 1. Pull the authoritative subscription state from Google.
+    const decoded = yield (0, google_verify_1.verifyGoogleSubscription)(purchaseToken, productId);
+    // 2. Fraud guard: a purchase token must not be linked to a different user.
+    const existingByToken = yield subscription_model_1.Subscription.findOne({
+        googlePurchaseToken: decoded.purchaseToken,
+    });
+    if (existingByToken && existingByToken.userId.toString() !== userId) {
+        throw new ApiError_1.default(http_status_1.default.CONFLICT, 'This Google purchase is already linked to another account');
+    }
+    // 3. Map productId → local plan.
+    const plan = (0, plan_mapper_1.mapGoogleProductToPlan)(decoded.productId);
+    if (plan === subscription_interface_1.SUBSCRIPTION_PLAN.FREE) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, `Unknown or unsupported productId: ${decoded.productId}`);
+    }
+    // 4. Translate Google's subscriptionState into our local status.
+    const isActiveState = decoded.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE' ||
+        decoded.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD';
+    if (!isActiveState) {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, `Google subscription is not active (state: ${decoded.subscriptionState})`);
+    }
+    const localStatus = decoded.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD'
+        ? subscription_interface_1.SUBSCRIPTION_STATUS.PAST_DUE
+        : subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE;
+    // 5. Persist for this user.
+    const updated = yield subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(userId), {
+        plan,
+        status: localStatus,
+        platform: subscription_interface_1.SUBSCRIPTION_PLATFORM.GOOGLE,
+        environment: decoded.environment,
+        productId: decoded.productId,
+        autoRenewing: decoded.autoRenewing,
+        googlePurchaseToken: decoded.purchaseToken,
+        googleOrderId: decoded.orderId,
+        startedAt: decoded.startTime ? new Date(decoded.startTime) : null,
+        currentPeriodEnd: decoded.expiryTime
+            ? new Date(decoded.expiryTime)
+            : null,
+        canceledAt: null,
+        gracePeriodEndsAt: localStatus === subscription_interface_1.SUBSCRIPTION_STATUS.PAST_DUE && decoded.expiryTime
+            ? new Date(decoded.expiryTime)
+            : null,
+        metadata: {
+            acknowledgementState: decoded.acknowledgementState,
+            linkedPurchaseToken: decoded.linkedPurchaseToken,
+            testPurchase: decoded.testPurchase,
+        },
+    });
+    return updated;
+});
+exports.verifyGooglePurchase = verifyGooglePurchase;
+const processGoogleWebhook = (rawBody, authorizationHeader) => __awaiter(void 0, void 0, void 0, function* () {
+    return (0, google_webhook_1.handleGoogleNotification)(rawBody, authorizationHeader);
+});
+exports.processGoogleWebhook = processGoogleWebhook;
 const SubscriptionService = {
     getMySubscription: exports.getMySubscription,
     setFreePlan: exports.setFreePlan,
     verifyApplePurchase: exports.verifyApplePurchase,
     processAppleWebhook: exports.processAppleWebhook,
+    verifyGooglePurchase: exports.verifyGooglePurchase,
+    processGoogleWebhook: exports.processGoogleWebhook,
 };
 exports.default = SubscriptionService;

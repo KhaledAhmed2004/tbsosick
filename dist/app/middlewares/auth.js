@@ -14,8 +14,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const http_status_codes_1 = require("http-status-codes");
 const config_1 = __importDefault(require("../../config"));
+const user_1 = require("../../enums/user");
 const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const jwtHelper_1 = require("../../helpers/jwtHelper");
+const user_model_1 = require("../modules/user/user.model");
 const auth = (...allowedRoles) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const authHeader = req.headers.authorization;
@@ -23,23 +25,47 @@ const auth = (...allowedRoles) => (req, res, next) => __awaiter(void 0, void 0, 
         if (!authHeader) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Authorization token is required');
         }
-        // 3️⃣ Validate Bearer format
+        // 2️⃣ Validate Bearer format
         if (!authHeader.startsWith('Bearer ')) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Authorization header must start with "Bearer "');
         }
-        // 4️⃣ Extract token and ensure it's not empty
+        // 3️⃣ Extract token and ensure it's not empty
         const token = authHeader.split(' ')[1];
         if (!token || token.trim() === '') {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Valid token is required');
         }
-        // 5️⃣ Verify JWT token
+        // 4️⃣ Verify JWT token
         const verifiedUser = jwtHelper_1.jwtHelper.verifyToken(token, config_1.default.jwt.jwt_secret);
         if (!verifiedUser || !verifiedUser.role) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Invalid token payload');
         }
+        // 5️⃣ tokenVersion check — ensure the JWT's version still matches the
+        //     current DB value. This is what makes force-logout / password
+        //     reset / status flip actually invalidate live access tokens
+        //     instead of waiting for them to expire naturally.
+        //
+        //     `tokenVersion` is `select: false` on the schema, so we must pull
+        //     it explicitly. `.lean()` keeps this ~1ms indexed `_id` lookup.
+        const dbUser = yield user_model_1.User.findById(verifiedUser.id)
+            .select('+tokenVersion status')
+            .lean();
+        if (!dbUser) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'User no longer exists');
+        }
+        // Block access for deleted / restricted accounts at the middleware
+        // level so every protected route gets the guarantee for free.
+        if (dbUser.status === user_1.USER_STATUS.DELETED ||
+            dbUser.status === user_1.USER_STATUS.RESTRICTED) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Account is no longer active');
+        }
+        const jwtTokenVersion = verifiedUser.tokenVersion;
+        if (typeof jwtTokenVersion === 'number' &&
+            dbUser.tokenVersion !== jwtTokenVersion) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Session invalidated — please log in again');
+        }
         // 6️⃣ Attach verified user to request
         req.user = verifiedUser;
-        // 7️⃣ Role-based access check — SUPER_ADMIN-only system
+        // 7️⃣ Role-based access check
         if (allowedRoles.length && !allowedRoles.includes(verifiedUser.role)) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, "You don't have permission to access this API");
         }

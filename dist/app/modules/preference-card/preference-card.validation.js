@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PreferenceCardValidation = exports.searchCardsSchema = exports.paramIdSchema = exports.summarizeEventSchema = exports.suggestSuppliesSchema = exports.updatePreferenceCardSchema = exports.createPreferenceCardSchema = void 0;
+exports.PreferenceCardValidation = void 0;
 const zod_1 = require("zod");
 // Surgeon Schema
 const surgeonSchema = zod_1.z.object({
@@ -20,24 +20,30 @@ const sutureItemSchema = zod_1.z.object({
     quantity: zod_1.z.number().int().min(1),
 });
 // Create Preference Card
-exports.createPreferenceCardSchema = zod_1.z.object({
+//
+// NOTE: Only the structural fields (`cardTitle`, `surgeon`) are required
+// at the API level. Long-form workflow text (`medication`, `instruments`,
+// `prepping`, `workflow`, `keyNotes`, `positioningEquipment`) is optional
+// so that drafts can be saved. Service layer enforces completeness only
+// when `published: true` is set or when an admin verifies the card.
+const createPreferenceCardSchema = zod_1.z.object({
     body: zod_1.z.object({
         cardTitle: zod_1.z.string().min(3),
         surgeon: surgeonSchema,
-        medication: zod_1.z.string().min(1),
-        supplies: zod_1.z.array(supplyItemSchema).min(1),
-        sutures: zod_1.z.array(sutureItemSchema).min(1),
-        instruments: zod_1.z.string().min(1),
-        positioningEquipment: zod_1.z.string().min(1),
-        prepping: zod_1.z.string().min(1),
-        workflow: zod_1.z.string().min(1),
-        keyNotes: zod_1.z.string().min(1),
-        photoLibrary: zod_1.z.array(zod_1.z.string()).optional(),
+        medication: zod_1.z.string().optional(),
+        supplies: zod_1.z.array(supplyItemSchema).optional().default([]),
+        sutures: zod_1.z.array(sutureItemSchema).optional().default([]),
+        instruments: zod_1.z.string().optional(),
+        positioningEquipment: zod_1.z.string().optional(),
+        prepping: zod_1.z.string().optional(),
+        workflow: zod_1.z.string().optional(),
+        keyNotes: zod_1.z.string().optional(),
+        photoLibrary: zod_1.z.array(zod_1.z.string()).max(10).optional(),
         published: zod_1.z.boolean().optional(),
     }),
 });
 // Update Preference Card (partial update)
-exports.updatePreferenceCardSchema = zod_1.z.object({
+const updatePreferenceCardSchema = zod_1.z.object({
     params: zod_1.z.object({ id: zod_1.z.string().min(1) }),
     body: zod_1.z.object({
         cardTitle: zod_1.z.string().min(3).optional(),
@@ -50,18 +56,18 @@ exports.updatePreferenceCardSchema = zod_1.z.object({
         prepping: zod_1.z.string().optional(),
         workflow: zod_1.z.string().optional(),
         keyNotes: zod_1.z.string().optional(),
-        photoLibrary: zod_1.z.array(zod_1.z.string()).optional(),
+        photoLibrary: zod_1.z.array(zod_1.z.string()).max(10).optional(),
         published: zod_1.z.boolean().optional(),
     }),
 });
 // Suggest Supplies Schema
-exports.suggestSuppliesSchema = zod_1.z.object({
+const suggestSuppliesSchema = zod_1.z.object({
     body: zod_1.z.object({
         specialty: zod_1.z.string().optional(),
     }),
 });
 // Summarize Event Schema
-exports.summarizeEventSchema = zod_1.z.object({
+const summarizeEventSchema = zod_1.z.object({
     params: zod_1.z.object({ id: zod_1.z.string().min(1) }).optional(),
     body: zod_1.z
         .object({
@@ -75,11 +81,11 @@ exports.summarizeEventSchema = zod_1.z.object({
         .optional(),
 });
 // Param ID Schema
-exports.paramIdSchema = zod_1.z.object({
+const paramIdSchema = zod_1.z.object({
     params: zod_1.z.object({ id: zod_1.z.string().min(1) }),
 });
 // Search Preference Cards Schema
-exports.searchCardsSchema = zod_1.z.object({
+const searchCardsSchema = zod_1.z.object({
     query: zod_1.z.object({
         searchTerm: zod_1.z.string().trim().max(100).optional(),
         visibility: zod_1.z.enum(['public', 'private']).default('public'),
@@ -97,9 +103,9 @@ const publishPreferenceCardSchema = zod_1.z.object({
     body: zod_1.z.object({ published: zod_1.z.boolean() }),
 });
 exports.PreferenceCardValidation = {
-    createPreferenceCardSchema: exports.createPreferenceCardSchema,
-    updatePreferenceCardSchema: exports.updatePreferenceCardSchema,
-    paramIdSchema: exports.paramIdSchema,
-    searchCardsSchema: exports.searchCardsSchema,
+    createPreferenceCardSchema,
+    updatePreferenceCardSchema,
+    paramIdSchema,
+    searchCardsSchema,
     publishPreferenceCardSchema,
 };

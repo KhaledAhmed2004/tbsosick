@@ -14,7 +14,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
+const crypto_1 = __importDefault(require("crypto"));
 const http_status_codes_1 = require("http-status-codes");
+const google_auth_library_1 = require("google-auth-library");
+const apple_signin_auth_1 = __importDefault(require("apple-signin-auth"));
 const config_1 = __importDefault(require("../../../config"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const authHelpers_1 = require("../../../helpers/authHelpers");
@@ -27,13 +30,16 @@ const resetToken_model_1 = require("./resetToken/resetToken.model");
 const user_model_1 = require("../user/user.model");
 const user_1 = require("../../../enums/user");
 const auth_constants_1 = require("../../../config/auth.constants");
+const googleClient = new google_auth_library_1.OAuth2Client(config_1.default.google_client_id);
 const loginUserFromDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password, deviceToken } = payload;
-    const isExistUser = yield user_model_1.User.findOne({ email }).select('+password');
+    // `tokenVersion` is `select: false` on the schema — pull it explicitly
+    // here so the issued JWT carries the current rotation counter.
+    const isExistUser = yield user_model_1.User.findOne({ email }).select('+password +tokenVersion');
     if (!isExistUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Invalid email or password');
     }
-    if (isExistUser.status === user_1.USER_STATUS.DELETE) {
+    if (isExistUser.status === user_1.USER_STATUS.DELETED) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account has been deleted. Contact support.');
     }
     if (isExistUser.status === user_1.USER_STATUS.RESTRICTED) {
@@ -104,7 +110,7 @@ const forgetPasswordToDB = (email) => __awaiter(void 0, void 0, void 0, function
         oneTimeCode: otp,
         expireAt: new Date(Date.now() + auth_constants_1.OTP_TTL_MS),
     };
-    yield user_model_1.User.findOneAndUpdate({ email, status: { $ne: user_1.USER_STATUS.DELETE } }, { $set: { authentication } });
+    yield user_model_1.User.findOneAndUpdate({ email, status: { $ne: user_1.USER_STATUS.DELETED } }, { $set: { authentication } });
 });
 //verify email
 const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
@@ -118,9 +124,9 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
         email,
         'authentication.oneTimeCode': otp,
         'authentication.expireAt': { $gt: new Date() },
-        status: { $ne: user_1.USER_STATUS.DELETE },
+        status: { $ne: user_1.USER_STATUS.DELETED },
     };
-    const isExistUser = yield user_model_1.User.findOne(filter).select('+authentication');
+    const isExistUser = yield user_model_1.User.findOne(filter).select('+authentication +tokenVersion');
     if (!isExistUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid or expired verification code');
     }
@@ -190,7 +196,7 @@ const resetPasswordToDB = (token, payload) => __awaiter(void 0, void 0, void 0, 
     const isExistUser = yield user_model_1.User.findOne({
         _id: isExistToken.user,
         'authentication.isResetPassword': true,
-        status: { $ne: user_1.USER_STATUS.DELETE },
+        status: { $ne: user_1.USER_STATUS.DELETED },
     }).select('+authentication');
     if (!isExistUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, "Invalid request or session. Please click 'Forgot Password' again.");
@@ -232,22 +238,116 @@ const changePasswordToDB = (user, payload) => __awaiter(void 0, void 0, void 0, 
 const resendVerifyEmailToDB = (email) => __awaiter(void 0, void 0, void 0, function* () {
     return (0, authHelpers_1.sendVerificationOTP)(email);
 });
-// Google OAuth login
-const googleLoginToDB = (user) => __awaiter(void 0, void 0, void 0, function* () {
-    // Check if user exists and is active
-    if (!user) {
-        console.error('❌ No user provided to googleLoginToDB');
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Google authentication failed!');
+// Social login (Google / Apple ID token verification)
+const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    const { provider, idToken, nonce, deviceToken, platform, appVersion } = payload;
+    let email;
+    let name;
+    let providerId;
+    if (provider === 'google') {
+        const ticket = yield googleClient.verifyIdToken({
+            idToken,
+            audience: config_1.default.google_client_id,
+        });
+        const tokenPayload = ticket.getPayload();
+        if (!tokenPayload || !tokenPayload.email) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Invalid Google ID token');
+        }
+        // Nonce replay protection: Google puts raw nonce in token
+        if (nonce && tokenPayload.nonce !== nonce) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
+        }
+        email = tokenPayload.email;
+        name = tokenPayload.name || email.split('@')[0];
+        providerId = tokenPayload.sub;
     }
-    // Check user status
-    if (user.status === user_1.USER_STATUS.DELETE) {
-        console.error('❌ User account is deleted');
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Your account has been deactivated. Contact support.');
+    else {
+        // Apple
+        const applePayload = yield apple_signin_auth_1.default.verifyIdToken(idToken, {
+            audience: config_1.default.apple_client_id,
+            ignoreExpiration: false,
+        });
+        if (!applePayload.sub) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Invalid Apple ID token');
+        }
+        // Nonce replay protection: Apple puts SHA256(nonce) in token.
+        // iOS SDK hashes the raw nonce before sending to Apple, so the
+        // token's `nonce` claim is the hash. We hash the client-provided
+        // raw nonce and compare.
+        if (nonce) {
+            const expectedHash = crypto_1.default
+                .createHash('sha256')
+                .update(nonce)
+                .digest('hex');
+            if (applePayload.nonce !== expectedHash) {
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
+            }
+        }
+        email = applePayload.email;
+        providerId = applePayload.sub;
+        name = email ? email.split('@')[0] : 'Apple User';
     }
-    // Create JWT token
-    const createToken = jwtHelper_1.jwtHelper.createToken({ id: user._id, role: user.role, email: user.email }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
-    console.log('✅ JWT token created successfully');
-    return { createToken };
+    // Find user by provider ID or email
+    const providerField = provider === 'google' ? 'googleId' : 'appleId';
+    let user = yield user_model_1.User.findOne({
+        $or: [
+            { [providerField]: providerId },
+            ...(email ? [{ email }] : []),
+        ],
+    }).select('+tokenVersion');
+    if (user) {
+        // Status checks
+        if (user.status === user_1.USER_STATUS.DELETED) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account has been deleted. Contact support.');
+        }
+        if (user.status === user_1.USER_STATUS.RESTRICTED) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account is restricted. Contact support.');
+        }
+        // Link provider ID if not already linked
+        if (!user[providerField]) {
+            yield user_model_1.User.findByIdAndUpdate(user._id, {
+                [providerField]: providerId,
+            });
+        }
+    }
+    else {
+        // Create new user
+        if (!email) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Email is required to create an account. Please allow email sharing.');
+        }
+        user = yield user_model_1.User.create({
+            name,
+            email,
+            verified: true,
+            [providerField]: providerId,
+        });
+        // Re-fetch with tokenVersion
+        user = yield user_model_1.User.findById(user._id).select('+tokenVersion');
+        if (!user) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create user');
+        }
+    }
+    if (user.isFirstLogin) {
+        yield user_model_1.User.findByIdAndUpdate(user._id, { isFirstLogin: false });
+    }
+    // Register device token
+    if (deviceToken) {
+        yield user_model_1.User.addDeviceToken(user._id.toString(), deviceToken, platform, appVersion);
+    }
+    // Issue tokens
+    const accessToken = jwtHelper_1.jwtHelper.createToken({
+        id: user._id,
+        role: user.role,
+        email: user.email,
+        tokenVersion: user.tokenVersion,
+    }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
+    const refreshToken = jwtHelper_1.jwtHelper.createToken({
+        id: user._id,
+        role: user.role,
+        email: user.email,
+        tokenVersion: user.tokenVersion,
+    }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
+    return { tokens: { accessToken, refreshToken } };
 });
 // Refresh token: verify and issue new tokens with rotation
 const refreshTokenToDB = (token) => __awaiter(void 0, void 0, void 0, function* () {
@@ -258,11 +358,13 @@ const refreshTokenToDB = (token) => __awaiter(void 0, void 0, void 0, function* 
     const decoded = jwtHelper_1.jwtHelper.verifyToken(token, config_1.default.jwt.jwt_refresh_secret);
     const userId = decoded.id;
     const tokenVersion = decoded.tokenVersion;
-    const user = yield user_model_1.User.findById(userId);
+    // Pull the hidden `tokenVersion` so we can compare against the
+    // version baked into the refresh token.
+    const user = yield user_model_1.User.findById(userId).select('+tokenVersion');
     if (!user) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Invalid refresh token');
     }
-    if (user.status === user_1.USER_STATUS.DELETE) {
+    if (user.status === user_1.USER_STATUS.DELETED) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'User account is deleted');
     }
     // Reuse Detection: If the token version in the JWT doesn't match the DB version,
@@ -299,6 +401,6 @@ exports.AuthService = {
     changePasswordToDB,
     resendVerifyEmailToDB,
     logoutUserFromDB,
-    googleLoginToDB,
+    socialLoginToDB,
     refreshTokenToDB,
 };

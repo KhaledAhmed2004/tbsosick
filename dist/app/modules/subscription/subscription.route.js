@@ -28,6 +28,21 @@ router.post('/apple/verify', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.
 // Apple's JWS signature is verified inside the controller/service.
 // Raw body parsing for this route is configured in src/app.ts.
 router.post('/apple/webhook', subscription_controller_1.default.appleWebhookController);
+// POST /subscription/google/verify
+// Android client passes the Google Play purchase token + productId from
+// the BillingClient — server verifies via Android Publisher API and
+// upserts the subscription record.
+router.post('/google/verify', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, rateLimit_1.rateLimitMiddleware)({
+    windowMs: 60000,
+    max: 30,
+    routeName: 'subscription-google-verify',
+}), (0, validateRequest_1.default)(subscription_validation_1.SubscriptionValidation.googleVerifySchema), subscription_controller_1.default.verifyGooglePurchaseController);
+// POST /subscription/google/webhook
+// Google Play Real-Time Developer Notifications — Pub/Sub push.
+// No app-level auth: the service verifies the bearer JWT signed by
+// Google Cloud Pub/Sub against the configured audience.
+// Raw body parsing for this route is configured in src/app.ts.
+router.post('/google/webhook', subscription_controller_1.default.googleWebhookController);
 // POST /subscription/choose/free
 // লোকালি Free প্ল্যানে সুইচ করে
 router.post('/choose/free', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), subscription_controller_1.default.chooseFreePlanController);

@@ -52,7 +52,7 @@ const getUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
 const getFavoriteCards = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
     const result = yield preference_card_service_1.PreferenceCardService.listFavoritePreferenceCardsForUserFromDB(user.id, req.query);
-    const favoriteCardIds = yield preference_card_service_1.PreferenceCardService.getFavoriteCardIdsForUser(user.id);
+    const favoriteCardIds = yield preference_card_service_1.PreferenceCardService.getFavoriteCardIdsForUserFromDB(user.id);
     const favoriteSet = new Set(favoriteCardIds.map(id => id.toString()));
     const summarized = result.data.map((doc) => {
         var _a, _b;

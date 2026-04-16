@@ -36,8 +36,8 @@ const userSchema = new Schema<IUser>(
     password: {
       type: String,
       required: function (this: IUser) {
-        // Password is not required for OAuth users (users with googleId)
-        return !this.googleId;
+        // Password is not required for OAuth users
+        return !this.googleId && !this.appleId;
       },
       minlength: 8,
       select: false, // hide password by default
@@ -48,7 +48,9 @@ const userSchema = new Schema<IUser>(
     },
     country: {
       type: String,
-      required: true,
+      required: function (this: IUser) {
+        return !this.googleId && !this.appleId;
+      },
       trim: true,
     },
     gender: {
@@ -60,7 +62,9 @@ const userSchema = new Schema<IUser>(
     },
     phone: {
       type: String,
-      required: true,
+      required: function (this: IUser) {
+        return !this.googleId && !this.appleId;
+      },
       trim: true,
     },
     specialty: {
@@ -104,6 +108,11 @@ const userSchema = new Schema<IUser>(
       type: String,
       sparse: true, // allows multiple null values
       unique: true, // but each non-null googleId must be unique — one Google account → one user
+    },
+    appleId: {
+      type: String,
+      sparse: true,
+      unique: true,
     },
     authentication: {
       type: {

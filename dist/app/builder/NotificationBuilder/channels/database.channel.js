@@ -22,13 +22,19 @@ const notification_model_1 = require("../../../modules/notification/notification
  */
 const saveToDatabase = (users, content) => __awaiter(void 0, void 0, void 0, function* () {
     const result = { sent: 0, failed: [] };
+    const resolvedResourceId = content.resourceId !== undefined && content.resourceId !== null
+        ? typeof content.resourceId === 'string'
+            ? content.resourceId
+            : content.resourceId.toString()
+        : undefined;
     // Prepare notification documents
     const notifications = users.map(user => ({
         title: content.title,
         subtitle: content.text,
         userId: user._id,
         type: content.type || 'SYSTEM',
-        referenceId: content.referenceId,
+        resourceType: content.resourceType,
+        resourceId: resolvedResourceId,
         read: false,
     }));
     try {

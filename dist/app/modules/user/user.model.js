@@ -14,11 +14,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
-const http_status_codes_1 = require("http-status-codes");
 const mongoose_1 = require("mongoose");
 const config_1 = __importDefault(require("../../../config"));
 const user_1 = require("../../../enums/user");
-const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const DeviceTokenSchema = new mongoose_1.Schema({
+    token: { type: String, required: true },
+    platform: { type: String, enum: ['ios', 'android', 'web'] },
+    appVersion: { type: String },
+    lastSeenAt: { type: Date, default: () => new Date() },
+}, { _id: false });
 const userSchema = new mongoose_1.Schema({
     name: {
         type: String,
@@ -40,8 +44,8 @@ const userSchema = new mongoose_1.Schema({
     password: {
         type: String,
         required: function () {
-            // Password is not required for OAuth users (users with googleId)
-            return !this.googleId;
+            // Password is not required for OAuth users
+            return !this.googleId && !this.appleId;
         },
         minlength: 8,
         select: false, // hide password by default
@@ -52,7 +56,9 @@ const userSchema = new mongoose_1.Schema({
     },
     country: {
         type: String,
-        required: true,
+        required: function () {
+            return !this.googleId && !this.appleId;
+        },
         trim: true,
     },
     gender: {
@@ -64,7 +70,9 @@ const userSchema = new mongoose_1.Schema({
     },
     phone: {
         type: String,
-        required: true,
+        required: function () {
+            return !this.googleId && !this.appleId;
+        },
         trim: true,
     },
     specialty: {
@@ -90,26 +98,29 @@ const userSchema = new mongoose_1.Schema({
     },
     verified: {
         type: Boolean,
-        default: true,
+        default: false,
     },
     deviceTokens: {
-        type: [String],
-        default: [],
-    },
-    favoriteCards: {
-        type: [String],
+        type: [DeviceTokenSchema],
         default: [],
     },
     tokenVersion: {
         type: Number,
         default: 0,
+        select: false,
     },
     about: {
         type: String,
     },
     googleId: {
         type: String,
-        sparse: true, // allows multiple null values but unique non-null values
+        sparse: true, // allows multiple null values
+        unique: true, // but each non-null googleId must be unique — one Google account → one user
+    },
+    appleId: {
+        type: String,
+        sparse: true,
+        unique: true,
     },
     authentication: {
         type: {
@@ -129,6 +140,9 @@ const userSchema = new mongoose_1.Schema({
         select: false, // hide auth info by default
     },
 }, { timestamps: true });
+// Index on the embedded device token field — makes the cross-user
+// rebinding guard in `addDeviceToken` cheap even at scale.
+userSchema.index({ 'deviceTokens.token': 1 });
 //exist user check
 userSchema.statics.isExistUserById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     const isExist = yield exports.User.findById(id);
@@ -142,31 +156,47 @@ userSchema.statics.isExistUserByEmail = (email) => __awaiter(void 0, void 0, voi
 userSchema.statics.isMatchPassword = (password, hashPassword) => __awaiter(void 0, void 0, void 0, function* () {
     return yield bcrypt_1.default.compare(password, hashPassword);
 });
-//check user
+// Hash password only when it has been set or changed. Email uniqueness
+// is enforced by the `{ unique: true }` index on the email field — no
+// manual `findOne` check is needed (the DB guarantees atomicity, which
+// a "check then write" cannot). Duplicate-key errors are translated in
+// the global error handler.
 userSchema.pre('save', function (next) {
     return __awaiter(this, void 0, void 0, function* () {
-        //check user - exclude current user from email uniqueness check
-        const isExist = yield exports.User.findOne({
-            email: this.email,
-            _id: { $ne: this._id }, // exclude current user
-        });
-        if (isExist) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Email already exist!');
-        }
-        //password hash - only hash if password is provided (not for OAuth users)
-        if (this.password) {
+        if (this.password && this.isModified('password')) {
             this.password = yield bcrypt_1.default.hash(this.password, Number(config_1.default.bcrypt_salt_rounds));
         }
         next();
     });
 });
-// ✅ add device token
-userSchema.statics.addDeviceToken = (userId, token) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield exports.User.findByIdAndUpdate(userId, { $addToSet: { deviceTokens: token } }, // prevent duplicates
-    { new: true });
+// ✅ add device token (upsert: refresh lastSeenAt / metadata if token already exists)
+userSchema.statics.addDeviceToken = (userId, token, platform, appVersion) => __awaiter(void 0, void 0, void 0, function* () {
+    // Step 1: Cross-user rebinding guard. Same physical device can get
+    // re-used by a different account (User A logs out → User B logs in on
+    // the same phone). FCM sends back the same token. If User A still has
+    // it, pushes meant for User A land on User B's device. Strip the token
+    // from any other user before attaching it here.
+    yield exports.User.updateMany({ _id: { $ne: userId }, 'deviceTokens.token': token }, { $pull: { deviceTokens: { token } } });
+    // Step 2: Try to refresh metadata on an existing token first.
+    const updated = yield exports.User.findOneAndUpdate({ _id: userId, 'deviceTokens.token': token }, {
+        $set: Object.assign(Object.assign({ 'deviceTokens.$.lastSeenAt': new Date() }, (platform ? { 'deviceTokens.$.platform': platform } : {})), (appVersion ? { 'deviceTokens.$.appVersion': appVersion } : {})),
+    }, { new: true });
+    if (updated)
+        return updated;
+    // Step 3: Not present — push a new sub-document.
+    return yield exports.User.findByIdAndUpdate(userId, {
+        $push: {
+            deviceTokens: {
+                token,
+                platform,
+                appVersion,
+                lastSeenAt: new Date(),
+            },
+        },
+    }, { new: true });
 });
-// ✅ remove device token
+// ✅ remove device token (match the token field inside the sub-document)
 userSchema.statics.removeDeviceToken = (userId, token) => __awaiter(void 0, void 0, void 0, function* () {
-    return yield exports.User.findByIdAndUpdate(userId, { $pull: { deviceTokens: token } }, { new: true });
+    return yield exports.User.findByIdAndUpdate(userId, { $pull: { deviceTokens: { token } } }, { new: true });
 });
 exports.User = (0, mongoose_1.model)('User', userSchema);

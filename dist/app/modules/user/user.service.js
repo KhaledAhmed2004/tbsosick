@@ -18,14 +18,28 @@ const user_1 = require("../../../enums/user");
 const preference_card_model_1 = require("../preference-card/preference-card.model");
 const subscription_model_1 = require("../subscription/subscription.model");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
+const authHelpers_1 = require("../../../helpers/authHelpers");
 const unlinkFile_1 = __importDefault(require("../../../shared/unlinkFile"));
 const user_model_1 = require("./user.model");
 const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
 const AggregationBuilder_1 = __importDefault(require("../../builder/AggregationBuilder"));
 const createUserToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
-    const createUser = yield user_model_1.User.create(Object.assign(Object.assign({}, payload), { verified: true }));
+    // Users start unverified. The verify-OTP flow flips `verified: true`
+    // once the user enters the code emailed below. Do NOT pass
+    // `verified: true` here — it bypasses email verification and defeats
+    // the auth flow.
+    const createUser = yield user_model_1.User.create(Object.assign({}, payload));
     if (!createUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to create user');
+    }
+    // Fire and forget OTP email. Signup must still succeed even if the
+    // email transport has a transient failure — the user can request a
+    // resend via /auth/resend-verify-email.
+    try {
+        yield (0, authHelpers_1.sendVerificationOTP)(createUser.email);
+    }
+    catch (err) {
+        console.error('Signup OTP send failed:', err);
     }
     return createUser;
 });

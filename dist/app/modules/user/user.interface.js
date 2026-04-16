@@ -11,5 +11,7 @@ var USER_STATUS;
     USER_STATUS["ACTIVE"] = "ACTIVE";
     USER_STATUS["INACTIVE"] = "INACTIVE";
     USER_STATUS["RESTRICTED"] = "RESTRICTED";
-    USER_STATUS["DELETE"] = "DELETE";
+    // Key renamed to `DELETED` (past-participle). Stored value stays
+    // `'DELETE'` for DB backwards compatibility.
+    USER_STATUS["DELETED"] = "DELETE";
 })(USER_STATUS || (exports.USER_STATUS = USER_STATUS = {}));

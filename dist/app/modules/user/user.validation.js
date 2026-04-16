@@ -90,7 +90,7 @@ exports.UserValidation = {
                 user_1.USER_STATUS.ACTIVE,
                 user_1.USER_STATUS.INACTIVE,
                 user_1.USER_STATUS.RESTRICTED,
-                user_1.USER_STATUS.DELETE,
+                user_1.USER_STATUS.DELETED,
             ]).optional(),
             role: zod_1.z.enum([user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER]).optional(),
         }),

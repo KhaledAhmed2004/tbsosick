@@ -15,14 +15,20 @@ const resetTokenSchema = new mongoose_1.Schema({
     user: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: 'User',
+        required: true,
+        index: true,
     },
     token: {
         type: String,
         required: true,
+        unique: true, // implicit index
     },
+    // TTL index — MongoDB auto-deletes the document at `expireAt`.
+    // Zero-ops cleanup of stale reset tokens.
     expireAt: {
         type: Date,
         required: true,
+        index: { expires: 0 },
     },
 }, { timestamps: true });
 // token check
@@ -42,4 +48,4 @@ resetTokenSchema.statics.isExpireToken = function (token) {
         return !!resetToken;
     });
 };
-exports.ResetToken = (0, mongoose_1.model)('Token', resetTokenSchema);
+exports.ResetToken = (0, mongoose_1.model)('ResetToken', resetTokenSchema);

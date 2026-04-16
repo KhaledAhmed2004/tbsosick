@@ -48,7 +48,7 @@ const parseBody = (req, res, next) => {
     next();
 };
 // Create card
-router.post('/', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, fileHandler_1.fileHandler)([{ name: 'photoLibrary', maxCount: 5 }]), parseBody, (0, validateRequest_1.default)(preference_card_validation_1.createPreferenceCardSchema), preference_card_controller_1.PreferenceCardController.createCard);
+router.post('/', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, fileHandler_1.fileHandler)([{ name: 'photoLibrary', maxCount: 5 }]), parseBody, (0, validateRequest_1.default)(preference_card_validation_1.PreferenceCardValidation.createPreferenceCardSchema), preference_card_controller_1.PreferenceCardController.createCard);
 // Search/List cards (Public by default)
 router.get('/', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, rateLimit_1.rateLimitMiddleware)({
     windowMs: 60000,
@@ -64,7 +64,7 @@ router.get('/specialties', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.US
 // Card details view by ID
 router.get('/:cardId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(zod_1.z.object({ params: zod_1.z.object({ cardId: zod_1.z.string() }) })), preference_card_controller_1.PreferenceCardController.getById);
 // Update card by ID
-router.patch('/:cardId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, fileHandler_1.fileHandler)([{ name: 'photoLibrary', maxCount: 5 }]), parseBody, (0, validateRequest_1.default)(preference_card_validation_1.updatePreferenceCardSchema), preference_card_controller_1.PreferenceCardController.updateCard);
+router.patch('/:cardId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, fileHandler_1.fileHandler)([{ name: 'photoLibrary', maxCount: 5 }]), parseBody, (0, validateRequest_1.default)(preference_card_validation_1.PreferenceCardValidation.updatePreferenceCardSchema), preference_card_controller_1.PreferenceCardController.updateCard);
 // Delete card by ID
 router.delete('/:cardId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(preference_card_validation_1.PreferenceCardValidation.paramIdSchema), preference_card_controller_1.PreferenceCardController.deleteCard);
 // Increment download count

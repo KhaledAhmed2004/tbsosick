@@ -54,6 +54,19 @@ const createChangePasswordZodSchema = z.object({
   }),
 });
 
+const createSocialLoginZodSchema = z.object({
+  body: z.object({
+    provider: z.enum(['google', 'apple'], {
+      required_error: 'Provider is required',
+    }),
+    idToken: z.string({ required_error: 'ID token is required' }),
+    nonce: z.string().optional(),
+    deviceToken: z.string().optional(),
+    platform: z.enum(['ios', 'android', 'web']).optional(),
+    appVersion: z.string().optional(),
+  }),
+});
+
 const createRefreshTokenZodSchema = z.object({
   // Allow empty body when using cookie-based refresh tokens
   body: z
@@ -70,4 +83,5 @@ export const AuthValidation = {
   createResetPasswordZodSchema,
   createChangePasswordZodSchema,
   createRefreshTokenZodSchema,
+  createSocialLoginZodSchema,
 };

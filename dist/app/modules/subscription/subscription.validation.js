@@ -14,4 +14,14 @@ exports.SubscriptionValidation = {
         query: zod_1.z.object({}).optional(),
     })
         .describe('AppleVerifyPurchaseSchema'),
+    googleVerifySchema: zod_1.z
+        .object({
+        body: zod_1.z.object({
+            purchaseToken: zod_1.z.string().min(1, 'purchaseToken is required'),
+            productId: zod_1.z.string().min(1, 'productId is required'),
+        }),
+        params: zod_1.z.object({}).optional(),
+        query: zod_1.z.object({}).optional(),
+    })
+        .describe('GoogleVerifyPurchaseSchema'),
 };

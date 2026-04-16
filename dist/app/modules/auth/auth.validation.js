@@ -43,6 +43,18 @@ const createChangePasswordZodSchema = zod_1.z.object({
             .regex(passwordRegex, 'Password must include upper, lower, number, special and be 8+ chars'),
     }),
 });
+const createSocialLoginZodSchema = zod_1.z.object({
+    body: zod_1.z.object({
+        provider: zod_1.z.enum(['google', 'apple'], {
+            required_error: 'Provider is required',
+        }),
+        idToken: zod_1.z.string({ required_error: 'ID token is required' }),
+        nonce: zod_1.z.string().optional(),
+        deviceToken: zod_1.z.string().optional(),
+        platform: zod_1.z.enum(['ios', 'android', 'web']).optional(),
+        appVersion: zod_1.z.string().optional(),
+    }),
+});
 const createRefreshTokenZodSchema = zod_1.z.object({
     // Allow empty body when using cookie-based refresh tokens
     body: zod_1.z
@@ -58,4 +70,5 @@ exports.AuthValidation = {
     createResetPasswordZodSchema,
     createChangePasswordZodSchema,
     createRefreshTokenZodSchema,
+    createSocialLoginZodSchema,
 };

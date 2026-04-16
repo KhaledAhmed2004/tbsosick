@@ -37,12 +37,27 @@ class QueryBuilder {
         }
         return this;
     }
-    // 🔎 Text search using MongoDB text indexes (for models with text index)
+    /**
+     * 🔎 Full-text search using a MongoDB text index.
+     *
+     * Prefer this over `.search()` when the target collection has a text
+     * index defined — it turns O(n) regex scans into O(log n) index hits
+     * and gives relevance scoring for free.
+     *
+     * When a search term is present the results are automatically
+     * re-sorted by `textScore` descending, which overrides any client
+     * `?sort=` (relevance wins over recency for a typed search). If no
+     * term is present this is a no-op and downstream `.sort()` applies.
+     */
     textSearch() {
         var _a;
         if ((_a = this === null || this === void 0 ? void 0 : this.query) === null || _a === void 0 ? void 0 : _a.searchTerm) {
-            const term = this.query.searchTerm;
-            this.modelQuery = this.modelQuery.find({ $text: { $search: term } });
+            const term = String(this.query.searchTerm).trim();
+            if (term.length > 0) {
+                this.modelQuery = this.modelQuery
+                    .find({ $text: { $search: term } }, { score: { $meta: 'textScore' } })
+                    .sort({ score: { $meta: 'textScore' } });
+            }
         }
         return this;
     }
@@ -312,8 +327,19 @@ class QueryBuilder {
     }
     // ↕️ Sorting
     sort() {
-        var _a;
-        let sort = ((_a = this === null || this === void 0 ? void 0 : this.query) === null || _a === void 0 ? void 0 : _a.sort) || '-createdAt';
+        var _a, _b;
+        // If `.textSearch()` was chained earlier it already set a
+        // `{ score: { $meta: 'textScore' } }` sort — relevance should win
+        // over the default `-createdAt` when the caller actually typed a
+        // search term. Skip the default sort override in that case.
+        const hasSearchTerm = typeof ((_a = this === null || this === void 0 ? void 0 : this.query) === null || _a === void 0 ? void 0 : _a.searchTerm) === 'string' &&
+            String(this.query.searchTerm).trim().length > 0;
+        const explicitSort = (_b = this === null || this === void 0 ? void 0 : this.query) === null || _b === void 0 ? void 0 : _b.sort;
+        if (hasSearchTerm && !explicitSort) {
+            // Keep the textScore sort that `textSearch()` installed.
+            return this;
+        }
+        const sort = explicitSort || '-createdAt';
         this.modelQuery = this.modelQuery.sort(sort);
         return this;
     }

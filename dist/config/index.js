@@ -51,8 +51,8 @@ exports.default = {
         password: process.env.SUPER_ADMIN_PASSWORD,
     },
     google_client_id: process.env.GOOGLE_CLIENT_ID,
-    google_client_secret: process.env.GOOGLE_CLIENT_SECRET,
-    google_redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+    // Apple Sign-In (ID token verification)
+    apple_client_id: process.env.APPLE_CLIENT_ID || '',
     firebase_api_key_base64: process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64,
     firebase_web_push_credentials: process.env.FIREBASE_WEB_PUSH_CREDENTIALS,
     // Apple In-App Purchase (StoreKit 2 + App Store Server API)
@@ -64,6 +64,18 @@ exports.default = {
         privateKeyPath: process.env.APPLE_PRIVATE_KEY_PATH,
         environment: (process.env.APPLE_ENVIRONMENT || 'sandbox'),
         rootCertsDir: process.env.APPLE_ROOT_CERTS_DIR || './secrets/apple-root-certs',
+    },
+    // Google Play Billing (Android Publisher API + RTDN via Pub/Sub)
+    googlePlay: {
+        packageName: process.env.GOOGLE_PLAY_PACKAGE_NAME || '',
+        serviceAccountPath: process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_PATH ||
+            './secrets/google-service-account.json',
+        // Audience used to verify Pub/Sub push JWTs (set to your webhook URL).
+        // If empty, JWT verification is skipped — only do that in dev.
+        pubsubAudience: process.env.GOOGLE_PLAY_PUBSUB_AUDIENCE || '',
+        // Service account email allowed to send push messages (optional extra
+        // check on the verified JWT issuer/email).
+        pubsubServiceAccountEmail: process.env.GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL || '',
     },
     // 🆕 NEW: Tracing capture configuration
     tracing: {

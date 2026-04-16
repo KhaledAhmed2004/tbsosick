@@ -23,7 +23,6 @@ const requestLogger_1 = require("./app/logging/requestLogger");
 const otelExpress_1 = require("./app/logging/otelExpress");
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
-const passport_1 = __importDefault(require("passport"));
 const corsLogger_1 = require("./app/logging/corsLogger");
 // autoLabelBootstrap moved above router import to ensure controllers are wrapped before route binding
 const app = (0, express_1.default)();
@@ -97,12 +96,14 @@ app.options('*', (0, cors_1.default)({
 // signature can be verified against the original bytes. This MUST be
 // registered before the generic express.json() middleware below.
 app.use('/api/v1/subscription/apple/webhook', express_1.default.raw({ type: 'application/json' }));
+// Google Play RTDN webhook (Pub/Sub push) — keep raw bytes so the
+// service can decode the base64 message.data exactly as sent. Must be
+// registered before express.json() below.
+app.use('/api/v1/subscription/google/webhook', express_1.default.raw({ type: 'application/json' }));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 // Cookie parser (for reading refresh tokens from cookies)
 app.use((0, cookie_parser_1.default)());
-// Passport
-app.use(passport_1.default.initialize());
 // Request/Response logging
 // Initialize request-scoped context BEFORE logging
 app.use(requestContext_1.requestContextInit);

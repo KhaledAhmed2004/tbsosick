@@ -150,25 +150,24 @@ const refreshToken = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
         data: result.tokens,
     });
 }));
-const googleCallback = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const user = req.user;
-        if (!user) {
-            console.error('❌ No user data received from passport');
-            const errorUrl = `${config_1.default.frontend_url}/error?message=${encodeURIComponent('Google authentication failed. No user data received.')}`;
-            return res.redirect(errorUrl);
-        }
-        const result = yield auth_service_1.AuthService.googleLoginToDB(user);
-        // Redirect to frontend with token as query parameter in frontend url
-        const successUrl = `${config_1.default.frontend_url}/success?token=${result.createToken}`;
-        return res.redirect(successUrl);
+const socialLogin = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    const result = yield auth_service_1.AuthService.socialLoginToDB(req.body);
+    // Set refresh token in httpOnly cookie
+    if ((_a = result === null || result === void 0 ? void 0 : result.tokens) === null || _a === void 0 ? void 0 : _a.refreshToken) {
+        res.cookie('refreshToken', result.tokens.refreshToken, {
+            httpOnly: true,
+            secure: config_1.default.node_env === 'production',
+            sameSite: 'lax',
+            path: '/',
+        });
     }
-    catch (error) {
-        console.error('💥 Google OAuth callback error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const errorUrl = `${config_1.default.frontend_url}/error?message=${encodeURIComponent(errorMessage)}`;
-        return res.redirect(errorUrl);
-    }
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'User logged in successfully.',
+        data: result.tokens,
+    });
 }));
 exports.AuthController = {
     verifyEmail,
@@ -178,6 +177,6 @@ exports.AuthController = {
     resetPassword,
     changePassword,
     resendVerifyEmail,
-    googleCallback,
+    socialLogin,
     refreshToken,
 };

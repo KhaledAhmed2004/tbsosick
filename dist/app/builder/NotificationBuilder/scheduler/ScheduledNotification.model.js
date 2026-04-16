@@ -32,23 +32,21 @@ const ScheduledNotificationSchema = new mongoose_1.Schema({
     type: {
         type: String,
         enum: [
+            'PREFERENCE_CARD_CREATED',
+            'EVENT_SCHEDULED',
+            'GENERAL',
             'ADMIN',
-            'BID',
-            'BID_ACCEPTED',
-            'BOOKING',
-            'TASK',
             'SYSTEM',
-            'DELIVERY_SUBMITTED',
-            'PAYMENT_PENDING',
-            'ORDER',
-            'PAYMENT',
             'MESSAGE',
             'REMINDER',
         ],
         default: 'SYSTEM',
     },
-    referenceId: {
-        type: mongoose_1.Schema.Types.ObjectId,
+    resourceType: {
+        type: String,
+    },
+    resourceId: {
+        type: String,
     },
     data: {
         type: mongoose_1.Schema.Types.Mixed,

@@ -42,6 +42,7 @@ export type IUser = {
   deviceTokens?: IDeviceToken[];
   about?: string;
   googleId?: string;
+  appleId?: string;
   authentication?: {
     isResetPassword: boolean;
     oneTimeCode: string;

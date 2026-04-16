@@ -4,7 +4,6 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { AuthController } from './auth.controller';
 import { AuthValidation } from './auth.validation';
-import passport from 'passport';
 const router = express.Router();
 
 // User login
@@ -14,21 +13,11 @@ router.post(
   AuthController.loginUser,
 );
 
-// Google OAuth login — redirect with profile/email scopes
-router.get('/google', (req, res, next) => {
-  passport.authenticate('google', {
-    scope: ['profile', 'email'],
-  })(req, res, next);
-});
-
-// Google OAuth callback — handle sign-in after Google returns
-router.get(
-  '/google/callback',
-  (req, res, next) => {
-    next();
-  },
-  passport.authenticate('google', { session: false }),
-  AuthController.googleCallback,
+// Social login (Google / Apple ID token verification)
+router.post(
+  '/social-login',
+  validateRequest(AuthValidation.createSocialLoginZodSchema),
+  AuthController.socialLogin,
 );
 
 // User logout — invalidate active sessions/tokens

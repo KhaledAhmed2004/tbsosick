@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.chooseFreePlanController = exports.appleWebhookController = exports.verifyApplePurchaseController = exports.getMySubscriptionController = void 0;
+exports.chooseFreePlanController = exports.googleWebhookController = exports.verifyGooglePurchaseController = exports.appleWebhookController = exports.verifyApplePurchaseController = exports.getMySubscriptionController = void 0;
 const http_status_1 = __importDefault(require("http-status"));
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
@@ -68,6 +68,34 @@ exports.appleWebhookController = (0, catchAsync_1.default)((req, res) => __await
         data: result,
     });
 }));
+exports.verifyGooglePurchaseController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.user;
+    const { purchaseToken, productId } = req.body;
+    const result = yield subscription_service_1.default.verifyGooglePurchase(id, purchaseToken, productId);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Google subscription verified successfully',
+        data: result,
+    });
+}));
+// Google Play RTDN webhook (Pub/Sub push). No app-level auth — the
+// service verifies the Pub/Sub JWT internally.
+exports.googleWebhookController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // The /google/webhook route uses express.raw() so req.body is a Buffer.
+    // The service handles JSON parsing + JWT verification.
+    const rawBody = Buffer.isBuffer(req.body)
+        ? req.body
+        : Buffer.from(JSON.stringify(req.body));
+    const authorizationHeader = req.header('authorization');
+    const result = yield subscription_service_1.default.processGoogleWebhook(rawBody, authorizationHeader);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Google webhook processed',
+        data: result,
+    });
+}));
 exports.chooseFreePlanController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.user;
     const result = yield subscription_service_1.default.setFreePlan(id);
@@ -82,6 +110,8 @@ const SubscriptionController = {
     getMySubscriptionController: exports.getMySubscriptionController,
     verifyApplePurchaseController: exports.verifyApplePurchaseController,
     appleWebhookController: exports.appleWebhookController,
+    verifyGooglePurchaseController: exports.verifyGooglePurchaseController,
+    googleWebhookController: exports.googleWebhookController,
     chooseFreePlanController: exports.chooseFreePlanController,
 };
 exports.default = SubscriptionController;

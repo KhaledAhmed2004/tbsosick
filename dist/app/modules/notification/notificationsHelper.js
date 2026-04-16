@@ -22,16 +22,17 @@ const sendNotifications = (data) => __awaiter(void 0, void 0, void 0, function* 
     }
     const result = yield notification_model_1.Notification.create(data);
     const user = yield user_model_1.User.findById(data === null || data === void 0 ? void 0 : data.userId);
-    // Check if user has device tokens and the array is not empty
-    if ((user === null || user === void 0 ? void 0 : user.deviceTokens) &&
-        Array.isArray(user.deviceTokens) &&
-        user.deviceTokens.length > 0) {
+    // Extract raw token strings from the deviceTokens sub-document array.
+    const tokens = Array.isArray(user === null || user === void 0 ? void 0 : user.deviceTokens)
+        ? user.deviceTokens.map(entry => entry === null || entry === void 0 ? void 0 : entry.token).filter(Boolean)
+        : [];
+    if (tokens.length > 0) {
         const message = {
             notification: {
                 title: (data === null || data === void 0 ? void 0 : data.title) || 'TBSosick Notification',
                 body: (data === null || data === void 0 ? void 0 : data.subtitle) || (data === null || data === void 0 ? void 0 : data.title) || '',
             },
-            tokens: user.deviceTokens,
+            tokens,
         };
         try {
             yield pushNotificationHelper_1.pushNotificationHelper.sendPushNotifications(message);

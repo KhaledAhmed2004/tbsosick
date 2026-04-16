@@ -1,6 +1,9 @@
 import bcrypt from 'bcrypt';
+import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import { JwtPayload, Secret } from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
+import appleSignin from 'apple-signin-auth';
 import config from '../../../config';
 import ApiError from '../../../errors/ApiError';
 import { sendVerificationOTP } from '../../../helpers/authHelpers';
@@ -11,6 +14,7 @@ import {
   IAuthResetPassword,
   IChangePassword,
   ILoginData,
+  ISocialLogin,
   IVerifyEmail,
 } from '../../../types/auth';
 import cryptoToken from '../../../util/cryptoToken';
@@ -19,6 +23,8 @@ import { ResetToken } from './resetToken/resetToken.model';
 import { User } from '../user/user.model';
 import { USER_STATUS } from '../../../enums/user';
 import { OTP_TTL_MS, RESET_TOKEN_TTL_MS } from '../../../config/auth.constants';
+
+const googleClient = new OAuth2Client(config.google_client_id);
 
 const loginUserFromDB = async (
   payload: ILoginData & { deviceToken?: string }
@@ -344,49 +350,158 @@ const resendVerifyEmailToDB = async (email: string) => {
   return sendVerificationOTP(email);
 };
 
-// Google OAuth login
-const googleLoginToDB = async (user: any) => {
-  // Check if user exists and is active
-  if (!user) {
-    console.error('❌ No user provided to googleLoginToDB');
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Google authentication failed!'
+// Social login (Google / Apple ID token verification)
+const socialLoginToDB = async (payload: ISocialLogin) => {
+  const { provider, idToken, nonce, deviceToken, platform, appVersion } = payload;
+
+  let email: string | undefined;
+  let name: string | undefined;
+  let providerId: string;
+
+  if (provider === 'google') {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      audience: config.google_client_id,
+    });
+    const tokenPayload = ticket.getPayload();
+    if (!tokenPayload || !tokenPayload.email) {
+      throw new ApiError(
+        StatusCodes.UNAUTHORIZED,
+        'Invalid Google ID token'
+      );
+    }
+
+    // Nonce replay protection: Google puts raw nonce in token
+    if (nonce && tokenPayload.nonce !== nonce) {
+      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
+    }
+
+    email = tokenPayload.email;
+    name = tokenPayload.name || email.split('@')[0];
+    providerId = tokenPayload.sub;
+  } else {
+    // Apple
+    const applePayload = await appleSignin.verifyIdToken(idToken, {
+      audience: config.apple_client_id,
+      ignoreExpiration: false,
+    });
+    if (!applePayload.sub) {
+      throw new ApiError(
+        StatusCodes.UNAUTHORIZED,
+        'Invalid Apple ID token'
+      );
+    }
+
+    // Nonce replay protection: Apple puts SHA256(nonce) in token.
+    // iOS SDK hashes the raw nonce before sending to Apple, so the
+    // token's `nonce` claim is the hash. We hash the client-provided
+    // raw nonce and compare.
+    if (nonce) {
+      const expectedHash = crypto
+        .createHash('sha256')
+        .update(nonce)
+        .digest('hex');
+      if (applePayload.nonce !== expectedHash) {
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
+      }
+    }
+
+    email = applePayload.email;
+    providerId = applePayload.sub;
+    name = email ? email.split('@')[0] : 'Apple User';
+  }
+
+  // Find user by provider ID or email
+  const providerField = provider === 'google' ? 'googleId' : 'appleId';
+  let user = await User.findOne({
+    $or: [
+      { [providerField]: providerId },
+      ...(email ? [{ email }] : []),
+    ],
+  }).select('+tokenVersion');
+
+  if (user) {
+    // Status checks
+    if (user.status === USER_STATUS.DELETED) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Your account has been deleted. Contact support.'
+      );
+    }
+    if (user.status === USER_STATUS.RESTRICTED) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Your account is restricted. Contact support.'
+      );
+    }
+
+    // Link provider ID if not already linked
+    if (!user[providerField]) {
+      await User.findByIdAndUpdate(user._id, {
+        [providerField]: providerId,
+      });
+    }
+  } else {
+    // Create new user
+    if (!email) {
+      throw new ApiError(
+        StatusCodes.BAD_REQUEST,
+        'Email is required to create an account. Please allow email sharing.'
+      );
+    }
+
+    user = await User.create({
+      name,
+      email,
+      verified: true,
+      [providerField]: providerId,
+    });
+
+    // Re-fetch with tokenVersion
+    user = await User.findById(user._id).select('+tokenVersion');
+    if (!user) {
+      throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create user');
+    }
+  }
+
+  if (user.isFirstLogin) {
+    await User.findByIdAndUpdate(user._id, { isFirstLogin: false });
+  }
+
+  // Register device token
+  if (deviceToken) {
+    await User.addDeviceToken(
+      user._id.toString(),
+      deviceToken,
+      platform,
+      appVersion,
     );
   }
 
-  // Check user status
-  if (user.status === USER_STATUS.DELETED) {
-    console.error('❌ User account is deleted');
-    throw new ApiError(
-      StatusCodes.BAD_REQUEST,
-      'Your account has been deactivated. Contact support.'
-    );
-  }
-
-  // Pull `tokenVersion` (hidden via `select: false`) so the issued JWT
-  // carries the current rotation counter — required for the auth
-  // middleware's tokenVersion check to apply to Google-signed-in users.
-  const dbUser = await User.findById(user._id).select('+tokenVersion');
-  if (!dbUser) {
-    throw new ApiError(StatusCodes.BAD_REQUEST, 'User not found');
-  }
-
-  // Create JWT token
-  const createToken = jwtHelper.createToken(
+  // Issue tokens
+  const accessToken = jwtHelper.createToken(
     {
-      id: dbUser._id,
-      role: dbUser.role,
-      email: dbUser.email,
-      tokenVersion: dbUser.tokenVersion,
+      id: user._id,
+      role: user.role,
+      email: user.email,
+      tokenVersion: user.tokenVersion,
     },
     config.jwt.jwt_secret as Secret,
     config.jwt.jwt_expire_in as string
   );
 
-  console.log('✅ JWT token created successfully');
+  const refreshToken = jwtHelper.createToken(
+    {
+      id: user._id,
+      role: user.role,
+      email: user.email,
+      tokenVersion: user.tokenVersion,
+    },
+    config.jwt.jwt_refresh_secret as Secret,
+    config.jwt.jwt_refresh_expire_in as string
+  );
 
-  return { createToken };
+  return { tokens: { accessToken, refreshToken } };
 };
 
 // Refresh token: verify and issue new tokens with rotation
@@ -470,6 +585,6 @@ export const AuthService = {
   changePasswordToDB,
   resendVerifyEmailToDB,
   logoutUserFromDB,
-  googleLoginToDB,
+  socialLoginToDB,
   refreshTokenToDB,
 };

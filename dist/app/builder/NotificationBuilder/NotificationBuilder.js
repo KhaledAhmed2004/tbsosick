@@ -207,10 +207,17 @@ class NotificationBuilder {
         return this;
     }
     /**
-     * Set reference ID (links to related entity)
+     * Link this notification to a source entity (polymorphic reference).
+     * Replaces the older `setReference(id)` — callers must now pass the
+     * `resourceType` tag alongside the id so readers can join back to the
+     * correct collection.
+     *
+     * @example .setResource('Event', eventId)
      */
-    setReference(referenceId) {
-        this.content.referenceId = referenceId;
+    setResource(resourceType, resourceId) {
+        this.content.resourceType = resourceType;
+        this.content.resourceId =
+            typeof resourceId === 'string' ? resourceId : resourceId.toString();
         return this;
     }
     /**
@@ -430,7 +437,8 @@ class NotificationBuilder {
                         title: resolvedContent.database.title,
                         text: resolvedContent.database.text,
                         type: resolvedContent.database.type,
-                        referenceId: this.content.referenceId,
+                        resourceType: this.content.resourceType,
+                        resourceId: this.content.resourceId,
                     });
                     result.sent.database = dbResult.sent;
                     result.failed.database = dbResult.failed;
@@ -597,7 +605,8 @@ class NotificationBuilder {
                 title: this.content.title,
                 text: this.content.text,
                 type: this.content.type,
-                referenceId: this.content.referenceId,
+                resourceType: this.content.resourceType,
+                resourceId: this.content.resourceId,
                 data: this.content.data,
                 channels: Array.from(this.channels),
                 scheduledFor: this.scheduledFor,

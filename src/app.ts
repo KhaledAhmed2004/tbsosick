@@ -18,7 +18,6 @@ import { requestLogger } from './app/logging/requestLogger';
 import { otelExpressMiddleware } from './app/logging/otelExpress';
 import fs from 'fs';
 import path from 'path';
-import passport from 'passport';
 import { allowedOrigins, maybeLogCors } from './app/logging/corsLogger';
 // autoLabelBootstrap moved above router import to ensure controllers are wrapped before route binding
 
@@ -134,9 +133,6 @@ app.use(express.urlencoded({ extended: true }));
 
 // Cookie parser (for reading refresh tokens from cookies)
 app.use(cookieParser());
-
-// Passport
-app.use(passport.initialize());
 
 // Request/Response logging
 // Initialize request-scoped context BEFORE logging

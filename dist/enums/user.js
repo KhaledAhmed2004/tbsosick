@@ -11,5 +11,8 @@ var USER_STATUS;
     USER_STATUS["ACTIVE"] = "ACTIVE";
     USER_STATUS["INACTIVE"] = "INACTIVE";
     USER_STATUS["RESTRICTED"] = "RESTRICTED";
-    USER_STATUS["DELETE"] = "DELETE";
+    // Key renamed to `DELETED` (past-participle — consistent with other
+    // terminal states like `CANCELED` / `EXPIRED`). The stored string value
+    // stays `'DELETE'` so no DB migration is needed.
+    USER_STATUS["DELETED"] = "DELETE";
 })(USER_STATUS || (exports.USER_STATUS = USER_STATUS = {}));

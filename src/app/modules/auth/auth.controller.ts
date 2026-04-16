@@ -147,35 +147,25 @@ const refreshToken = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const googleCallback = catchAsync(async (req: Request, res: Response) => {
-  try {
-    const user = req.user as any;
+const socialLogin = catchAsync(async (req: Request, res: Response) => {
+  const result = await AuthService.socialLoginToDB(req.body);
 
-    if (!user) {
-      console.error('❌ No user data received from passport');
-      const errorUrl = `${
-        config.frontend_url
-      }/error?message=${encodeURIComponent(
-        'Google authentication failed. No user data received.'
-      )}`;
-      return res.redirect(errorUrl);
-    }
-
-    const result = await AuthService.googleLoginToDB(user);
-
-    // Redirect to frontend with token as query parameter in frontend url
-    const successUrl = `${config.frontend_url}/success?token=${result.createToken}`;
-    return res.redirect(successUrl);
-  } catch (error) {
-    console.error('💥 Google OAuth callback error:', error);
-
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error';
-    const errorUrl = `${config.frontend_url}/error?message=${encodeURIComponent(
-      errorMessage
-    )}`;
-    return res.redirect(errorUrl);
+  // Set refresh token in httpOnly cookie
+  if (result?.tokens?.refreshToken) {
+    res.cookie('refreshToken', result.tokens.refreshToken, {
+      httpOnly: true,
+      secure: config.node_env === 'production',
+      sameSite: 'lax' as const,
+      path: '/',
+    });
   }
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'User logged in successfully.',
+    data: result.tokens,
+  });
 });
 
 export const AuthController = {
@@ -186,6 +176,6 @@ export const AuthController = {
   resetPassword,
   changePassword,
   resendVerifyEmail,
-  googleCallback,
+  socialLogin,
   refreshToken,
 };
