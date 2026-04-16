@@ -18,6 +18,7 @@
 3. Follow Workflows for multi-step tasks (read `.trae/workflows/`).
 4. Plan before acting (3+ steps).
 5. Verify work — build passing, tests run, endpoint tested.
+6. **Documentation Integrity**: ONLY document endpoints that actually exist in the codebase. Never add "missing" or "future" APIs to files like `api-inventory.md`.
 
 ---
 

@@ -33,7 +33,7 @@ const getUserProfile = catchAsync(async (req: Request, res: Response) => {
 
 const getFavoriteCards = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
-  
+
   const result = await PreferenceCardService.listFavoritePreferenceCardsForUserFromDB(
     (user as any).id,
     req.query,

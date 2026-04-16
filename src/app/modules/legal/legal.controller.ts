@@ -5,7 +5,7 @@ import sendResponse from '../../../shared/sendResponse';
 import { LegalService } from './legal.service';
 
 const createLegalPage = catchAsync(async (req: Request, res: Response) => {
-  const result = await LegalService.createLegalPageToDB(req.body);
+  const result = await LegalService.createLegalPage(req.body);
 
   sendResponse(res, {
     success: true,
@@ -16,7 +16,7 @@ const createLegalPage = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getAll = catchAsync(async (req: Request, res: Response) => {
-  const result = await LegalService.getAllLegalPagesFromDB();
+  const result = await LegalService.getAll();
 
   sendResponse(res, {
     success: true,
@@ -27,7 +27,7 @@ const getAll = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getBySlug = catchAsync(async (req: Request, res: Response) => {
-  const result = await LegalService.getLegalPageBySlugFromDB(req.params.slug);
+  const result = await LegalService.getBySlug(req.params.slug);
 
   sendResponse(res, {
     success: true,
@@ -38,7 +38,7 @@ const getBySlug = catchAsync(async (req: Request, res: Response) => {
 });
 
 const updateBySlug = catchAsync(async (req: Request, res: Response) => {
-  const result = await LegalService.updateLegalPageBySlugInDB(req.params.slug, req.body);
+  const result = await LegalService.updateBySlug(req.params.slug, req.body);
 
   sendResponse(res, {
     success: true,
@@ -49,7 +49,7 @@ const updateBySlug = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteBySlug = catchAsync(async (req: Request, res: Response) => {
-  await LegalService.deleteLegalPageBySlugFromDB(req.params.slug);
+  await LegalService.deleteBySlug(req.params.slug);
 
   sendResponse(res, {
     success: true,

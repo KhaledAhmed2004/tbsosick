@@ -57,6 +57,16 @@ Failure to verify against the source code will result in "Broken" or "Review" st
 
 ---
 
+## CRITICAL: Documentation Integrity (No "Imaginary" APIs)
+
+You are strictly forbidden from adding "missing", "future", or "suggested" APIs to the `api-inventory.md` or any UX flow documentation unless those APIs are already implemented in the routes and controllers.
+
+- **Source of Truth**: The code (Routes/Controllers) is the only source of truth for the documentation.
+- **No Gaps**: Do not fill "gaps" in the documentation with endpoints that should exist but don't.
+- **Suggest, Don't Doc**: If you identify a missing feature (like a broadcast API or device token endpoint), mention it to the user in the chat. Do NOT add it to the `api-inventory.md` with a ❌ Status.
+
+---
+
 ## Output Folder Structure
 
 ```

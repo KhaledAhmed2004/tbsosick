@@ -5,6 +5,14 @@
 
 ---
 
+## 🛑 CRITICAL: Documentation Integrity (API Inventory)
+
+- **ONLY** document endpoints that currently exist in the codebase (routes/controllers).
+- **NEVER** add "missing", "future", or "imaginary" APIs to the `api-inventory.md` or UX flow docs unless they are already implemented in code.
+- If an API is missing but needed, suggest it in the conversation instead of adding it to the documentation tracker.
+
+---
+
 ## ⚠️ CRITICAL: Import Order (src/app.ts & src/server.ts)
 
 Violation causes runtime errors. MANDATORY order:

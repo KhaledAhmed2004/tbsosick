@@ -4,26 +4,50 @@ import { Response } from 'express';
 const snakeToCamel = (str: string): string =>
   str.replace(/(_\w)/g, m => m[1].toUpperCase());
 
-const formatData = (obj: any): any => {
-  if (Array.isArray(obj)) {
-    return obj.map(v => formatData(v));
-  } else if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
-    return Object.keys(obj).reduce((result: any, key) => {
-      let value = obj[key];
-      // Recursive call for nested objects/arrays
-      value = formatData(value);
-
-      // Alias _id to id
-      let newKey = key === '_id' ? 'id' : key;
-
-      // Convert snake_case to camelCase (e.g., user_name -> userName)
-      newKey = snakeToCamel(newKey);
-
-      result[newKey] = value;
-      return result;
-    }, {});
+const formatData = (obj: any, seen = new WeakSet()): any => {
+  if (
+    obj === null ||
+    typeof obj !== 'object' ||
+    obj instanceof Date ||
+    obj instanceof Buffer
+  ) {
+    return obj;
   }
-  return obj;
+
+  // Handle circular references
+  if (seen.has(obj)) {
+    return undefined;
+  }
+
+  // Handle Mongoose documents/Objects
+  if (typeof obj.toObject === 'function') {
+    obj = obj.toObject();
+  }
+
+  // Handle ObjectId (Mongoose)
+  if (obj.constructor && obj.constructor.name === 'ObjectId') {
+    return obj.toString();
+  }
+
+  // Add to seen set to prevent infinite recursion
+  seen.add(obj);
+
+  if (Array.isArray(obj)) {
+    return obj.map(v => formatData(v, seen));
+  }
+
+  return Object.keys(obj).reduce((result: any, key) => {
+    let value = obj[key];
+
+    // Recursive call for nested objects/arrays
+    value = formatData(value, seen);
+
+    // Alias _id to id
+    const newKey = key === '_id' ? 'id' : snakeToCamel(key);
+
+    result[newKey] = value;
+    return result;
+  }, {});
 };
 
 type IData<T> = {

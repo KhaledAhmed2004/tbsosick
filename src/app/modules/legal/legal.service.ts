@@ -6,7 +6,7 @@ import { LegalPage } from './legal.model';
 
 const generateSlug = async (title: string): Promise<string> => {
   const slug = slugify(title, { lower: true, strict: true });
-  const existing = await LegalPage.findOne({ slug }).lean();
+  const existing = await LegalPage.findOne({ slug });
   if (existing) {
     throw new ApiError(
       StatusCodes.CONFLICT,
@@ -16,7 +16,7 @@ const generateSlug = async (title: string): Promise<string> => {
   return slug;
 };
 
-const createLegalPageToDB = async (
+const createLegalPage = async (
   payload: Partial<ILegalPage>,
 ): Promise<ILegalPage> => {
   if (!payload.title) {
@@ -26,29 +26,28 @@ const createLegalPageToDB = async (
   await LegalPage.create({ ...payload, slug });
   const result = await LegalPage.findOne({ slug }).select(
     'slug title content createdAt',
-  ).lean();
+  );
   return result as ILegalPage;
 };
 
-const getAllLegalPagesFromDB = async (): Promise<ILegalPage[]> => {
+const getAll = async (): Promise<ILegalPage[]> => {
   const result = await LegalPage.find()
     .select('-_id slug title')
-    .sort({ title: 1 })
-    .lean();
+    .sort({ title: 1 });
   return result;
 };
 
-const getLegalPageBySlugFromDB = async (slug: string): Promise<ILegalPage> => {
+const getBySlug = async (slug: string): Promise<ILegalPage> => {
   const result = await LegalPage.findOne({ slug }).select(
     '-_id slug title content updatedAt',
-  ).lean();
+  );
   if (!result) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
   }
   return result;
 };
 
-const updateLegalPageBySlugInDB = async (
+const updateBySlug = async (
   slug: string,
   payload: Partial<ILegalPage>,
 ): Promise<ILegalPage> => {
@@ -72,8 +71,8 @@ const updateLegalPageBySlugInDB = async (
   return result;
 };
 
-const deleteLegalPageBySlugFromDB = async (slug: string): Promise<void> => {
-  const existing = await LegalPage.findOne({ slug }).lean();
+const deleteBySlug = async (slug: string): Promise<void> => {
+  const existing = await LegalPage.findOne({ slug });
   if (!existing) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Legal page not found');
   }
@@ -81,9 +80,9 @@ const deleteLegalPageBySlugFromDB = async (slug: string): Promise<void> => {
 };
 
 export const LegalService = {
-  createLegalPageToDB,
-  getAllLegalPagesFromDB,
-  getLegalPageBySlugFromDB,
-  updateLegalPageBySlugInDB,
-  deleteLegalPageBySlugFromDB,
+  createLegalPage,
+  getAll,
+  getBySlug,
+  updateBySlug,
+  deleteBySlug,
 };
