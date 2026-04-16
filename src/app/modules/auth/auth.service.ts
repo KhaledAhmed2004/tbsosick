@@ -24,7 +24,15 @@ import { User } from '../user/user.model';
 import { USER_STATUS } from '../../../enums/user';
 import { OTP_TTL_MS, RESET_TOKEN_TTL_MS } from '../../../config/auth.constants';
 
-const googleClient = new OAuth2Client(config.google_client_id);
+const googleClient = new OAuth2Client();
+
+// All valid Google client IDs — iOS, Android, Web each get a separate one.
+// verifyIdToken accepts an array; token is valid if aud matches ANY of them.
+const googleAudience = [
+  config.google.clientIdIos,
+  config.google.clientIdAndroid,
+  config.google.clientIdWeb,
+].filter(Boolean);
 
 const loginUserFromDB = async (
   payload: ILoginData & { deviceToken?: string }
@@ -361,7 +369,7 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
   if (provider === 'google') {
     const ticket = await googleClient.verifyIdToken({
       idToken,
-      audience: config.google_client_id,
+      audience: googleAudience,
     });
     const tokenPayload = ticket.getPayload();
     if (!tokenPayload || !tokenPayload.email) {

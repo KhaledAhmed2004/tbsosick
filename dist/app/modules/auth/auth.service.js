@@ -30,7 +30,14 @@ const resetToken_model_1 = require("./resetToken/resetToken.model");
 const user_model_1 = require("../user/user.model");
 const user_1 = require("../../../enums/user");
 const auth_constants_1 = require("../../../config/auth.constants");
-const googleClient = new google_auth_library_1.OAuth2Client(config_1.default.google_client_id);
+const googleClient = new google_auth_library_1.OAuth2Client();
+// All valid Google client IDs — iOS, Android, Web each get a separate one.
+// verifyIdToken accepts an array; token is valid if aud matches ANY of them.
+const googleAudience = [
+    config_1.default.google.clientIdIos,
+    config_1.default.google.clientIdAndroid,
+    config_1.default.google.clientIdWeb,
+].filter(Boolean);
 const loginUserFromDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     const { email, password, deviceToken } = payload;
     // `tokenVersion` is `select: false` on the schema — pull it explicitly
@@ -247,7 +254,7 @@ const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
     if (provider === 'google') {
         const ticket = yield googleClient.verifyIdToken({
             idToken,
-            audience: config_1.default.google_client_id,
+            audience: googleAudience,
         });
         const tokenPayload = ticket.getPayload();
         if (!tokenPayload || !tokenPayload.email) {

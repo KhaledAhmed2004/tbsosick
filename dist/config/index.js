@@ -50,8 +50,13 @@ exports.default = {
         email: process.env.SUPER_ADMIN_EMAIL,
         password: process.env.SUPER_ADMIN_PASSWORD,
     },
-    google_client_id: process.env.GOOGLE_CLIENT_ID,
-    // Apple Sign-In (ID token verification)
+    // Google OAuth client IDs (each platform gets its own in Google Cloud Console)
+    google: {
+        clientIdIos: process.env.GOOGLE_CLIENT_ID_IOS || '',
+        clientIdAndroid: process.env.GOOGLE_CLIENT_ID_ANDROID || '',
+        clientIdWeb: process.env.GOOGLE_CLIENT_ID_WEB || '',
+    },
+    // Apple Sign-In — audience = Bundle ID for native mobile apps
     apple_client_id: process.env.APPLE_CLIENT_ID || '',
     firebase_api_key_base64: process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64,
     firebase_web_push_credentials: process.env.FIREBASE_WEB_PUSH_CREDENTIALS,

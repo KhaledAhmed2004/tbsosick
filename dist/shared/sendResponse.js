@@ -2,24 +2,39 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 // Helper to recursively transform keys to camelCase and alias _id to id
 const snakeToCamel = (str) => str.replace(/(_\w)/g, m => m[1].toUpperCase());
-const formatData = (obj) => {
+const formatData = (obj, seen = new WeakSet()) => {
+    if (obj === null ||
+        typeof obj !== 'object' ||
+        obj instanceof Date ||
+        obj instanceof Buffer) {
+        return obj;
+    }
+    // Handle circular references
+    if (seen.has(obj)) {
+        return undefined;
+    }
+    // Handle Mongoose documents/Objects
+    if (typeof obj.toObject === 'function') {
+        obj = obj.toObject();
+    }
+    // Handle ObjectId (Mongoose)
+    if (obj.constructor && obj.constructor.name === 'ObjectId') {
+        return obj.toString();
+    }
+    // Add to seen set to prevent infinite recursion
+    seen.add(obj);
     if (Array.isArray(obj)) {
-        return obj.map(v => formatData(v));
+        return obj.map(v => formatData(v, seen));
     }
-    else if (obj !== null && typeof obj === 'object' && !(obj instanceof Date)) {
-        return Object.keys(obj).reduce((result, key) => {
-            let value = obj[key];
-            // Recursive call for nested objects/arrays
-            value = formatData(value);
-            // Alias _id to id
-            let newKey = key === '_id' ? 'id' : key;
-            // Convert snake_case to camelCase (e.g., user_name -> userName)
-            newKey = snakeToCamel(newKey);
-            result[newKey] = value;
-            return result;
-        }, {});
-    }
-    return obj;
+    return Object.keys(obj).reduce((result, key) => {
+        let value = obj[key];
+        // Recursive call for nested objects/arrays
+        value = formatData(value, seen);
+        // Alias _id to id
+        const newKey = key === '_id' ? 'id' : snakeToCamel(key);
+        result[newKey] = value;
+        return result;
+    }, {});
 };
 const sendResponse = (res, data) => {
     // 👇 store full response data for logger middleware

@@ -19,36 +19,35 @@ const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const legal_model_1 = require("./legal.model");
 const generateSlug = (title) => __awaiter(void 0, void 0, void 0, function* () {
     const slug = (0, slugify_1.default)(title, { lower: true, strict: true });
-    const existing = yield legal_model_1.LegalPage.findOne({ slug }).lean();
+    const existing = yield legal_model_1.LegalPage.findOne({ slug });
     if (existing) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'A legal page with this title already exists');
     }
     return slug;
 });
-const createLegalPageToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+const createLegalPage = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     if (!payload.title) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Title is required');
     }
     const slug = yield generateSlug(payload.title);
     yield legal_model_1.LegalPage.create(Object.assign(Object.assign({}, payload), { slug }));
-    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content createdAt').lean();
+    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('slug title content createdAt');
     return result;
 });
-const getAllLegalPagesFromDB = () => __awaiter(void 0, void 0, void 0, function* () {
+const getAll = () => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield legal_model_1.LegalPage.find()
         .select('-_id slug title')
-        .sort({ title: 1 })
-        .lean();
+        .sort({ title: 1 });
     return result;
 });
-const getLegalPageBySlugFromDB = (slug) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('-_id slug title content updatedAt').lean();
+const getBySlug = (slug) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield legal_model_1.LegalPage.findOne({ slug }).select('-_id slug title content updatedAt');
     if (!result) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Legal page not found');
     }
     return result;
 });
-const updateLegalPageBySlugInDB = (slug, payload) => __awaiter(void 0, void 0, void 0, function* () {
+const updateBySlug = (slug, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const updateData = {};
     if (payload.title) {
         const newSlug = yield generateSlug(payload.title);
@@ -66,17 +65,17 @@ const updateLegalPageBySlugInDB = (slug, payload) => __awaiter(void 0, void 0, v
     }
     return result;
 });
-const deleteLegalPageBySlugFromDB = (slug) => __awaiter(void 0, void 0, void 0, function* () {
-    const existing = yield legal_model_1.LegalPage.findOne({ slug }).lean();
+const deleteBySlug = (slug) => __awaiter(void 0, void 0, void 0, function* () {
+    const existing = yield legal_model_1.LegalPage.findOne({ slug });
     if (!existing) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Legal page not found');
     }
     yield legal_model_1.LegalPage.findOneAndDelete({ slug });
 });
 exports.LegalService = {
-    createLegalPageToDB,
-    getAllLegalPagesFromDB,
-    getLegalPageBySlugFromDB,
-    updateLegalPageBySlugInDB,
-    deleteLegalPageBySlugFromDB,
+    createLegalPage,
+    getAll,
+    getBySlug,
+    updateBySlug,
+    deleteBySlug,
 };
