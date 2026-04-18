@@ -155,6 +155,6 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 | # | Endpoint | Status | Notes |
 | :--- | :--- | :---: | :--- |
 | 4.1 | `GET /preference-cards` | ✅ Done | Aggregated list for moderation |
-| 4.2 | `PATCH /preference-cards/:id/approve` | ✅ Done | Completeness logic applied |
-| 4.3 | `PATCH /preference-cards/:id/reject` | ✅ Done | ID validation included |
-| 4.4 | `DELETE /preference-cards/:id` | ✅ Done | Hard delete by Admin |
+| 4.2 | `PATCH /preference-cards/:cardId/approve` | ✅ Done | Completeness logic applied |
+| 4.3 | `PATCH /preference-cards/:cardId/reject` | ✅ Done | ID validation included |
+| 4.4 | `DELETE /preference-cards/:cardId` | ✅ Done | Hard delete by Admin |

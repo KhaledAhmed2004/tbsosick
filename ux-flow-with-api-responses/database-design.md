@@ -680,9 +680,11 @@ Ei doc theke duita check hoy:
 
 **Google OAuth fix o lagche** — `googleLoginToDB` age `tokenVersion` JWT payload-e include korto na, mane Google users tokenVersion check bypass kore jeto. Ei fix-er part hishebe `User.findById(user._id).select('+tokenVersion')` diye DB theke current value fetch kore JWT payload-e add kora hoyeche.
 
+> **UPDATE (April 2026):** `googleLoginToDB` ar `passport.ts` removed. Replaced by `socialLoginToDB` — unified Google + Apple ID token verification via `POST /auth/social-login`. Details: [social-login-guide.md](../docs/social-login-guide.md)
+
 **Files touched**
 - `src/app/middlewares/auth.ts` — DB check + status block + version compare added
-- `src/app/modules/auth/auth.service.ts` — `googleLoginToDB` now includes `tokenVersion` in the issued JWT
+- `src/app/modules/auth/auth.service.ts` — `socialLoginToDB` handles Google + Apple with `tokenVersion` in JWT
 
 **Migration note**
 Deploy-er por **already-issued JWT tokens** jeguloy `tokenVersion` embedded nei (ba purono value), oigula next request-e 401 hoye jabe ebong user re-login korte hobe. Eta expected — deploy window e force-logout effect. Jodi gradual rollout dorkar, middleware e `typeof jwtTokenVersion === 'number'` check already ache jate purono JWTs gracefully pass through — but eta security gap purono token-e keep kore rakhe, so window boro rakha uchit na.
@@ -1124,7 +1126,9 @@ Enum key renamed to past-participle form, consistent with other terminal states 
 ```ts
 DELETED = 'DELETE',  // key `DELETED`, value stays `'DELETE'`
 ```
-All 10+ call sites updated: `auth.service.ts` (6 places), `passport.ts`, `auth.ts` middleware, `user.validation.ts`, plus both enum definitions (`src/enums/user.ts` and the duplicate in `user.interface.ts`).
+All 10+ call sites updated: `auth.service.ts` (6 places), `auth.ts` middleware, `user.validation.ts`, plus both enum definitions (`src/enums/user.ts` and the duplicate in `user.interface.ts`).
+
+> **Note:** `passport.ts` removed (April 2026) — replaced by `socialLoginToDB` in `auth.service.ts`.
 
 **21b — `Favorite.timestamps: { updatedAt: false }`**
 
@@ -1154,7 +1158,7 @@ Ei shob template shothik `NOTIFICATION_TYPES` enum-e nei er (Fix 11 te ei types 
 
 **Files touched**
 - `src/enums/user.ts` + `src/app/modules/user/user.interface.ts` — `DELETE` → `DELETED` enum key
-- `src/app/modules/auth/auth.service.ts` + `src/app/middlewares/auth.ts` + `src/app/modules/auth/config/passport.ts` + `src/app/modules/user/user.validation.ts` — call site updates
+- `src/app/modules/auth/auth.service.ts` + `src/app/middlewares/auth.ts` + `src/app/modules/user/user.validation.ts` — call site updates (note: `passport.ts` removed April 2026)
 - `src/app/modules/favorite/favorite.model.ts` — timestamps option
 - `src/app/modules/user/user.model.ts` — `googleId` unique added
 - `src/app/modules/subscription/subscription.model.ts` — `metadata` type change

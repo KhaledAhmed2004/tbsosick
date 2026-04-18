@@ -16,7 +16,7 @@ const createSuture = catchAsync(async (req: Request, res: Response) => {
 
 const updateSuture = catchAsync(async (req: Request, res: Response) => {
   const result = await SuturesService.updateSutureInDB(
-    req.params.id,
+    req.params.sutureId,
     req.body,
   );
   sendResponse(res, {
@@ -28,7 +28,7 @@ const updateSuture = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteSuture = catchAsync(async (req: Request, res: Response) => {
-  const result = await SuturesService.deleteSutureFromDB(req.params.id);
+  const result = await SuturesService.deleteSutureFromDB(req.params.sutureId);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,

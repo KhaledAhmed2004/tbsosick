@@ -16,7 +16,7 @@ const createSupply = catchAsync(async (req: Request, res: Response) => {
 
 const updateSupply = catchAsync(async (req: Request, res: Response) => {
   const result = await SuppliesService.updateSupplyInDB(
-    req.params.id,
+    req.params.supplyId,
     req.body,
   );
   sendResponse(res, {
@@ -28,7 +28,7 @@ const updateSupply = catchAsync(async (req: Request, res: Response) => {
 });
 
 const deleteSupply = catchAsync(async (req: Request, res: Response) => {
-  const result = await SuppliesService.deleteSupplyFromDB(req.params.id);
+  const result = await SuppliesService.deleteSupplyFromDB(req.params.supplyId);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,

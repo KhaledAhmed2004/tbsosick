@@ -21,7 +21,7 @@ router.get(
 
 // Mark specific notification as read
 router.patch(
-  '/:id/read',
+  '/:notificationId/read',
   auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
   validateRequest(markReadSchema),
   NotificationController.markRead
@@ -36,7 +36,7 @@ router.patch(
 
 // Delete notification
 router.delete(
-  '/:id',
+  '/:notificationId',
   auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
   validateRequest(paramIdSchema),
   NotificationController.deleteNotification

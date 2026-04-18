@@ -64,13 +64,13 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | **Supplies** | `/supplies` | `GET` | ALL_AUTH | `supplies.route.ts` | ✅ |
 | **Supplies** | `/supplies` | `POST` | SUPER_ADMIN | `supplies.route.ts` | ✅ |
-| **Supplies** | `/supplies/:id` | `PATCH` | SUPER_ADMIN | `supplies.route.ts` | ✅ |
-| **Supplies** | `/supplies/:id` | `DELETE` | SUPER_ADMIN | `supplies.route.ts` | ✅ |
+| **Supplies** | `/supplies/:supplyId` | `PATCH` | SUPER_ADMIN | `supplies.route.ts` | ✅ |
+| **Supplies** | `/supplies/:supplyId` | `DELETE` | SUPER_ADMIN | `supplies.route.ts` | ✅ |
 | **Supplies** | `/supplies/bulk` | `POST` | SUPER_ADMIN | `supplies.route.ts` | ✅ |
 | **Sutures** | `/sutures` | `GET` | ALL_AUTH | `sutures.route.ts` | ✅ |
 | **Sutures** | `/sutures` | `POST` | SUPER_ADMIN | `sutures.route.ts` | ✅ |
-| **Sutures** | `/sutures/:id` | `PATCH` | SUPER_ADMIN | `sutures.route.ts` | ✅ |
-| **Sutures** | `/sutures/:id` | `DELETE` | SUPER_ADMIN | `sutures.route.ts` | ✅ |
+| **Sutures** | `/sutures/:sutureId` | `PATCH` | SUPER_ADMIN | `sutures.route.ts` | ✅ |
+| **Sutures** | `/sutures/:sutureId` | `DELETE` | SUPER_ADMIN | `sutures.route.ts` | ✅ |
 | **Sutures** | `/sutures/bulk` | `POST` | SUPER_ADMIN | `sutures.route.ts` | ✅ |
 
 ---
@@ -88,8 +88,7 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | 1.6 | `/auth/refresh-token` | `POST` | Refresh Token | [01-auth.md](./app-screens/01-auth.md) | ✅ |
 | 1.7 | `/auth/logout` | `POST` | USER | [01-auth.md](./app-screens/01-auth.md) | ✅ |
 | 1.8 | `/auth/resend-verify-email` | `POST` | Public | [01-auth.md](./app-screens/01-auth.md) | ✅ |
-| 1.9 | `/auth/google` | `GET` | Public | [01-auth.md](./app-screens/01-auth.md) | ✅ |
-| 1.10 | `/auth/google/callback` | `GET` | Public | [01-auth.md](./app-screens/01-auth.md) | ✅ |
+| 1.9 | `/auth/social-login` | `POST` | Public | [01-auth.md](./app-screens/01-auth.md) | ✅ |
 
 ### 2. [Home (Mobile)](./app-screens/02-home.md)
 | ID | Endpoint | Method | Roles | Implementation | Status |
@@ -104,10 +103,13 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 ### 3. [Preference Card Details](./app-screens/03-preference-card-details.md)
 | ID | Endpoint | Method | Roles | Implementation | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
-| 3.1 | `/preference-cards` | `POST` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
-| 3.2 | `/preference-cards/:cardId` | `GET` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
-| 3.3 | `/preference-cards/:cardId` | `PATCH` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
-| 3.4 | `/preference-cards/:cardId` | `DELETE` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.1 | `/preference-cards/:cardId` | `GET` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.2 | `/preference-cards/:cardId/download` | `POST` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.3 | `/preference-cards` | `POST` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.4 | `/preference-cards/:cardId` | `PATCH` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.5 | `/supplies` | `GET` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.6 | `/sutures` | `GET` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
+| 3.7 | `/preference-cards/:cardId` | `DELETE` | USER | [03-preference-card-details.md](./app-screens/03-preference-card-details.md) | ✅ |
 
 ### 4. [Library (Mobile)](./app-screens/04-library.md)
 | ID | Endpoint | Method | Roles | Implementation | Status |
@@ -120,9 +122,9 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | 5.1 | `/events` | `GET` | USER | [05-calendar.md](./app-screens/05-calendar.md) | ✅ |
 | 5.2 | `/events` | `POST` | USER | [05-calendar.md](./app-screens/05-calendar.md) | ✅ |
-| 5.3 | `/events/:id` | `GET` | USER | [05-calendar.md](./app-screens/05-calendar.md) | ✅ |
-| 5.4 | `/events/:id` | `PATCH` | USER | [05-calendar.md](./app-screens/05-calendar.md) | ✅ |
-| 5.5 | `/events/:id` | `DELETE` | USER | [05-calendar.md](./app-screens/05-calendar.md) | ✅ |
+| 5.3 | `/events/:eventId` | `GET` | USER | [05-calendar.md](./app-screens/05-calendar.md) | ✅ |
+| 5.4 | `/events/:eventId` | `PATCH` | USER | [05-calendar.md](./app-screens/05-calendar.md) | ✅ |
+| 5.5 | `/events/:eventId` | `DELETE` | USER | [05-calendar.md](./app-screens/05-calendar.md) | ✅ |
 
 ### 6. [Profile (Mobile)](./app-screens/06-profile.md)
 | ID | Endpoint | Method | Roles | Implementation | Status |
@@ -137,9 +139,9 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | ID | Endpoint | Method | Roles | Implementation | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | 7.1 | `/notifications` | `GET` | ALL_AUTH | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
-| 7.2 | `/notifications/:id/read` | `PATCH` | ALL_AUTH | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
+| 7.2 | `/notifications/:notificationId/read` | `PATCH` | ALL_AUTH | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
 | 7.3 | `/notifications/read-all` | `PATCH` | ALL_AUTH | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
-| 7.4 | `/notifications/:id` | `DELETE` | ALL_AUTH | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
+| 7.4 | `/notifications/:notificationId` | `DELETE` | ALL_AUTH | [07-notifications.md](./app-screens/07-notifications.md) | ✅ |
 
 ### 8. Subscription / IAP (Doc Missing)
 | ID | Endpoint | Method | Roles | Implementation | Status |

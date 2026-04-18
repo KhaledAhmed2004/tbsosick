@@ -352,9 +352,9 @@
               "response": []
             },
             {
-              "name": "1.9 Google Login",
+              "name": "1.9 Social Login (Google / Apple)",
               "request": {
-                "method": "GET",
+                "method": "POST",
                 "header": [
                   {
                     "key": "Content-Type",
@@ -362,43 +362,21 @@
                     "type": "text"
                   }
                 ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"provider\": \"google\",\n  \"idToken\": \"eyJhbGciOiJSUzI1NiIs...\",\n  \"nonce\": \"random-nonce-string\",\n  \"deviceToken\": \"fcm-token-xyz\",\n  \"platform\": \"ios\",\n  \"appVersion\": \"1.0.0\"\n}"
+                },
                 "url": {
-                  "raw": "{{baseUrl}}/auth/google",
+                  "raw": "{{baseUrl}}/auth/social-login",
                   "host": [
                     "{{baseUrl}}"
                   ],
                   "path": [
                     "auth",
-                    "google"
+                    "social-login"
                   ]
                 },
-                "description": "Opens Google OAuth2 consent screen."
-              },
-              "response": []
-            },
-            {
-              "name": "1.10 Google Callback",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/google/callback",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "google",
-                    "callback"
-                  ]
-                },
-                "description": ""
+                "description": "Google / Apple social login via ID token verification. Provider: 'google' or 'apple'. Nonce recommended for Apple, optional for Google (Flutter plugin limitation)."
               },
               "response": []
             }
@@ -655,7 +633,16 @@
                     }
                   ]
                 },
-                "description": "Card-er shob details (surgeon, supplies, sutures, workflow, etc.) fetch korar jonno."
+                "description": "Card-er shob details (surgeon, supplies, sutures, workflow, etc.) fetch korar jonno.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"published\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
               },
               "response": []
             },
@@ -692,7 +679,184 @@
                     }
                   ]
                 },
-                "description": "User card download korle download count baranor jonno call kora hoy."
+                "description": "User card download korle download count baranor jonno call kora hoy.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"published\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3.3 Create Preference Card",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards"
+                  ]
+                },
+                "description": "Notun preference card create kore. `cardTitle` ar `surgeon` required — baki fields optional (draft save korar jonno). `published: true` set korle shob required fields thakte hobe. Supplies/Sutures e ObjectId ba plain name duita-i pathano jay — name dile backend auto-create kore catalog e.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"published\": false\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3.4 Update Preference Card",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Existing card update kore. Shudhu je fields change korte chay segula pathale hobe. Owner ba SUPER_ADMIN chara update possible na."
+              },
+              "response": []
+            },
+            {
+              "name": "3.5 List Supplies (Catalog)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/supplies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "supplies"
+                  ]
+                },
+                "description": "Card create/edit form e supplies dropdown populate korar jonno. Full catalog fetch kore jate user select korte pare."
+              },
+              "response": []
+            },
+            {
+              "name": "3.6 List Sutures (Catalog)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sutures",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sutures"
+                  ]
+                },
+                "description": "Card create/edit form e sutures dropdown populate korar jonno. Full catalog fetch kore jate user select korte pare."
+              },
+              "response": []
+            },
+            {
+              "name": "3.7 Delete Preference Card",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/preference-cards/:cardId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "preference-cards",
+                    ":cardId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "cardId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Card permanently delete kore. Owner ba SUPER_ADMIN chara delete possible na. Hard delete — restore possible na."
               },
               "response": []
             }
@@ -1443,6 +1607,524 @@
                 "body": {
                   "mode": "raw",
                   "raw": "{\n  \"email\": \"admin@example.com\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Overview",
+          "item": [
+            {
+              "name": "2.1 Growth Metrics (Stats)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/growth-metrics",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "growth-metrics"
+                  ]
+                },
+                "description": "Dashboard-er summary cards-er jonno ei endpoint use hoy. Monthly growth calculate kore: current month vs last month."
+              },
+              "response": []
+            },
+            {
+              "name": "2.2 Monthly Preference Cards Trend",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/preference-cards/monthly",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "preference-cards",
+                    "monthly"
+                  ]
+                },
+                "description": "Preference cards-er monthly trend chart render korar jonno data return kore. YoY comparison inline series e embedded — frontend ke আলাদা calculate korte hobe na."
+              },
+              "response": []
+            },
+            {
+              "name": "2.3 Monthly Active Subscriptions Trend",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/admin/subscriptions/active/monthly",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "admin",
+                    "subscriptions",
+                    "active",
+                    "monthly"
+                  ]
+                },
+                "description": "Active subscriptions-er monthly analytics return kore — same shape as 2.2. YoY data inline series e embedded."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Supplies Management",
+          "item": [
+            {
+              "name": "6.1 List Supplies",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/supplies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "supplies"
+                  ]
+                },
+                "description": "Shob supplies paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sterile Gauze\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6.2 Create Supply",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/supplies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "supplies"
+                  ]
+                },
+                "description": "Single supply create kore. Shudhu `name` field required.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sterile Gauze\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6.3 Update Supply",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/supplies/:supplyId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "supplies",
+                    ":supplyId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "supplyId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Supply er name update kore. Shudhu `name` field changeable.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Gauze Name\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6.4 Delete Supply",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/supplies/:supplyId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "supplies",
+                    ":supplyId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "supplyId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Supply permanently delete kore. Hard delete — restore possible na.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    { \"name\": \"Sterile Gauze\" },\n    { \"name\": \"Surgical Drape\" },\n    { \"name\": \"Suction Tip\" }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "6.5 Bulk Create Supplies",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/supplies/bulk",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "supplies",
+                    "bulk"
+                  ]
+                },
+                "description": "Multiple supplies ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    { \"name\": \"Sterile Gauze\" },\n    { \"name\": \"Surgical Drape\" },\n    { \"name\": \"Suction Tip\" }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Sutures Management",
+          "item": [
+            {
+              "name": "7.1 List Sutures",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sutures",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sutures"
+                  ]
+                },
+                "description": "Shob sutures paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"3-0 Vicryl\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7.2 Create Suture",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sutures",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sutures"
+                  ]
+                },
+                "description": "Single suture create kore. Shudhu `name` field required.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"3-0 Vicryl\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7.3 Update Suture",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sutures/:sutureId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sutures",
+                    ":sutureId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "sutureId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Suture er name update kore. Shudhu `name` field changeable.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"4-0 Monocryl\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7.4 Delete Suture",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sutures/:sutureId",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sutures",
+                    ":sutureId"
+                  ],
+                  "variable": [
+                    {
+                      "key": "sutureId",
+                      "value": ""
+                    }
+                  ]
+                },
+                "description": "Suture permanently delete kore. Hard delete — restore possible na.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    { \"name\": \"3-0 Vicryl\" },\n    { \"name\": \"4-0 Monocryl\" },\n    { \"name\": \"2-0 Silk\" }\n  ]\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "7.5 Bulk Create Sutures",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{accessToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/sutures/bulk",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "sutures",
+                    "bulk"
+                  ]
+                },
+                "description": "Multiple sutures ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [\n    { \"name\": \"3-0 Vicryl\" },\n    { \"name\": \"4-0 Monocryl\" },\n    { \"name\": \"2-0 Silk\" }\n  ]\n}",
                   "options": {
                     "raw": {
                       "language": "json"

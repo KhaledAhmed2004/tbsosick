@@ -24,7 +24,7 @@ router.get(
 
 // Update Suture — by ID
 router.patch(
-  '/:id',
+  '/:sutureId',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(SuturesValidation.updateSutureSchema),
   SuturesController.updateSuture,
@@ -32,7 +32,7 @@ router.patch(
 
 // Delete Suture — by ID
 router.delete(
-  '/:id',
+  '/:sutureId',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(SuturesValidation.paramIdSchema),
   SuturesController.deleteSuture,

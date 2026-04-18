@@ -7,14 +7,14 @@ const createSupplySchema = z.object({
 });
 
 const updateSupplySchema = z.object({
-  params: z.object({ id: z.string().min(1) }),
+  params: z.object({ supplyId: z.string().min(1) }),
   body: z.object({
     name: z.string().min(1).optional(),
   }),
 });
 
 const paramIdSchema = z.object({
-  params: z.object({ id: z.string().min(1) }),
+  params: z.object({ supplyId: z.string().min(1) }),
 });
 
 const bulkCreateSchema = z.object({

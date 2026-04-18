@@ -40,8 +40,8 @@ const getMyEvents = catchAsync(async (req: Request, res: Response) => {
 
 const getEventById = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
-  const { id } = req.params;
-  const result = await EventService.getEventByIdFromDB(id, {
+  const { eventId } = req.params;
+  const result = await EventService.getEventByIdFromDB(eventId, {
     id: (user as any).id,
     role: (user as any).role as string,
   });
@@ -56,9 +56,9 @@ const getEventById = catchAsync(async (req: Request, res: Response) => {
 
 const updateEvent = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
-  const { id } = req.params;
+  const { eventId } = req.params;
   const result = await EventService.updateEventInDB(
-    id,
+    eventId,
     {
       id: (user as any).id,
       role: (user as any).role as string,
@@ -76,8 +76,8 @@ const updateEvent = catchAsync(async (req: Request, res: Response) => {
 
 const deleteEvent = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
-  const { id } = req.params;
-  const result = await EventService.deleteEventFromDB(id, {
+  const { eventId } = req.params;
+  const result = await EventService.deleteEventFromDB(eventId, {
     id: (user as any).id,
     role: (user as any).role as string,
   });

@@ -3,7 +3,11 @@
     "allow": [
       "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -40 {}')",
       "Bash(npm list:*)",
-      "Bash(ls \"d:/web projects/office-sta/re-fector/tbsosick/node_modules/apple-signin-auth/\"*.d.ts)"
+      "Bash(ls \"d:/web projects/office-sta/re-fector/tbsosick/node_modules/apple-signin-auth/\"*.d.ts)",
+      "Bash(grep -n \"/:id\" src/app/modules/supplies/supplies.route.ts src/app/modules/sutures/sutures.route.ts src/app/modules/event/event.route.ts src/app/modules/notification/notification.routes.ts)",
+      "Bash(grep -n \"params.id\" src/app/modules/supplies/supplies.controller.ts src/app/modules/sutures/sutures.controller.ts src/app/modules/event/event.controller.ts src/app/modules/notification/notification.controller.ts)",
+      "Bash(python3 -c ' *)",
+      "Bash(npm run *)"
     ]
   }
 }

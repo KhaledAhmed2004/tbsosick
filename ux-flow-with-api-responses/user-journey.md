@@ -87,15 +87,15 @@ TBSOSick
 [Home Screen]
 ```
 
-**Google OAuth Alternative:**
+**Social Login Alternative (Google / Apple):**
 ```
-[Sign in with Google]
+[Sign in with Google] / [Sign in with Apple]
         │
-        ▼ GET /auth/google → Webview opens
+        ▼ Flutter SDK login (google_sign_in / sign_in_with_apple)
         │
-        ▼ GET /auth/google/callback
+        ▼ POST /auth/social-login { provider, idToken, nonce? }
         │
-        ▼ [Redirect with tokens → Home Screen]
+        ▼ [Tokens receive → Home Screen]
 ```
 
 ---
@@ -178,7 +178,7 @@ TBSOSick
         │
    ┌────┴──────────────────────────┐
    │ Not Favorited                  │ Already Favorited
-   │ POST /preference-cards/:id/favorite │ DELETE /preference-cards/:id/favorite
+   │ POST /preference-cards/:cardId/favorite │ DELETE /preference-cards/:cardId/favorite
    │                                │
    ▼                                ▼
 [Added → 200]                  [Removed → 200]
@@ -207,9 +207,9 @@ TBSOSick
 └── 🖼️ Photo Library
 
 [Actions]
-├── ⭐ Favorite Toggle (POST/DELETE /preference-cards/:id/favorite)
+├── ⭐ Favorite Toggle (POST/DELETE /preference-cards/:cardId/favorite)
 ├── 📤 Share → System Share Sheet (frontend-only)
-└── ⬇️ Download → POST /preference-cards/:id/download → count++ (200)
+└── ⬇️ Download → POST /preference-cards/:cardId/download → count++ (200)
 ```
 
 **Error States:**
@@ -311,13 +311,13 @@ GET /preference-cards           GET /preference-cards
 ```
 [Event Tap from List]
         │
-        ▼ GET /events/:id → Full details
+        ▼ GET /events/:eventId → Full details
         │
 [Details Modal]
         │
         ▼ [Edit Icon Tap]
         │
-        ▼ PATCH /events/:id { title?, time?, ... }
+        ▼ PATCH /events/:eventId { title?, time?, ... }
         │
         ▼ 200 Updated → Calendar Refreshes
 ```
@@ -405,7 +405,7 @@ GET /subscriptions/me
 ```
 [Single Notification Tap]
         │
-        ▼ PATCH /notifications/:id/read { read: true }
+        ▼ PATCH /notifications/:notificationId/read { read: true }
         │
         ▼ Navigate to resource (PreferenceCard, etc.) based on resourceType + resourceId
 ```
@@ -421,7 +421,7 @@ GET /subscriptions/me
 ```
 [Swipe/Delete Icon]
         │
-        ▼ DELETE /notifications/:id
+        ▼ DELETE /notifications/:notificationId
         │
         ▼ 200 → Removed from list
 ```
@@ -535,7 +535,7 @@ GET /admin/preference-cards/monthly?year=2025&compare_year=2024&tz=Asia/Dhaka
 [Pre-filled Form: name, specialty, hospital, phone]
 (password & status বদলানো যাবে না এই endpoint থেকে)
         │
-        ▼ PATCH /doctors/:id { name?, specialty?, hospital? }
+        ▼ PATCH /doctors/:doctorId { name?, specialty?, hospital? }
         │
         ▼ 200 → Updated row in table
 ```
@@ -544,13 +544,13 @@ GET /admin/preference-cards/monthly?year=2025&compare_year=2024&tz=Asia/Dhaka
 ```
 [Block Action]
         │
-        ▼ PATCH /doctors/:id/status { status: "RESTRICTED" }
+        ▼ PATCH /doctors/:doctorId/status { status: "RESTRICTED" }
         │
         ▼ 200 → Doctor status becomes RESTRICTED (login blocked)
 
 [Activate Action]
         │
-        ▼ PATCH /doctors/:id/status { status: "ACTIVE" }
+        ▼ PATCH /doctors/:doctorId/status { status: "ACTIVE" }
         │
         ▼ 200 → Doctor status becomes ACTIVE
 ```
@@ -561,7 +561,7 @@ GET /admin/preference-cards/monthly?year=2025&compare_year=2024&tz=Asia/Dhaka
         │
 [Confirm Modal]
         │
-        ▼ DELETE /doctors/:id
+        ▼ DELETE /doctors/:doctorId
         │
         ▼ 200 → Doctor removed from list
 ```
@@ -582,32 +582,31 @@ GET /admin/preference-cards/monthly?year=2025&compare_year=2024&tz=Asia/Dhaka
 | Auth | 1.6 | `POST` | `/auth/refresh-token` | Refresh Token |
 | Auth | 1.7 | `POST` | `/auth/logout` | Bearer |
 | Auth | 1.8 | `POST` | `/auth/resend-verify-email` | Public |
-| Auth | 1.9 | `GET` | `/auth/google` | Public |
-| Auth | 1.10 | `GET` | `/auth/google/callback` | Public |
+| Auth | 1.9 | `POST` | `/auth/social-login` | Public |
 | Home | 2.1 | `GET` | `/preference-cards?visibility=public` | Bearer |
 | Home | 2.2 | `GET` | `/preference-cards/stats` | Bearer |
 | Home | 2.3 | `GET` | `/users/me/favorites` | Bearer |
-| Home | 2.4 | `POST` | `/preference-cards/:id/favorite` | Bearer |
-| Home | 2.5 | `DELETE` | `/preference-cards/:id/favorite` | Bearer |
-| Home | 2.6 | `POST` | `/preference-cards/:id/download` | Bearer |
-| Card Details | 3.1 | `GET` | `/preference-cards/:id` | Bearer |
-| Card Details | 3.2 | `POST` | `/preference-cards/:id/download` | Bearer |
+| Home | 2.4 | `POST` | `/preference-cards/:cardId/favorite` | Bearer |
+| Home | 2.5 | `DELETE` | `/preference-cards/:cardId/favorite` | Bearer |
+| Home | 2.6 | `POST` | `/preference-cards/:cardId/download` | Bearer |
+| Card Details | 3.1 | `GET` | `/preference-cards/:cardId` | Bearer |
+| Card Details | 3.2 | `POST` | `/preference-cards/:cardId/download` | Bearer |
 | Library | 4.1 | `GET` | `/preference-cards?visibility=public` | Bearer |
 | Library | 4.2 | `GET` | `/preference-cards?visibility=private` | Bearer |
 | Library | 4.2a | `GET` | `/preference-cards/specialties` | Bearer |
 | Calendar | 5.1 | `GET` | `/events` | Bearer |
 | Calendar | 5.2 | `POST` | `/events` | Bearer |
-| Calendar | 5.3 | `GET` | `/events/:id` | Bearer |
-| Calendar | 5.4 | `PATCH` | `/events/:id` | Bearer |
+| Calendar | 5.3 | `GET` | `/events/:eventId` | Bearer |
+| Calendar | 5.4 | `PATCH` | `/events/:eventId` | Bearer |
 | Profile | 6.1 | `GET` | `/users/profile` | Bearer |
 | Profile | 6.2 | `PATCH` | `/users/profile` | Bearer |
 | Profile | 6.3 | `GET` | `/subscriptions/me` | Bearer |
 | Profile | 6.4 | `GET` | `/legal` | Public |
 | Profile | 6.5 | `GET` | `/legal/:slug` | Public |
 | Notifications | 7.1 | `GET` | `/notifications` | Bearer |
-| Notifications | 7.2 | `PATCH` | `/notifications/:id/read` | Bearer |
+| Notifications | 7.2 | `PATCH` | `/notifications/:notificationId/read` | Bearer |
 | Notifications | 7.3 | `PATCH` | `/notifications/read-all` | Bearer |
-| Notifications | 7.4 | `DELETE` | `/notifications/:id` | Bearer |
+| Notifications | 7.4 | `DELETE` | `/notifications/:notificationId` | Bearer |
 
 ### Admin Dashboard APIs
 
@@ -627,9 +626,9 @@ GET /admin/preference-cards/monthly?year=2025&compare_year=2024&tz=Asia/Dhaka
 | Doctor | D3.1 | `GET` | `/doctors/stats` | SUPER_ADMIN |
 | Doctor | D3.2 | `GET` | `/doctors` | SUPER_ADMIN |
 | Doctor | D3.3 | `POST` | `/doctors` | SUPER_ADMIN |
-| Doctor | D3.4 | `PATCH` | `/doctors/:id` | SUPER_ADMIN |
-| Doctor | D3.5 | `PATCH` | `/doctors/:id/status` | SUPER_ADMIN |
-| Doctor | D3.6 | `DELETE` | `/doctors/:id` | SUPER_ADMIN |
+| Doctor | D3.4 | `PATCH` | `/doctors/:doctorId` | SUPER_ADMIN |
+| Doctor | D3.5 | `PATCH` | `/doctors/:doctorId/status` | SUPER_ADMIN |
+| Doctor | D3.6 | `DELETE` | `/doctors/:doctorId` | SUPER_ADMIN |
 
 ---
 

@@ -24,14 +24,14 @@ router.get(
 
 // Event details
 router.get(
-  '/:id',
+  '/:eventId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   EventController.getEventById,
 );
 
 // Update event
 router.patch(
-  '/:id',
+  '/:eventId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   validateRequest(EventValidation.updateEventZodSchema),
   EventController.updateEvent,
@@ -39,7 +39,7 @@ router.patch(
 
 // Delete event
 router.delete(
-  '/:id',
+  '/:eventId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   EventController.deleteEvent,
 );

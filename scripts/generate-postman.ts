@@ -49,7 +49,7 @@ interface PostmanCollection {
 }
 
 function parseMarkdownFile(filePath: string): PostmanRequest[] {
-  const content = fs.readFileSync(filePath, 'utf-8');
+  const content = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
   const requests: PostmanRequest[] = [];
 
   // Match API sections starting with ### X.X Name

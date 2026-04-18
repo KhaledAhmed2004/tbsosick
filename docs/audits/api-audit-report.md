@@ -155,8 +155,10 @@ Mutating financial endpoints (`/payments/*`, `/subscription/iap/verify`, `/prefe
 ### S3. Add a `Validation` column
 Reference the Zod schema name per row — makes future audits trivial and surfaces missing validation gaps.
 
-### S4. Group webhook / OAuth-callback routes separately
-`/payments/webhook` and `/auth/google/callback` are external-callback endpoints with different security models (signature verification, no JWT). Mixing them with auth-protected routes hides that distinction.
+### S4. Group webhook routes separately
+`/payments/webhook` and similar webhook endpoints are external-callback endpoints with different security models (signature verification, no JWT). Mixing them with auth-protected routes hides that distinction.
+
+> **Note (April 2026):** `/auth/google/callback` removed — replaced by `POST /auth/social-login` (ID token verification, not redirect-based).
 
 ### S5. Add `/api/health` + `/api/ready` to the inventory
 Standard production probes — listed as a best practice in the skill's audit suggestions. If they don't exist, create them; if they do, document them.

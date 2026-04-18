@@ -24,7 +24,7 @@ router.get(
 
 // Update Supply — by ID
 router.patch(
-  '/:id',
+  '/:supplyId',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(SuppliesValidation.updateSupplySchema),
   SuppliesController.updateSupply,
@@ -32,7 +32,7 @@ router.patch(
 
 // Delete Supply — by ID
 router.delete(
-  '/:id',
+  '/:supplyId',
   auth(USER_ROLES.SUPER_ADMIN),
   validateRequest(SuppliesValidation.paramIdSchema),
   SuppliesController.deleteSupply,

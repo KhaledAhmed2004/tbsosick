@@ -22,11 +22,13 @@
 3. Success → tokens receive kore + `refreshToken` httpOnly cookie auto-set hoy → Home/Dashboard screen e navigate kore
 4. "Forgot Password?" link e tap korle → forgot password flow start hoy
 
-### Google OAuth Flow
-1. User "Sign in with Google" button e tap kore
-2. Webview ba browser open hoy → `GET /auth/google` (→ 1.9)
-3. Google authentication successful hole callback ashe → `GET /auth/google/callback` (→ 1.10)
-4. Backend theke tokens return kore → tokens save kore App e navigate kore
+### Social Login Flow (Google / Apple)
+1. User "Sign in with Google" ba "Sign in with Apple" button e tap kore
+2. Flutter SDK (google_sign_in / sign_in_with_apple) login UI dekhay
+3. User authenticate korle SDK theke `idToken` pawa jay
+4. App server-e pathay → `POST /auth/social-login` (→ 1.9)
+5. Server token verify kore → tokens return kore → Home screen e navigate kore
+6. **409 Conflict** asle → "This email already has an account. Please login with email and password." dekhay
 
 ### Forgot Password Flow
 1. User "Forgot Password?" e tap kore
@@ -49,7 +51,9 @@
 - **Email Already Exists**: Register korar somoy email already thakle error message dekhay.
 - **Silent Success (Forgot Password)**: Security-r jonno email thakuk ba na thakuk, response identical thake.
 - **Token Rotation Violation**: Refresh token reuse detect hole system auto-logout force kore security-r jonno.
-- **OAuth without Password**: Google sign-in kora users der profile update e password proyojon hoy na.
+- **OAuth without Password**: Social login (Google/Apple) kora users der profile update e password proyojon hoy na.
+- **409 Conflict (Social Login)**: Email already exists with password — social login e auto-link hoy na, user-ke email/password diye login korte hobe.
+- **Apple Email — First Time Only**: Apple shudhu prothombar email dey. Porer login-e `sub` (Apple user ID) diye match hoy.
 
 ---
 
@@ -377,36 +381,96 @@ Auth: None
 
 ---
 
-### 1.9 Google Login
+### 1.9 Social Login (Google / Apple)
 
 ```
-GET /auth/google
+POST /auth/social-login
+Content-Type: application/json
 Auth: None
 ```
 
-> Opens Google OAuth2 consent screen.
+> Mobile SDK (google_sign_in / sign_in_with_apple) theke paowa ID token server-e verify kore login/signup kore.
 
 **Implementation:**
 - **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
-- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `googleLogin`
+- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `socialLogin`
+- **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `socialLoginToDB`
 
----
-
-### 1.10 Google Callback
-
+**Request Body:**
+```json
+{
+  "provider": "google",
+  "idToken": "eyJhbGciOiJSUzI1NiIs...",
+  "nonce": "aB3xK9mP2qR7...",
+  "deviceToken": "fcm-token-xyz",
+  "platform": "ios",
+  "appVersion": "1.2.0"
+}
 ```
-GET /auth/google/callback
-Auth: None
-```
 
-**Implementation:**
-- **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
-- **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `googleCallback`
+| Field         | Required    | Type   | Notes                                           |
+| ------------- | ----------- | ------ | ----------------------------------------------- |
+| `provider`    | Yes         | string | `"google"` or `"apple"`                         |
+| `idToken`     | Yes         | string | Provider SDK theke paowa ID token               |
+| `nonce`       | Recommended | string | Replay attack prevention (Apple e must, Google e Flutter plugin support kore na) |
+| `deviceToken` | No          | string | FCM push notification token                     |
+| `platform`    | No          | string | `"ios"` / `"android"` / `"web"`                 |
+| `appVersion`  | No          | string | App version tracking                            |
 
 #### Responses
 
-- **Scenario: Success (Redirect)**
-  Redirects to app with `accessToken` and `refreshToken` in query params or sets httpOnly cookies.
+- **Scenario: Success — Login/Signup (200)**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "User logged in successfully.",
+    "data": {
+      "accessToken": "eyJhbGciOi...",
+      "refreshToken": "eyJhbGciOi..."
+    }
+  }
+  ```
+- **Scenario: Invalid/Expired Token (401)**
+  ```json
+  {
+    "success": false,
+    "statusCode": 401,
+    "message": "Invalid Google ID token"
+  }
+  ```
+- **Scenario: Nonce Mismatch (401)**
+  ```json
+  {
+    "success": false,
+    "statusCode": 401,
+    "message": "Nonce mismatch"
+  }
+  ```
+- **Scenario: Email Already Exists with Password (409)**
+  ```json
+  {
+    "success": false,
+    "statusCode": 409,
+    "message": "An account with this email already exists. Please login with your email and password."
+  }
+  ```
+- **Scenario: Account Restricted/Deleted (403)**
+  ```json
+  {
+    "success": false,
+    "statusCode": 403,
+    "message": "Your account has been deleted. Contact support."
+  }
+  ```
+- **Scenario: Apple — No Email Shared (400)**
+  ```json
+  {
+    "success": false,
+    "statusCode": 400,
+    "message": "Email is required to create an account. Please allow email sharing."
+  }
+  ```
 
 ---
 
@@ -422,5 +486,4 @@ Auth: None
 | 1.6 | `POST /auth/refresh-token` | ✅ Done | Refresh Token | Token rotation enabled |
 | 1.7 | `POST /auth/logout` | ✅ Done | User | Invalidate session |
 | 1.8 | `POST /auth/resend-verify-email` | ✅ Done | Public | Resend OTP code |
-| 1.9 | `GET /auth/google` | ✅ Done | Public | Initiate Google OAuth |
-| 1.10 | `GET /auth/google/callback` | ✅ Done | Public | Google OAuth callback |
+| 1.9 | `POST /auth/social-login` | ✅ Done | Public | Google + Apple ID token verification |

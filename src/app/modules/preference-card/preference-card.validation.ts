@@ -46,7 +46,7 @@ const createPreferenceCardSchema = z.object({
 
 // Update Preference Card (partial update)
 const updatePreferenceCardSchema = z.object({
-  params: z.object({ id: z.string().min(1) }),
+  params: z.object({ cardId: z.string().min(1) }),
   body: z.object({
     cardTitle: z.string().min(3).optional(),
     surgeon: surgeonSchema.partial().optional(),
@@ -87,7 +87,7 @@ const summarizeEventSchema = z.object({
 
 // Param ID Schema
 const paramIdSchema = z.object({
-  params: z.object({ id: z.string().min(1) }),
+  params: z.object({ cardId: z.string().min(1) }),
 });
 
 // Search Preference Cards Schema
@@ -106,7 +106,7 @@ const searchCardsSchema = z.object({
 
 // Publish Preference Card Schema
 const publishPreferenceCardSchema = z.object({
-  params: z.object({ id: z.string().min(1) }),
+  params: z.object({ cardId: z.string().min(1) }),
   body: z.object({ published: z.boolean() }),
 });
 
