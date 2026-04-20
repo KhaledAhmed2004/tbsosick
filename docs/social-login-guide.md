@@ -7,27 +7,145 @@
 
 ## Part 1: Backend Developer — Ki Ki Korte Hobe
 
+### ⚠️ Step 0: Right Google Cloud Project Select Koro (MOST IMPORTANT)
+
+**Ei step miss korle shob debugging time waste hobe.** Shobar age Google Cloud project-er issue resolve koro.
+
+#### The Cardinal Rule
+
+> **OAuth Client IDs, Firebase project (`google-services.json`), ar backend-er Firebase service account — tinoi-ta SAME Google Cloud project-e thakte hobe.**
+
+Firebase project = Google Cloud project (1:1 mapping). Mismatch hole:
+- Flutter login -> project A-r token pay
+- Server verify kore project B-r audience-e -> 401 mismatch
+- Push notifications project C-e pathay -> silently fail
+- Error: `PlatformException(sign_in_failed, ApiException: 10)` (DEVELOPER_ERROR)
+
+#### Decision Checklist (before touching ANY console)
+
+Ekta kaj shuru korar age ei question-gulo answer koro:
+
+1. **Client-er already kono Google Cloud / Firebase project ache?**
+   - Hile — **shei project use koro**, notun banaio na
+   - Project ID confirm koro client theke
+
+2. **Flutter app-e `google-services.json` already ache?**
+   - `flutter_project/android/app/google-services.json` khole dekho:
+   ```json
+   {
+     "project_info": {
+       "project_id": "smrt-scrub",         // <-- ei project use korte hobe
+       "project_number": "344458357764"
+     }
+   }
+   ```
+   - Ei `project_id` = tomar "official" project. OAuth Client IDs **ei project-e** banate hobe, tomar personal ba dev-er personal project-e na.
+
+3. **Who owns the Google Cloud billing?**
+   - Production-e client-er account-e thaka uchit — dev chole gele / account suspend hole login bondho hobe na
+   - Dev-er personal project use korle eta business risk
+
+#### Common Project Mismatch Scenarios
+
+| Scenario | Symptom | Fix |
+|----------|---------|-----|
+| Dev personal GCP project-e Client IDs banaichhe, Flutter app client-er Firebase project use kore | `ApiException: 10` on login | Client's Firebase-linked GCP project-e Client IDs recreate koro |
+| Multiple Firebase projects (old test + new prod) shathe shathe run korche | FCM tokens register hoy kintu push fail | Ek-ta project-e standardize koro, both FCM ar service account same project-theke |
+| `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64` project A-r, `google-services.json` project B-r | Push notifications fail silently | Service account regenerate koro same project theke je project-er `google-services.json` app-e ache |
+
+#### Verify Project Alignment (1 min check)
+
+```
+Flutter app's google-services.json:  project_id = X
+Server .env FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 (decoded): project_id = X
+Google Cloud Console → Credentials:  OAuth Client IDs live in project X
+```
+
+**Tinoi-ta X hoa lagbe.** Alada hole issue.
+
+```bash
+# Service account-er project_id check (Windows PowerShell):
+$base64 = (Get-Content .env | Select-String "FIREBASE_SERVICE_ACCOUNT_KEY_BASE64").ToString().Split('=')[1]
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($base64)) | ConvertFrom-Json | Select project_id
+```
+
+---
+
+#### 🔗 Quick Links Cheat Sheet (replace `{PROJECT_ID}` with your project id)
+
+Google Cloud Console / Firebase / Apple — je je page-e jete hobe, shob direct link ek jaygay. Example project id = `smrt-scrub`.
+
+**Google Cloud Console (OAuth Client IDs, APIs):**
+
+| Page | Direct URL |
+|------|------------|
+| Credentials (OAuth Client IDs list) | `https://console.cloud.google.com/apis/credentials?project={PROJECT_ID}` |
+| OAuth consent screen | `https://console.cloud.google.com/apis/credentials/consent?project={PROJECT_ID}` |
+| Project dashboard | `https://console.cloud.google.com/home/dashboard?project={PROJECT_ID}` |
+| API Library (enable APIs) | `https://console.cloud.google.com/apis/library?project={PROJECT_ID}` |
+
+**Firebase Console (Push, SHA-1, Service Accounts):**
+
+| Page | Direct URL |
+|------|------------|
+| Project settings (General) | `https://console.firebase.google.com/project/{PROJECT_ID}/settings/general` |
+| Service accounts (generate JSON for backend) | `https://console.firebase.google.com/project/{PROJECT_ID}/settings/serviceaccounts/adminsdk` |
+| Cloud Messaging (FCM) | `https://console.firebase.google.com/project/{PROJECT_ID}/notification` |
+| Authentication | `https://console.firebase.google.com/project/{PROJECT_ID}/authentication/users` |
+| App settings (for SHA-1, download google-services.json) | `https://console.firebase.google.com/project/{PROJECT_ID}/settings/general/` then scroll to "Your apps" |
+
+**Apple Developer Portal (Sign In with Apple):**
+
+| Page | Direct URL |
+|------|------------|
+| Identifiers list | `https://developer.apple.com/account/resources/identifiers/list` |
+| Certificates list | `https://developer.apple.com/account/resources/certificates/list` |
+| Services IDs (for web/Android Apple Sign In) | `https://developer.apple.com/account/resources/identifiers/list/serviceId` |
+| Keys (for Apple Sign In private key `.p8`) | `https://developer.apple.com/account/resources/authkeys/list` |
+
+**Bookmarkable for tbsosick (`smrt-scrub` project):**
+
+```
+GCP Credentials:    https://console.cloud.google.com/apis/credentials?project=smrt-scrub
+GCP Consent Screen: https://console.cloud.google.com/apis/credentials/consent?project=smrt-scrub
+Firebase Settings:  https://console.firebase.google.com/project/smrt-scrub/settings/general
+Service Accounts:   https://console.firebase.google.com/project/smrt-scrub/settings/serviceaccounts/adminsdk
+```
+
+> **Tip:** ei link-gula browser bookmark kore rakho — prottek bar `gcp -> project select -> APIs & Services -> Credentials` navigate kora time waste.
+
+---
+
 ### Step 1: Google Cloud Console Setup
+
+> **Shurur age Step 0 pore nao.** Kon project-e kaj korche sure hoye eikhane ashba.
 
 Google-te iOS, Android, Web — prottekar **alada client ID** thake. Eita important — mismatch hole verify fail korbe.
 
-**Overview — 3 ta OAuth Client ID create korte hobe:**
+**Overview — 3 ta OAuth Client ID create korte hobe (shob same project-e):**
 
-| # | Application Type | Required Info | Env Var |
-|---|-----------------|---------------|---------|
-| 1 | **iOS** | Bundle ID (e.g. `com.yourcompany.app`) | `GOOGLE_CLIENT_ID_IOS` |
-| 2 | **Android** | Package name + SHA-1 fingerprint | `GOOGLE_CLIENT_ID_ANDROID` |
-| 3 | **Web application** | (optional, if web client exists) | `GOOGLE_CLIENT_ID_WEB` |
+| # | Application Type | Required Info | Env Var | Purpose |
+|---|-----------------|---------------|---------|---------|
+| 1 | **iOS** | Bundle ID (e.g. `com.yourcompany.app`) | `GOOGLE_CLIENT_ID_IOS` | iOS native login initialization |
+| 2 | **Android** | Package name + SHA-1 fingerprint | `GOOGLE_CLIENT_ID_ANDROID` | Android native login initialization |
+| 3 | **Web application** ⭐ | (name only, no redirect if mobile-only) | `GOOGLE_CLIENT_ID_WEB` | **Token audience (`serverClientId`) — REQUIRED** |
+
+> ⭐ **Web Client ID MANDATORY, even for mobile-only apps.** Flutter-e `google_sign_in` plugin-er `serverClientId` parameter-e **Web Client ID** pass kora hoy (iOS/Android ID na). Eita-i idToken-er `aud` claim hobe — server ei value diye verify korbe. Most devs mistake kore iOS/Android Client ID `serverClientId`-e dey, which causes audience mismatch.
 
 > **Important:** iOS ar Android-er client ID-te kono **client secret nai** — Google mobile clients-ke "public client" mone kore, tai secret generate kore na. Shudhu client ID lagbe.
 
-> **How it works:** Server-e `verifyIdToken()` call korar shomoy audience-e tin-tai array hishebe pass hoy. Token-er `aud` claim jodi ANY ektar shathe match kore, verify pass hoy.
+> **How it works:** Server-e `verifyIdToken()` call korar shomoy audience-e tin-tai array hishebe pass hoy. Token-er `aud` claim jodi ANY ektar shathe match kore, verify pass hoy. Practice-e `serverClientId` (Web Client ID) use hole token-er `aud` = Web Client ID — so shei ta primarily hit hoy.
 
 ---
 
 #### Prerequisite: OAuth Consent Screen Configure (ekbar matro)
 
 Client ID create korar **age** ei step ta korte **must**, na hole "Create Credentials" button disable thakbe.
+
+**Direct link:** `https://console.cloud.google.com/apis/credentials/consent?project={PROJECT_ID}`
+(example: `https://console.cloud.google.com/apis/credentials/consent?project=smrt-scrub`)
+
+**Manual navigation:**
 
 1. [Google Cloud Console](https://console.cloud.google.com/) -> tomar project select koro (ba notun create koro)
 2. Left sidebar: **APIs & Services** -> **OAuth consent screen**
@@ -44,6 +162,10 @@ Client ID create korar **age** ei step ta korte **must**, na hole "Create Creden
 ---
 
 #### 1.1: iOS Client ID Create
+
+**Direct link:** `https://console.cloud.google.com/apis/credentials?project={PROJECT_ID}`
+
+**Manual navigation:**
 
 1. Left sidebar: **APIs & Services** -> **Credentials**
 2. Top-e **+ Create Credentials** -> **OAuth client ID**
@@ -62,6 +184,11 @@ Client ID create korar **age** ei step ta korte **must**, na hole "Create Creden
 ---
 
 #### 1.2: Android Client ID Create
+
+**Direct link:** `https://console.cloud.google.com/apis/credentials?project={PROJECT_ID}`
+
+> **Alternative (recommended for Firebase projects):** Android app-ke Firebase-e register korar shomoy Firebase automatic ekta Android OAuth Client banay. Firebase -> Project Settings -> Android app-e SHA-1 add korle `google-services.json`-e automatically incorporate hoy.
+> Firebase Console Android setup: `https://console.firebase.google.com/project/{PROJECT_ID}/settings/general`
 
 **Age SHA-1 fingerprint lagbe** — app developer theke nao, othoba niche-r command diye generate koro:
 
@@ -94,14 +221,15 @@ SHA256: 45:6F:16:BF:6F:67:F3:2A:D6:A4:20:88:C9:D3:EE:21:92:3D:00:50:18:DF:5F:21:
 ```
 > Google Cloud Console-e **SHA-1** value ta paste korte hobe (SHA-256 na).
 
-**Tarpor:**
+**Tarpor — Manual navigation:**
 
-1. **Credentials** -> **+ Create Credentials** -> **OAuth client ID**
-2. **Application type**: `Android`
-3. **Name**: `Android Client`
-4. **Package name**: `com.yourcompany.yourapp` (app-er `build.gradle` theke)
-5. **SHA-1 certificate fingerprint**: upor-er command theke paoya value paste koro
-6. **Create**
+1. Left sidebar: **APIs & Services** -> **Credentials**
+2. Top-e **+ Create Credentials** -> **OAuth client ID**
+3. **Application type**: `Android`
+4. **Name**: `Android Client`
+5. **Package name**: `com.yourcompany.yourapp` (app-er `build.gradle` theke)
+6. **SHA-1 certificate fingerprint**: upor-er command theke paoya value paste koro
+7. **Create**
 
 > Copy: **Client ID** -> `GOOGLE_CLIENT_ID_ANDROID`.
 > **Debug ar Release SHA-1 alada** — dui tar jonne dui ta Android Client ID banano best practice, othoba ek Client ID-te dui SHA-1 add koro (Edit -> Add fingerprint).
@@ -217,19 +345,349 @@ Android Client ID: tbsosick
 
 ---
 
-#### 1.3: Web Client ID Create (Optional)
+#### 1.3: Web Client ID Create (MANDATORY — serverClientId audience)
 
-Web frontend thakle banao, na thakle skip koro (server automatic filter kore).
+> **Mobile-only app holeo ei ta LAGBE.** Ei value-i Flutter `serverClientId`-e jabe ar idToken-er `aud` claim hobe. Skip korle login fail korbe (401 audience mismatch / `ApiException: 10`).
 
-1. **+ Create Credentials** -> **OAuth client ID**
-2. **Application type**: `Web application`
-3. **Name**: `Web Client`
-4. **Authorized JavaScript origins**: `https://yourdomain.com` (production), `http://localhost:3000` (dev)
-5. **Authorized redirect URIs**: `https://yourdomain.com/auth/callback` (jodi redirect flow use koro)
-6. **Create**
+**Direct link:** `https://console.cloud.google.com/apis/credentials?project={PROJECT_ID}`
+
+**Manual navigation:**
+
+1. Left sidebar: **APIs & Services** -> **Credentials**
+2. Top-e **+ Create Credentials** -> **OAuth client ID**
+3. **Application type**: `Web application`
+4. **Name**: `Server Audience` (ba `Mobile Backend` — ja intent clear kore)
+5. **Authorized JavaScript origins**: mobile-only hole **khali rakhle o cholbe** (production web frontend thakle `https://yourdomain.com` + `http://localhost:3000` dao)
+6. **Authorized redirect URIs**: mobile-only hole **khali rakhle o cholbe** (web redirect flow use korle actual URI dao)
+7. **Create**
 
 > Copy: **Client ID** -> `GOOGLE_CLIENT_ID_WEB`.
 > Web client-e **Client Secret thake** — kintu `social-login` endpoint ID token verify kore, secret lagbe na. Shudhu Client ID use koro.
+
+**Why this Client ID is special:**
+- Flutter `google_sign_in(serverClientId: '<THIS>')` parameter-e ei value bosabe
+- Google je idToken dibe, tar `aud` claim hobe ei Client ID
+- Server `.env`-er `GOOGLE_CLIENT_ID_WEB`-e **exact same value** thakte hobe
+- iOS/Android Client IDs primarily native login initialization-er jonne — ID token audience er shathe shopark nai
+
+---
+
+#### 1.3.1: Web Client ID — Deep Dive (Concept Explained)
+
+> Ei section pore rakha. Porer bar "keno Web Client ID lage, mobile-only app-e keno?" confusion hole ei part dekhle pura OAuth flow clear hoye jabe.
+
+**"Web application" Client ID Originally Ki?**
+
+Google-er OAuth 2.0 system-e 4 rokom Client ID thake — app kothay chole sheta onujayi:
+
+| Application Type | Kothay Chole | Example |
+|------------------|--------------|---------|
+| **iOS** | iPhone/iPad native app | tomar Flutter-er iOS build |
+| **Android** | Android native app | tomar Flutter-er Android build |
+| **Web application** | Browser-e chola web app | gmail.com, admin dashboard |
+| **Desktop** | Windows/Mac native | Google Drive desktop client |
+
+**"Web application" Client ID originally** — browser-based HTML/JS app-er jonne, user login kore redirect URI-te back ashe with auth code flow.
+
+---
+
+**Kintu Mobile App-e Keno Lage? (The Twist)**
+
+Mobile app to web na — tahole Web Client ID keno?
+
+Ei khane **Audience (`aud`) concept** ashe. OIDC specification bole:
+
+> "ID token issue korar shomoy token-er `aud` claim-e bolte hobe ei token **kar jonne**."
+
+Analogy:
+- **Token** = letter
+- **`aud` claim** = envelope-e written receiver address
+- **Server verify kore:** "address = amar?" ✅ / ❌
+
+---
+
+**Mobile Flow-e `aud` Ki Hoy? — 3 Option**
+
+Flutter `google_sign_in` use korle, Google-ke bolte hoy: "user-ke login koriye ID token dao."
+
+**Google-er internal question:** *"token-er `aud` ki bosabo?"*
+
+| Option | Result | Suitable? |
+|--------|--------|-----------|
+| A: `aud` = iOS Client ID (default if no serverClientId) | Token "iOS app-er jonne" | ❌ Server-e verify hobe na — audience mismatch |
+| B: `aud` = Android Client ID (default on Android) | Token "Android app-er jonne" | ❌ Same problem |
+| C: `aud` = Web Client ID (if serverClientId passed) ⭐ | Token "server-er jonne" | ✅ Server verify korte pare |
+
+---
+
+**Keno Web Client ID-i "Server's Identity"?**
+
+Bit confusing, but logical:
+
+| App Component | Physical Form | OAuth Identity | Client ID Type |
+|---------------|--------------|----------------|----------------|
+| iPhone-e chola Flutter UI | Mobile | iOS Client ID | iOS |
+| Samsung-e chola Flutter UI | Mobile | Android Client ID | Android |
+| **tomar Node.js Express backend** | **Server** | **Web Client ID** | **Web application** |
+
+**Keno "Web"?** Karon Google-er view-te server = web entity. Server HTTPS-e chole, web protocol use kore. Naming convention — "Web Client ID" mane actually tomar backend server-er identity.
+
+---
+
+**Complete Flow Diagram**
+
+```
+┌──────────────┐                  ┌──────────┐                  ┌─────────┐
+│ Flutter App  │                  │  Google  │                  │ Server  │
+│ (iOS/Android)│                  │          │                  │  (Web)  │
+└──────┬───────┘                  └─────┬────┘                  └────┬────┘
+       │                                │                             │
+       │  1. signIn(serverClientId:    │                             │
+       │     "Web Client ID")          │                             │
+       │ ─────────────────────────────>│                             │
+       │                                │                             │
+       │                                │  Google: "OK, audience =    │
+       │                                │  Web Client ID. Token issue"│
+       │                                │                             │
+       │  2. idToken: { aud: "Web ID"} │                             │
+       │ <─────────────────────────────│                             │
+       │                                │                             │
+       │  3. POST /social-login                                      │
+       │     { idToken, nonce, ... }                                 │
+       │ ───────────────────────────────────────────────────────────>│
+       │                                │                             │
+       │                                │  4. Server: "token.aud ==   │
+       │                                │     GOOGLE_CLIENT_ID_WEB? ✅"│
+       │                                │                             │
+       │  5. { accessToken, refreshToken }                           │
+       │ <───────────────────────────────────────────────────────────│
+```
+
+---
+
+**iOS ar Android Client ID-er Role Tahole?**
+
+Valid question — shudhu Web Client ID dile hoto na?
+
+**Answer: Dui-tar alada alada kaj ache.**
+
+| Client ID | Role |
+|-----------|------|
+| **iOS Client ID** | iOS native login sheet launch korar shomoy Google verify kore "kon iOS app ei request korche" (Bundle ID diye) |
+| **Android Client ID** | Android login popup-e Google verify: package name + SHA-1 = legit app kina |
+| **Web Client ID** | idToken-er `aud` claim — "ei token kon server-er jonne" |
+
+**Building Analogy:**
+- iOS/Android Client ID = **gate pass** (guard-e dekhao kon app-er jonne)
+- Web Client ID = **letter-er address** (letter kar jonne)
+
+Dui-tai lagbe — dhokar shomoy gate pass, porar shomoy address.
+
+---
+
+**Amazon E-commerce Analogy (Simple)**
+
+- **iOS Client ID** = iPhone-er Amazon app identity — "ohh iPhone app theke order"
+- **Android Client ID** = Samsung-er Amazon app identity
+- **Web Client ID** = Amazon warehouse server identity — "order amar warehouse-e ashe"
+
+User iPhone app-e order kore -> Amazon verifies iOS app ✅ -> generates receipt with "**Deliver to: Warehouse**" (Web Client ID) -> warehouse server receives receipt -> fulfill kore.
+
+**Mobile Client ID = request initiator. Web Client ID = receipt recipient.**
+
+---
+
+**Tomar Server Code-e Reality**
+
+```ts
+// auth.service.ts
+googleClient.verifyIdToken({
+  idToken,
+  audience: [
+    config.google.clientIdIos,     // iOS Client ID — rarely matches
+    config.google.clientIdAndroid, // Android Client ID — rarely matches
+    config.google.clientIdWeb,     // ⭐ Web Client ID — practically always matches
+  ],
+});
+```
+
+Token-er `aud` jekono ek-ta-r shathe match hole pass. `serverClientId` = Web Client ID use korle, practically **Web Client ID-i hit kore**.
+
+---
+
+**TL;DR — One Line**
+
+> **Web Application Client ID = tomar server-er "email address"**. Google idToken-e ei address bosaye, server verify kore "ha eta amar-jonne." Mobile app-e "Web" Client ID use kora eta simply Google-er naming convention — actually eta tomar backend-er identity.
+
+---
+
+#### 1.3.2: Testing vs Production — Full Deployment Guide
+
+> Ek-tai Web Client ID testing ar production dui phase-e kaj kore. Alada banate hobe na. Shudhu administrative change:
+
+| Phase | Consent Screen Status | Origins/Redirects | Client ID |
+|-------|----------------------|-------------------|-----------|
+| **Testing** (dev) | "Testing" mode | Empty (mobile-only) | Same |
+| **Production** (live) | "In production" mode | Empty (ba domains jodi web add koro) | Same |
+
+---
+
+**PART 1: Testing Phase (Ekhoni Korbe)**
+
+**Step A: OAuth Consent Screen Configure — Testing Mode**
+
+Direct link: `https://console.cloud.google.com/apis/credentials/consent?project={PROJECT_ID}`
+
+Page-e giye dekho:
+- "Get Started" button dekhle -> never configured, first-time setup koro
+- "Audience / Branding / Data Access" tabs dekhle -> already configured
+
+**First-time configure:**
+
+| Field | Testing-e Ki Dibe |
+|-------|-------------------|
+| App name | `TBSOSICK` (ba ja client pref) |
+| User support email | tomar / client-er email |
+| **Audience** | ⭐ `External` (otherwise shudhu Google Workspace users login parbe) |
+| Developer contact email | tomar email |
+
+Agree policy -> **Create** -> Consent screen auto **"Testing"** mode-e start.
+
+**Step B: Test Users Add (Testing Mode Mandatory)**
+
+Testing mode-e **shudhu whitelist users login korte parbe**. Na add korle `403 access_denied` silently.
+
+1. Consent screen page -> **"Audience"** tab
+2. **"Test users"** -> **+ ADD USERS**
+3. Add everyone who'll test:
+   ```
+   you@gmail.com
+   bayzid@gmail.com
+   qa@client-company.com
+   client@company.com
+   ```
+4. **Save**
+
+**Step C: Web Client ID Create** — already upor-e covered (Section 1.3). Ekta-i banabe, testing + production dui-jaygay kaj korbe.
+
+**Step D: Testing Verify**
+
+1. `npm run dev` — server clean start
+2. Flutter app-e login try koro **whitelisted test user diye**
+3. Success hole:
+   ```
+   Server log: [auth.service] verifyIdToken success, aud=<Web Client ID>
+   Response: { accessToken, refreshToken }
+   ```
+
+**Testing Error Matrix:**
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| 403 access_denied | User not in test_users list | Consent screen test users-e add koro |
+| ApiException: 10 | Package/SHA-1 mismatch | Troubleshooting section check (earlier in guide) |
+| 401 Invalid Google ID token | `_WEB` value mismatch | `.env` + Flutter serverClientId same Client ID kina verify |
+
+---
+
+**PART 2: Production Launch Phase**
+
+**Backend/Flutter code kichui change na.** Only 3 ta administrative change:
+
+**Change 1: Consent Screen -> "In Production" Publish**
+
+Direct link: `https://console.cloud.google.com/apis/credentials/consent?project={PROJECT_ID}`
+
+1. **Audience** tab open
+2. Current status: **"Testing"**
+3. **"Publish App"** button click
+4. Popup: *"Your app will be available to everyone with a Google Account"* -> **Confirm**
+5. Status change: **"In production"**
+
+**Effect:** Test users whitelist restriction removed. Jei kono Google user-e login korte parbe.
+
+> **"Sensitive scopes" use korle verification lagbe** — but tumi only `openid`, `email`, `profile` use korcho (default social login scopes), so **NO verification needed**. Publish instant hoy.
+
+**Change 2: Release Keystore SHA-1 Add**
+
+Production APK release keystore diye sign — debug theke alada SHA-1.
+
+1. Release SHA-1 generate (Windows PowerShell):
+   ```powershell
+   keytool -list -v -alias <release-alias> -keystore "path\to\release.keystore"
+   ```
+2. Firebase Console -> Project Settings -> Android app -> **Add fingerprint** -> release SHA-1 paste
+3. **`google-services.json` re-download** -> Flutter project-e replace
+4. Release APK build -> ei APK login korbe
+
+> **Debug SHA-1 rekhe dao** — dev team-er debug APK o login korte parbe (multiple SHA-1 co-exist korte pare).
+
+**Change 3: Play Store App Signing SHA-1 (IMPORTANT — Commonly Missed)**
+
+"App Signing by Google Play" use korle, Google nijer key-te re-sign kore. Tai Play Store install-kora APK-er SHA-1 alada — tomar release keystore SHA-1 na.
+
+1. Play Console -> tomar app -> **Setup** -> **App integrity**
+2. **App signing key certificate** section -> SHA-1 copy koro
+3. Firebase-e ei SHA-1 add koro
+4. `google-services.json` re-download -> Flutter project-e replace
+
+> **Ei step miss korle:** Play Store-theke-install-kora app-e login fail, kintu sideload APK login kaj kore. Confusing, commonly missed.
+
+---
+
+**Summary Checklist**
+
+**Dev/Testing Phase:**
+```
+✅ OAuth Consent Screen — Testing mode
+✅ Test users whitelist add (dev team-er Gmails)
+✅ Web Client ID created, .env + Flutter code updated
+✅ Debug SHA-1 added (each dev-er)
+✅ Flutter debug APK-e login kore
+```
+
+**Production Launch:**
+```
+✅ Same Web Client ID (change na)
+✅ Consent Screen → "Publish App" (Testing → In Production)
+✅ Release keystore SHA-1 added
+✅ Play Store App Signing SHA-1 added (Play Store use korle)
+✅ google-services.json re-downloaded + committed
+✅ Release APK build & test
+```
+
+---
+
+**Multi-Client-ID Scenarios (Future)**
+
+| Scenario | Ek Client ID Enough? | Note |
+|----------|---------------------|------|
+| Mobile-only app (tbsosick current) | ✅ Ha | Ek audience dorkar |
+| Mobile + web frontend add hole | ⚠️ Same project-e 2nd Web Client banaite paro | Frontend-er alada origins/redirects thakbe |
+| Staging + Production alada environment | ⚠️ Alada Client IDs recommended | Staging leak hole prod safe |
+
+**Ekhon:** ek-ta-i banate hobe. Future-e staging lagle separate Web Client safest.
+
+---
+
+**Timeline (Practical)**
+
+**Today (testing phase):**
+- [ ] Consent screen `External` + test users add
+- [ ] Web Client ID create — origins/redirects empty
+- [ ] `.env` update + Flutter code update
+- [ ] Dev team login test
+
+**Launch-er 1 week age:**
+- [ ] Release keystore plan
+- [ ] Play Store-e app uploaded, App Signing SHA-1 paoa
+- [ ] Firebase-e release + Play Store SHA-1 add
+- [ ] Final google-services.json committed
+
+**Launch day:**
+- [ ] Consent screen "Publish App" click
+- [ ] Release APK Play Store-e submit
+- [ ] Post-launch: first 24h server logs monitor
 
 ---
 
@@ -247,9 +705,13 @@ Web frontend thakle banao, na thakle skip koro (server automatic filter kore).
 
 Apple-er jonne **shudhu Bundle ID lagbe** as client ID. Alada Services ID lagbe na (sheta web-only flow-er jonne).
 
+**Direct link:** https://developer.apple.com/account/resources/identifiers/list
+
+**Manual navigation:**
+
 1. [Apple Developer Portal](https://developer.apple.com/account) jao
 2. **Certificates, Identifiers & Services** -> **Identifiers**
-3. App ID select koro
+3. App ID select koro (Bundle ID, e.g. `com.tbsosick.smrtscrub`)
 4. **Sign In with Apple** capability **enable** koro (checkbox tick)
 5. Save koro
 
@@ -343,10 +805,17 @@ Content-Type: application/json
 
 ### 4. Google Client IDs (App Developer-ke dite hobe)
 
+**Tin ta-i dao** — misuse avoid korar jonne purpose explain koro:
+
 | Platform | Client ID env var | Where to Use in Flutter |
 |----------|-------------------|-------------------------|
-| iOS | `GOOGLE_CLIENT_ID_IOS` value | `google_sign_in` package: `GoogleSignIn(clientId: '...', serverClientId: '...')` |
-| Android | `GOOGLE_CLIENT_ID_ANDROID` value | `google_sign_in` package (Android auto-picks via SHA-1) |
+| iOS | `GOOGLE_CLIENT_ID_IOS` | `GoogleSignIn(clientId: '<iOS ID>')` — iOS-only |
+| Android | `GOOGLE_CLIENT_ID_ANDROID` | Not used directly in Dart — `google-services.json` + SHA-1 handle it |
+| **Web ⭐** | `GOOGLE_CLIENT_ID_WEB` | `GoogleSignIn(serverClientId: '<Web ID>')` — **BOTH iOS and Android use this** |
+
+> ⭐ `serverClientId` = Web Client ID **always**. Eita commonest bug. App dev-ke explicitly janao.
+>
+> Confirm korao: **tin-tai Client ID same Google Cloud project theke ashche** (`google-services.json`-er `project_id`-er shathe match).
 
 ### 5. Apple Bundle ID
 
@@ -529,10 +998,15 @@ import 'package:http/http.dart' as http;
 
 Future<void> signInWithGoogle() async {
   final googleSignIn = GoogleSignIn(
+    // iOS: iOS Client ID (native login initialization)
     clientId: Platform.isIOS
-        ? '247970361242-r52rrf6f0o467dkm0gs48eidlb6b6u2h.apps.googleusercontent.com'
-        : null,  // Android auto-picks from google-services.json / Console
-    serverClientId: '247970361242-r52rrf6f0o467dkm0gs48eidlb6b6u2h.apps.googleusercontent.com',
+        ? '<GOOGLE_CLIENT_ID_IOS>.apps.googleusercontent.com'
+        : null,  // Android auto-picks from google-services.json
+    // ⚠️ serverClientId = WEB Client ID (NOT iOS/Android).
+    //    This becomes the `aud` claim of the idToken and MUST match
+    //    GOOGLE_CLIENT_ID_WEB on the server. Using iOS/Android Client ID
+    //    here is the #1 source of `ApiException: 10` errors.
+    serverClientId: '<GOOGLE_CLIENT_ID_WEB>.apps.googleusercontent.com',
   );
 
   final account = await googleSignIn.signIn();
@@ -684,11 +1158,22 @@ request — the server already verifies it when present.
 - User email hide korle Apple ekta **private relay email** dey: `xyz@privaterelay.appleid.com`
 - **Action:** App developer-ke bolte hobe — prothom login-e email + name save koro locally, karon Apple ar dibe na
 
-### Google Multiple Client IDs
+### Google Multiple Client IDs & `serverClientId`
 
 - iOS, Android, Web prottekar jonne **alada** OAuth client ID thake
 - Server-e **tin-tai** env var dite hobe
 - `verifyIdToken()` array accept kore — token-er `aud` jodi ANY ektar shathe match kore, pass
+- **Flutter-e `serverClientId` = Web Client ID** (iOS/Android na). Eita commonest bug — devs iOS Client ID diye dey, login fails silently (or returns `ApiException: 10`)
+
+### SHA-1 Fingerprint: Per-Developer Reality Check
+
+- **Prottek dev-er debug keystore alada** (Android Studio auto-generates, machine-specific)
+- Ek dev-er debug SHA-1 Firebase/GCP-e add korle onno dev-er APK login korte parbe na
+- **Solution:** Team-e shob dev-er debug SHA-1 add koro Firebase Android app settings-e
+  - Firebase Console -> Project Settings -> Android app -> "Add fingerprint"
+  - SHA-1 add korar por **updated `google-services.json` download kore Flutter project-e replace koro** (otherwise changes pick up na)
+- **Release SHA-1** (Play Store signed APK) alada — CI/CD ba lead dev-er kache thake, production-er age oitao add korte hobe
+- `google-services.json` file-e purono kono dev-er SHA-1 thakleo problem na — jototto gulo SHA-1 registered thake, ttotogulo machine login korte parbe
 
 ### Nonce Policy (Apple Strict, Google Pragmatic)
 
@@ -726,6 +1211,56 @@ request — the server already verifies it when present.
 - Social login-e new user create hole `country` ar `phone` required na (pore profile complete korbe)
 - `password` o required na (OAuth user)
 - User automatically `verified: true` hoy (provider already email verify korche)
+
+### Troubleshooting — Common Errors
+
+#### `PlatformException(sign_in_failed, ApiException: 10)` — Android Google Login
+
+"DEVELOPER_ERROR" — config ar code mismatch. Check in this order:
+
+| # | Check | Fix |
+|---|-------|-----|
+| 1 | **Project mismatch:** `google-services.json`-er `project_id` = OAuth Client IDs-er project? | Tin-ta place (Flutter json, server .env Client IDs, Firebase service account) shob same project-e rakho |
+| 2 | **`serverClientId` = Web Client ID?** iOS ba Android Client ID diye dile ei error ashe | Flutter `GoogleSignIn(serverClientId: '<WEB-CLIENT-ID>')` |
+| 3 | **Current dev-er debug SHA-1 added?** Other dev-er SHA-1 thakleo kaj korbe na | **Direct link:** `https://console.firebase.google.com/project/{PROJECT_ID}/settings/general` · **Manual:** Firebase Console -> Project Settings -> General tab -> scroll to "Your apps" -> Android app -> Add fingerprint -> download new `google-services.json` -> replace in Flutter project -> `flutter clean && flutter run` |
+| 4 | **Package name match?** Flutter `build.gradle`-er `applicationId` = Google Cloud Console Android Client-er package name | Exact match required (case-sensitive) |
+| 5 | **Updated `google-services.json` downloaded?** SHA-1 add korar por re-download required | `android/app/google-services.json` replace + `flutter clean && flutter run` |
+
+#### `401 Invalid Google ID token` — Server Response
+
+| Cause | Fix |
+|-------|-----|
+| `aud` claim mismatch — token audience != `GOOGLE_CLIENT_ID_WEB` | Server `.env`-e `GOOGLE_CLIENT_ID_WEB` = app-er `serverClientId` value, same project |
+| Token expired | App re-login — tokens ~1hr valid |
+| Token from different project | Step 0 project alignment re-check |
+
+#### `409 Conflict: Email already in use`
+
+- Same email-e password-based account already ache
+- User ke: password diye login koro, settings theke social link koro
+- Expected behavior — security feature (OWASP account linking)
+
+#### Push Notifications Silently Fail After Login Works
+
+- FCM token `google-services.json`-er project-e register hoy
+- Backend `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64` jodi alada project-er hoy, push reject hobe
+- Fix: Service account regenerate same project theke -> base64 encode -> `.env` update
+  - **Direct link:** `https://console.firebase.google.com/project/{PROJECT_ID}/settings/serviceaccounts/adminsdk`
+  - **Manual steps:** Firebase Console -> Project Settings -> Service accounts tab -> "Generate new private key" -> JSON file download -> base64 encode -> `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64` replace in `.env`
+
+#### Apple Sign In Fails on Second Login (Email Missing)
+
+- Apple shudhu first login-e email + name dey, subsequent logins-e not
+- Server `sub` (provider ID) diye match kore — already handled in code
+- App-e: first login-er email + name locally save koro (future use-er jonne)
+
+#### `400 Nonce is required for Apple sign-in`
+
+- Apple-er jonne nonce strictly required (production policy)
+- Flutter `sign_in_with_apple`-e `nonce: sha256(rawNonce)` pass koro
+- Server-e raw `rawNonce` pathao (hash na)
+
+---
 
 ### Backend Key Files
 
