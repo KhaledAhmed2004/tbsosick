@@ -60,7 +60,17 @@ const createSocialLoginZodSchema = z.object({
       required_error: 'Provider is required',
     }),
     idToken: z.string({ required_error: 'ID token is required' }),
-    nonce: z.string().optional(),
+    // Apple: nonce is REQUIRED at the service layer (plugin supports it
+    //   cleanly via sign_in_with_apple).
+    // Google: nonce is OPTIONAL here because mainstream Flutter plugins
+    //   don't expose a nonce parameter, but the service still verifies it
+    //   when provided. Teams wanting strict nonce for Google should wire
+    //   up flutter_appauth or a platform channel to pass it through.
+    // If provided, the raw nonce must be at least 32 characters.
+    nonce: z
+      .string()
+      .min(32, 'Nonce must be at least 32 characters')
+      .optional(),
     deviceToken: z.string().optional(),
     platform: z.enum(['ios', 'android', 'web']).optional(),
     appVersion: z.string().optional(),
