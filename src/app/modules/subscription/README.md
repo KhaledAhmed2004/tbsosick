@@ -1542,6 +1542,13 @@ Subscription (product — just a container, NO price here)
 5. Click the service account you just created → **Keys** tab → **Add Key** → **Create new key** → JSON → **Create**
 6. A `.json` file downloads — save it as `./secrets/google-service-account.json` in your project
 
+> **Tip:** Downloaded JSON er `client_email` field e service account er email already ache. Jodi Pub/Sub push subscription (Step 9) same service account diye sign kora hoy, tahole `GOOGLE_PLAY_PUBSUB_SERVICE_ACCOUNT_EMAIL` env var e ei `client_email` er value ta bosao — notun kichu banate hobe na.
+>
+> ```bash
+> # Example JSON field:
+> "client_email": "play-billing-service@your-project.iam.gserviceaccount.com"
+> ```
+
 #### Step 6 — Link service account in Play Console
 
 **Important:** Ei step er jonno tomar Play Console er **Account Owner** hote hobe. Owner chara "API access" menu dekhabe na.
