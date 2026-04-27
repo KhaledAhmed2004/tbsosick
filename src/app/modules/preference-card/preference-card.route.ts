@@ -21,7 +21,7 @@ const parseBody = (req: Request, res: Response, next: NextFunction) => {
     }
 
     // Handle array fields
-    ['supplies', 'sutures', 'photoLibrary'].forEach((field) => {
+    ['supplies', 'sutures', 'photoLibrary'].forEach(field => {
       if (req.body[field]) {
         if (typeof req.body[field] === 'string') {
           try {
@@ -113,17 +113,22 @@ router.delete(
   PreferenceCardController.deleteCard,
 );
 
-// Increment download count
+// Download preference card
 router.post(
   '/:cardId/download',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  validateRequest(PreferenceCardValidation.paramIdSchema),
-  PreferenceCardController.incrementDownloadCount,
+  rateLimitMiddleware({
+    windowMs: 60_000,
+    max: 20,
+    routeName: 'download-preference-card',
+  }),
+  validateRequest(PreferenceCardValidation.downloadPreferenceCardSchema),
+  PreferenceCardController.downloadCard,
 );
 
 // Favorite preference card
-router.post(
-  '/:cardId/favorite',
+router.put(
+  '/favorites/cards/:cardId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.favoriteCard,
@@ -131,26 +136,18 @@ router.post(
 
 // Unfavorite preference card
 router.delete(
-  '/:cardId/favorite',
+  '/favorites/cards/:cardId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.unfavoriteCard,
 );
 
-// Approve preference card (set verificationStatus = VERIFIED) — super admin only
+// Update verification status (APPROVE/REJECT)
 router.patch(
-  '/:cardId/approve',
+  '/:cardId/status',
   auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(PreferenceCardValidation.paramIdSchema),
-  PreferenceCardController.approveCard,
-);
-
-// Reject preference card (set verificationStatus = UNVERIFIED) — super admin only
-router.patch(
-  '/:cardId/reject',
-  auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(PreferenceCardValidation.paramIdSchema),
-  PreferenceCardController.rejectCard,
+  validateRequest(PreferenceCardValidation.updateVerificationStatusSchema),
+  PreferenceCardController.updateVerificationStatus,
 );
 
 export const PreferenceCardRoutes = router;

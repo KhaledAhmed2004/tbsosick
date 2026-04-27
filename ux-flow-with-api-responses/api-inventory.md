@@ -46,8 +46,7 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | ID | Endpoint | Method | Roles | Implementation | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | 4.1 | `/preference-cards` | `GET` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
-| 4.2 | `/preference-cards/:cardId/approve` | `PATCH` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
-| 4.3 | `/preference-cards/:cardId/reject` | `PATCH` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
+| 4.2 | `/preference-cards/:cardId/status` | `PATCH` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
 | 4.4 | `/preference-cards/:cardId` | `DELETE` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
 
 ### 5. [Legal Management](./dashboard-screens/05-legal-management.md)
@@ -96,8 +95,8 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | 2.1 | `/preference-cards` | `GET` | USER | [02-home.md](./app-screens/02-home.md) | ✅ |
 | 2.2 | `/preference-cards/stats` | `GET` | USER | [02-home.md](./app-screens/02-home.md) | ✅ |
 | 2.3 | `/users/me/favorites` | `GET` | USER | [02-home.md](./app-screens/02-home.md) | ✅ |
-| 2.4 | `/preference-cards/:cardId/favorite` | `POST` | USER | [02-home.md](./app-screens/02-home.md) | ✅ |
-| 2.5 | `/preference-cards/:cardId/favorite` | `DELETE` | USER | [02-home.md](./app-screens/02-home.md) | ✅ |
+| 2.4 | `/preference-cards/favorites/cards/:cardId` | `PUT` | USER | [02-home.md](./app-screens/02-home.md) | ✅ |
+| 2.5 | `/preference-cards/favorites/cards/:cardId` | `DELETE` | USER | [02-home.md](./app-screens/02-home.md) | ✅ |
 | 2.6 | `/preference-cards/:cardId/download` | `POST` | USER | [02-home.md](./app-screens/02-home.md) | ✅ |
 
 ### 3. [Preference Card Details](./app-screens/03-preference-card-details.md)

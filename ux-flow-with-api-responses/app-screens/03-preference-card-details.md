@@ -15,7 +15,7 @@
    - Medication, Supplies (list with quantity), Sutures (list with quantity).
    - Instruments, Positioning Equipment, Prepping, Workflow.
    - Key Notes ebong Photo Library (images).
-4. User favorite icon toggle kore card favorite/unfavorite korte pare.
+4. User favorite icon toggle kore card favorite/unfavorite korte pare → `PUT/DELETE /preference-cards/favorites/cards/:cardId`
 
 ### Share & Download
 1. **Share**: User "Share" icon-e tap kore. System share sheet open hoy card title ebong link/details shoho. (Frontend-only action, logic context: `Share.share({ message: cardTitle + ... })`).
@@ -514,3 +514,5 @@ Auth: Bearer {{accessToken}} (USER)
 | 3.5 | `/supplies` | `GET` | Bearer | ✅ Done | Catalog fetch for card create/edit |
 | 3.6 | `/sutures` | `GET` | Bearer | ✅ Done | Catalog fetch for card create/edit |
 | 3.7 | `/preference-cards/:cardId` | `DELETE` | Bearer | ✅ Done | Hard delete (owner/admin) |
+| 3.8 | `/preference-cards/favorites/cards/:cardId` | `PUT` | Bearer | ✅ Done | Add to favorites (Idempotent) |
+| 3.9 | `/preference-cards/favorites/cards/:cardId` | `DELETE` | Bearer | ✅ Done | Remove from favorites (Idempotent) |

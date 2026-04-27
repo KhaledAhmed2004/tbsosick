@@ -178,7 +178,7 @@ TBSOSick
         │
    ┌────┴──────────────────────────┐
    │ Not Favorited                  │ Already Favorited
-   │ POST /preference-cards/:cardId/favorite │ DELETE /preference-cards/:cardId/favorite
+   │ PUT /preference-cards/favorites/cards/:cardId │ DELETE /preference-cards/favorites/cards/:cardId
    │                                │
    ▼                                ▼
 [Added → 200]                  [Removed → 200]
@@ -207,7 +207,7 @@ TBSOSick
 └── 🖼️ Photo Library
 
 [Actions]
-├── ⭐ Favorite Toggle (POST/DELETE /preference-cards/:cardId/favorite)
+├── ⭐ Favorite Toggle (PUT/DELETE /preference-cards/favorites/cards/:cardId)
 ├── 📤 Share → System Share Sheet (frontend-only)
 └── ⬇️ Download → POST /preference-cards/:cardId/download → count++ (200)
 ```

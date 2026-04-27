@@ -1,5 +1,8 @@
 import { Schema, model } from 'mongoose';
-import { PreferenceCard } from './preference-card.interface';
+import {
+  PreferenceCard,
+  PreferenceCardDownload,
+} from './preference-card.interface';
 
 // Surgeon subdocument schema
 const SurgeonSchema = new Schema(
@@ -77,6 +80,7 @@ const PreferenceCardSchema = new Schema<PreferenceCard>(
       enum: ['VERIFIED', 'UNVERIFIED'],
       default: 'UNVERIFIED',
     },
+    isDeleted: { type: Boolean, default: false },
   },
   { timestamps: true },
 );
@@ -117,4 +121,25 @@ PreferenceCardSchema.index(
 export const PreferenceCardModel = model<PreferenceCard>(
   'PreferenceCard',
   PreferenceCardSchema,
+);
+
+// ─── Download Tracking ───────────────────────────────────────────────────
+const PreferenceCardDownloadSchema = new Schema<PreferenceCardDownload>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    cardId: { type: Schema.Types.ObjectId, ref: 'PreferenceCard', required: true },
+    downloadDate: { type: String, required: true },
+  },
+  { timestamps: true },
+);
+
+// Unique constraint to prevent duplicate counts per user per card per day.
+PreferenceCardDownloadSchema.index(
+  { userId: 1, cardId: 1, downloadDate: 1 },
+  { unique: true },
+);
+
+export const PreferenceCardDownloadModel = model<PreferenceCardDownload>(
+  'PreferenceCardDownload',
+  PreferenceCardDownloadSchema,
 );

@@ -1,5 +1,8 @@
 import { Model, Types } from 'mongoose';
-import { PreferenceCardModel } from './preference-card.model';
+import {
+  PreferenceCardDownloadModel,
+  PreferenceCardModel,
+} from './preference-card.model';
 import ApiError from '../../../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
 import { USER_ROLES } from '../../../enums/user';
@@ -7,6 +10,7 @@ import { QueryBuilder } from '../../builder';
 import { SupplyModel } from '../supplies/supplies.model';
 import { SutureModel } from '../sutures/sutures.model';
 import { Favorite } from '../favorite/favorite.model';
+import PDFBuilder from '../../builder/PDFBuilder';
 
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 
@@ -148,27 +152,200 @@ const getFavoriteCardIdsForUserFromDB = async (userId: string) => {
   return favorites.map(f => f.cardId.toString());
 };
 
-const incrementDownloadCountInDB = async (
+/**
+ * Flattens a card document to make it easy for PDF generation.
+ * Extracts names from populated supplies and sutures.
+ */
+const flattenCard = (doc: any) => {
+  return {
+    ...doc,
+    supplies: (doc.supplies || []).map((s: any) => ({
+      name: s.supply?.name || 'N/A',
+      quantity: s.quantity,
+    })),
+    sutures: (doc.sutures || []).map((s: any) => ({
+      name: s.suture?.name || 'N/A',
+      quantity: s.quantity,
+    })),
+  };
+};
+
+const downloadPreferenceCardInDB = async (
   id: string,
   userId: string,
   role?: string,
 ) => {
-  const doc = await PreferenceCardModel.findById(id);
-  if (!doc)
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+  // 1. Fetch Card Safely
+  const doc = await PreferenceCardModel.findById(id)
+    .populate('supplies.supply', 'name -_id')
+    .populate('sutures.suture', 'name -_id')
+    .lean();
 
+  if (!doc) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
+  }
+
+  // 2. Check Card Status (isDeleted or inactive/unverified)
+  // Requirement: Reject if deleted or inactive.
+  // We'll use published: false as "inactive" for public users.
+  if (doc.isDeleted) {
+    throw new ApiError(StatusCodes.GONE, 'This preference card has been deleted');
+  }
+
+  // 3. Authorization Rules
   const isOwner = doc.createdBy.toString() === userId;
   const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
-  if (!isOwner && !isSuperAdmin && !doc.published) {
+
+  if (!doc.published && !isOwner && !isSuperAdmin) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
-      'Not authorized to update download count',
+      'You do not have permission to download this private card',
     );
   }
 
-  doc.downloadCount = (doc.downloadCount || 0) + 1;
-  await doc.save();
-  return { downloadCount: doc.downloadCount };
+  // 4. Idempotency / Spam Control
+  // userId + cardId + date (YYYY-MM-DD)
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    // Attempt to create a download log. Unique index handles idempotency.
+    await PreferenceCardDownloadModel.create({
+      userId: new Types.ObjectId(userId),
+      cardId: new Types.ObjectId(id),
+      downloadDate: today,
+    });
+
+    // 5. Atomic Increment (only if log creation succeeded)
+    await PreferenceCardModel.findByIdAndUpdate(id, {
+      $inc: { downloadCount: 1 },
+    });
+  } catch (error: any) {
+    // If it's a duplicate key error (code 11000), it means user already downloaded today.
+    // We return success without incrementing.
+    if (error.code !== 11000) {
+      throw error;
+    }
+  }
+
+  // 6. Generate PDF
+  const flattenedDoc = flattenCard(doc);
+  const pdfBuffer = await generatePreferenceCardPDF(flattenedDoc);
+
+  return {
+    buffer: pdfBuffer,
+    fileName: `${flattenedDoc.cardTitle.replace(/\s+/g, '_')}_Preference_Card.pdf`,
+  };
+};
+
+/**
+ * Generates a "beautiful" PDF for a preference card using PDFBuilder.
+ */
+const generatePreferenceCardPDF = async (card: any): Promise<Buffer> => {
+  const builder = new PDFBuilder()
+    .setTheme('corporate') // Using corporate for a more professional/beautiful look
+    .setTitle(card.cardTitle)
+    .setHeader({
+      title: card.cardTitle,
+      subtitle: 'Official Preference Card',
+      showDate: true,
+      style: {
+        padding: 24,
+      },
+    })
+    .addText({
+      content: 'Surgeon Information',
+      style: 'heading',
+      margin: { top: 20, bottom: 10 },
+    })
+    .addTable({
+      headers: ['Field', 'Details'],
+      rows: [
+        ['Full Name', card.surgeon?.fullName || 'N/A'],
+        ['Specialty', card.surgeon?.specialty || 'N/A'],
+        ['Hand Preference', card.surgeon?.handPreference || 'N/A'],
+        ['Contact', card.surgeon?.contactNumber || 'N/A'],
+        ['Music Preference', card.surgeon?.musicPreference || 'N/A'],
+      ],
+      striped: true,
+    })
+    .addSpacer(20);
+
+  if (card.medication) {
+    builder
+      .addText({ content: 'Medication', style: 'subheading' })
+      .addText({
+        content: card.medication,
+        style: 'body',
+        margin: { bottom: 15 },
+      })
+      .addDivider();
+  }
+
+  if (card.supplies && card.supplies.length > 0) {
+    builder.addText({ content: 'Supplies', style: 'subheading' }).addTable({
+      headers: ['Item Name', 'Quantity'],
+      rows: card.supplies.map((s: any) => [s.name, s.quantity]),
+      striped: true,
+    });
+    builder.addSpacer(20);
+  }
+
+  if (card.sutures && card.sutures.length > 0) {
+    builder.addText({ content: 'Sutures', style: 'subheading' }).addTable({
+      headers: ['Item Name', 'Quantity'],
+      rows: card.sutures.map((s: any) => [s.name, s.quantity]),
+      striped: true,
+    });
+    builder.addSpacer(20);
+  }
+
+  const sections = [
+    { label: 'Instruments', value: card.instruments },
+    { label: 'Positioning Equipment', value: card.positioningEquipment },
+    { label: 'Prepping', value: card.prepping },
+    { label: 'Workflow', value: card.workflow },
+    { label: 'Key Notes', value: card.keyNotes },
+  ];
+
+  for (const section of sections) {
+    if (section.value) {
+      builder
+        .addText({ content: section.label, style: 'subheading' })
+        .addText({
+          content: section.value,
+          style: 'body',
+          margin: { bottom: 15 },
+        })
+        .addDivider();
+    }
+  }
+
+  // Add Photo Library if exists
+  if (card.photoLibrary && card.photoLibrary.length > 0) {
+    builder.addText({
+      content: 'Photo Library',
+      style: 'heading',
+      margin: { top: 20, bottom: 10 },
+    });
+
+    for (const photo of card.photoLibrary) {
+      if (photo.url) {
+        builder
+          .addImage({
+            src: photo.url,
+            width: 500, // Large enough to see details
+          })
+          .addSpacer(10);
+      }
+    }
+  }
+
+  builder.setFooter({
+    showPageNumbers: true,
+    text: '© Preference Card System - Secure Document',
+  });
+
+  return builder.toBuffer();
 };
 
 /**
@@ -432,7 +609,7 @@ const listPublicPreferenceCardsFromDB = async (query?: Record<string, any>) => {
   const limit = Math.min(Math.max(Number(rawQuery.limit) || 10, 1), 50);
   const skip = (page - 1) * limit;
 
-  const match: Record<string, any> = { published: true };
+  const match: Record<string, any> = { published: true, isDeleted: false };
 
   // Specialty facet filter. Uses exact match now that `surgeon.specialty`
   // is indexed — callers pass the canonical string from `/specialties`.
@@ -617,43 +794,69 @@ const favoritePreferenceCardInDB = async (cardId: string, userId: string) => {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
   }
 
+  // Soft-delete check
+  if (card.isDeleted) {
+    throw new ApiError(StatusCodes.GONE, 'This preference card has been deleted');
+  }
+
+  // Visibility check: Card must be published OR the user must be the creator
   if (!card.published && card.createdBy.toString() !== userId) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
-      'Not authorized to favorite this card',
+      'Not authorized to favorite this private card',
     );
   }
 
-  // Upsert — idempotent, unique index on { userId, cardId } makes double
-  // favorite a no-op.
-  await Favorite.updateOne(
-    { userId: new Types.ObjectId(userId), cardId: new Types.ObjectId(cardId) },
-    { $setOnInsert: { userId, cardId } },
-    { upsert: true },
-  );
+  // Idempotent favorite using unique index constraint
+  try {
+    await Favorite.create({
+      userId: new Types.ObjectId(userId),
+      cardId: new Types.ObjectId(cardId),
+    });
+  } catch (error: any) {
+    // 11000 is MongoDB's duplicate key error code
+    if (error.code !== 11000) {
+      throw error;
+    }
+  }
 
   return { favorited: true };
 };
 
 const unfavoritePreferenceCardInDB = async (cardId: string, userId: string) => {
+  // Check if card exists
   const card = await PreferenceCardModel.findById(cardId);
   if (!card) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
   }
 
-  await Favorite.deleteOne({
+  // Soft-delete check
+  if (card.isDeleted) {
+    throw new ApiError(StatusCodes.GONE, 'This preference card has been deleted');
+  }
+
+  // Visibility check
+  if (!card.published && card.createdBy.toString() !== userId) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to unfavorite this private card',
+    );
+  }
+
+  // Idempotent unfavorite
+  const result = await Favorite.deleteOne({
     userId: new Types.ObjectId(userId),
     cardId: new Types.ObjectId(cardId),
   });
 
-  return { favorited: false };
+  return { favorited: false, deletedCount: result.deletedCount };
 };
 
 export const PreferenceCardService = {
   getPreferenceCardCountsFromDB,
   getDistinctSpecialtiesFromDB,
   getFavoriteCardIdsForUserFromDB,
-  incrementDownloadCountInDB,
+  downloadPreferenceCardInDB,
   createPreferenceCardInDB,
   listPreferenceCardsForUserFromDB,
   listPrivatePreferenceCardsForUserFromDB,

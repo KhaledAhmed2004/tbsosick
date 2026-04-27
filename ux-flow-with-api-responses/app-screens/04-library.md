@@ -257,28 +257,28 @@ Auth: Bearer {{accessToken}}
 ### 4.3 Favorite a Card
 
 ```
-POST /preference-cards/:cardId/favorite
+PUT /preference-cards/favorites/cards/:cardId
 Auth: Bearer {{accessToken}}
 ```
 
-> Card favorite list-e add korar jonno.
+> Card favorite list-e add korar jonno. Idempotent behaviour follow kore (already favorite thakle 200 OK return kore).
 
 #### Responses
-- **Scenario: Success (200)**: `{ "success": true, "message": "Preference card favorited" }`
+- **Scenario: Success (200)**: `{ "success": true, "message": "Preference card favorited", "data": { "favorited": true } }`
 
 ---
 
 ### 4.4 Unfavorite a Card
 
 ```
-DELETE /preference-cards/:cardId/favorite
+DELETE /preference-cards/favorites/cards/:cardId
 Auth: Bearer {{accessToken}}
 ```
 
-> Favorite list theke remove korar jonno.
+> Favorite list theke remove korar jonno. Idempotent behaviour follow kore (already unfavorited thakle-o 200 OK return kore).
 
 #### Responses
-- **Scenario: Success (200)**: `{ "success": true, "message": "Preference card unfavorited" }`
+- **Scenario: Success (200)**: `{ "success": true, "message": "Preference card unfavorited", "data": { "favorited": false, "deletedCount": 1 } }`
 
 ---
 

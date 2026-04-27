@@ -158,21 +158,24 @@ const deleteCard = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const incrementDownloadCount = catchAsync(async (req: Request, res: Response) => {
+const downloadCard = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
 
-  const result = await PreferenceCardService.incrementDownloadCountInDB(
+  const result = await PreferenceCardService.downloadPreferenceCardInDB(
     req.params.cardId,
     (user as any).id,
     (user as any).role,
   );
 
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Download count incremented',
-    data: result,
-  });
+  // Set headers for PDF download
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${result.fileName}"`,
+  );
+
+  // Send the PDF buffer directly
+  res.status(StatusCodes.OK).send(result.buffer);
 });
 
 const favoriteCard = catchAsync(async (req: Request, res: Response) => {
@@ -234,34 +237,20 @@ const getSpecialties = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const approveCard = catchAsync(async (req: Request, res: Response) => {
+const updateVerificationStatus = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
+  const { verificationStatus } = req.body;
+
   const result = await PreferenceCardService.updateVerificationStatusInDB(
     req.params.cardId,
     (user as any).role,
-    'VERIFIED',
+    verificationStatus,
   );
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Preference card approved',
-    data: result,
-  });
-});
-
-const rejectCard = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as JwtPayload;
-  const result = await PreferenceCardService.updateVerificationStatusInDB(
-    req.params.cardId,
-    (user as any).role,
-    'UNVERIFIED',
-  );
-
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Preference card rejected',
+    message: `Preference card status updated to ${verificationStatus}`,
     data: result,
   });
 });
@@ -273,11 +262,10 @@ export const PreferenceCardController = {
   getById,
   updateCard,
   deleteCard,
-  incrementDownloadCount,
+  downloadCard,
   favoriteCard,
   unfavoriteCard,
   getStats,
   getSpecialties,
-  approveCard,
-  rejectCard,
+  updateVerificationStatus,
 };

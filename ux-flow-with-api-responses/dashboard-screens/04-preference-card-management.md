@@ -14,10 +14,9 @@
 3. Admin search bar use kore card title ba surgeon name search kore → `GET /preference-cards?searchTerm=Cardiology` (→ 4.1)
 4. Admin filters use kore verified ba unverified card dekhte pare.
 5. Card table render hoy: Card Title, Surgeon Name, Specialty, Verification Status, Creation Date dekhay.
-6. Admin kono "UNVERIFIED" card review kore "Approve" button click kore → `PATCH /preference-cards/:cardId/approve` (→ 4.2)
-7. Card-er status "VERIFIED" hoye jay ebong system notification trigger hoy.
-8. Admin jodi card-ti reject korte chay, "Reject" button click kore → `PATCH /preference-cards/:cardId/reject` (→ 4.3)
-9. Card delete korar proyojon hole delete action click kore → `DELETE /preference-cards/:cardId` (→ 4.4)
+6. Admin kono card review kore verification status change korte pare (Approve hole status "VERIFIED" hoy, Reject hole "UNVERIFIED") → `PATCH /preference-cards/:cardId/status` (→ 4.2)
+7. Status update hole system notification trigger hoy ebong front-end list sync hoy.
+8. Card delete korar proyojon hole delete action click kore → `DELETE /preference-cards/:cardId` (→ 4.3)
 
 ---
 
@@ -80,17 +79,26 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 4.2 Approve Preference Card
+### 4.2 Update Verification Status (Approve/Reject)
 ```http
-PATCH /preference-cards/:cardId/approve
+PATCH /preference-cards/:cardId/status
+Content-Type: application/json
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Card-er content review korar por admin card-ti verify (Approve) kore. Service layer e data completeness check kora hoy.
+> Card review korar por admin status update kore. `VERIFIED` (Approve) korar somoy completeness logic apply hoy. `UNVERIFIED` (Reject) kora holeo card record delete hoy na.
 
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `approveCard`
+- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `updateVerificationStatus`
+- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `updateVerificationStatusInDB`
+
+**Request Body:**
+```json
+{
+  "verificationStatus": "VERIFIED"  // Enum: "VERIFIED" | "UNVERIFIED"
+}
+```
 
 #### Responses
 
@@ -99,7 +107,7 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 {
   "success": true,
   "statusCode": 200,
-  "message": "Preference card approved",
+  "message": "Preference card status updated to VERIFIED",
   "data": {
     "verificationStatus": "VERIFIED"
   }
@@ -108,35 +116,7 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 4.3 Reject Preference Card
-```http
-PATCH /preference-cards/:cardId/reject
-Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
-```
-
-> Card-er status "UNVERIFIED" set kore (Reject action).
-
-**Implementation:**
-- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `rejectCard`
-
-#### Responses
-
-- **Scenario: Success (200)**
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Preference card rejected",
-  "data": {
-    "verificationStatus": "UNVERIFIED"
-  }
-}
-```
-
----
-
-### 4.4 Delete Preference Card (Admin)
+### 4.3 Delete Preference Card (Admin)
 ```http
 DELETE /preference-cards/:cardId
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
@@ -155,6 +135,5 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 | # | Endpoint | Status | Notes |
 | :--- | :--- | :---: | :--- |
 | 4.1 | `GET /preference-cards` | ✅ Done | Aggregated list for moderation |
-| 4.2 | `PATCH /preference-cards/:cardId/approve` | ✅ Done | Completeness logic applied |
-| 4.3 | `PATCH /preference-cards/:cardId/reject` | ✅ Done | ID validation included |
-| 4.4 | `DELETE /preference-cards/:cardId` | ✅ Done | Hard delete by Admin |
+| 4.2 | `PATCH /preference-cards/:cardId/status` | ✅ Done | Unified Approve/Reject endpoint |
+| 4.3 | `DELETE /preference-cards/:cardId` | ✅ Done | Hard delete by Admin |
