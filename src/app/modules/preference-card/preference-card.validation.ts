@@ -87,7 +87,9 @@ const summarizeEventSchema = z.object({
 
 // Param ID Schema
 const paramIdSchema = z.object({
-  params: z.object({ cardId: z.string().min(1) }),
+  params: z.object({
+    cardId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
+  }),
 });
 
 // Search Preference Cards Schema
@@ -110,10 +112,28 @@ const publishPreferenceCardSchema = z.object({
   body: z.object({ published: z.boolean() }),
 });
 
+const downloadPreferenceCardSchema = z.object({
+  params: z.object({
+    cardId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
+  }),
+});
+
+// Update Verification Status Schema (Admin)
+const updateVerificationStatusSchema = z.object({
+  params: z.object({
+    cardId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
+  }),
+  body: z.object({
+    verificationStatus: z.enum(['VERIFIED', 'UNVERIFIED']),
+  }),
+});
+
 export const PreferenceCardValidation = {
   createPreferenceCardSchema,
   updatePreferenceCardSchema,
   paramIdSchema,
   searchCardsSchema,
   publishPreferenceCardSchema,
+  downloadPreferenceCardSchema,
+  updateVerificationStatusSchema,
 };

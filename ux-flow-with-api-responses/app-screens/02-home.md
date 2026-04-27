@@ -34,8 +34,8 @@
 ### Favorite Management
 1. User favorite list theke "View All" button-e tap korle full favorite list screen-e navigate kore.
 2. List ba details screen theke kono card favorite icon toggle korle:
-   - Jodi favorite kora na thake: `POST /preference-cards/:cardId/favorite` (→ 2.4)
-   - Jodi already favorite thake: `DELETE /preference-cards/:cardId/favorite` (→ 2.5)
+   - Jodi favorite kora na thake: `PUT /preference-cards/favorites/cards/:cardId` (→ 2.4)
+   - Jodi already favorite thake: `DELETE /preference-cards/favorites/cards/:cardId` (→ 2.5)
 3. Success hole backend update message pathay ebong Home screen-er favorite list refresh hoye naya data dekhay.
 4. Kono card-e tap korle full view-te navigate kore → [Details](./03-preference-card-details.md).
 
@@ -201,11 +201,11 @@ Auth: Bearer {{accessToken}}
 ### 2.4 Favorite a Card
 
 ```
-POST /preference-cards/:cardId/favorite
+PUT /preference-cards/favorites/cards/:cardId
 Auth: Bearer {{accessToken}}
 ```
 
-> Card favorite list-e add korar jonno.
+> Card favorite list-e add korar jonno. Idempotent behaviour follow kore (already favorite thakle 200 OK return kore).
 
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
@@ -213,9 +213,10 @@ Auth: Bearer {{accessToken}}
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `favoritePreferenceCardInDB`
 
 **Business Logic (`favoritePreferenceCardInDB`):**
-- Card execution-er age check kora hoy card-ti exist kore kina; na thakle `NOT_FOUND` error throw kore.
-- Visibility check: Card-ti jodi `published` na hoy, tahole shudhu matro creator operation-ti korte pare; onnothay `FORBIDDEN` error throw kore.
-- User record update kora hoy `$addToSet` command use kore jate same card multiple bar favorite list-e na dhoke.
+- Card existence check kora hoy; na thakle `NOT_FOUND` error throw kore.
+- Card-ti soft-deleted (`isDeleted: true`) hole `GONE` (410) ashe.
+- Visibility check: Private card hole shudhu creator favorite korte pare.
+- Unique index on `(userId, cardId)` use kore idempotency ensure kora hoy. Already favorited thakle silently success return kore.
 
 #### Responses
 - **Scenario: Success (200)**: `{ "success": true, "message": "Preference card favorited" }`
@@ -225,7 +226,7 @@ Auth: Bearer {{accessToken}}
 ### 2.5 Unfavorite a Card
 
 ```
-DELETE /preference-cards/:cardId/favorite
+DELETE /preference-cards/favorites/cards/:cardId
 Auth: Bearer {{accessToken}}
 ```
 
@@ -238,7 +239,7 @@ Auth: Bearer {{accessToken}}
 
 **Business Logic (`unfavoritePreferenceCardInDB`):**
 - Card existence check kora hoy.
-- User profile theke `$pull` use kore specific `cardId`-ti favorite array theke remove kora hoy.
+- Specific `userId` ebong `cardId` matching record favorite collection theke remove kora hoy.
 
 #### Responses
 - **Scenario: Success (200)**: `{ "success": true, "message": "Preference card unfavorited" }`
@@ -276,6 +277,6 @@ Auth: Bearer {{accessToken}}
 | 2.1 | `/preference-cards` | `GET` | Bearer | ✅ Done | Use `visibility=public` query |
 | 2.2 | `/preference-cards/stats` | `GET` | Bearer | ✅ Done | Stats (BOLA safe) |
 | 2.3 | `/users/me/favorites` | `GET` | Bearer | ✅ Done | Migrated to `/users` module |
-| 2.4 | `/preference-cards/:cardId/favorite` | `POST` | Bearer | ✅ Done | Add to favorites |
-| 2.5 | `/preference-cards/:cardId/favorite` | `DELETE` | Bearer | ✅ Done | Remove from favorites |
+| 2.4 | `/preference-cards/favorites/cards/:cardId` | `PUT` | Bearer | ✅ Done | Add to favorites (Idempotent) |
+| 2.5 | `/preference-cards/favorites/cards/:cardId` | `DELETE` | Bearer | ✅ Done | Remove from favorites (Idempotent) |
 | 2.6 | `/preference-cards/:cardId/download` | `POST` | Bearer | ✅ Done | Increment downloads |

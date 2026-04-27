@@ -34,4 +34,11 @@ export type PreferenceCard = {
   downloadCount: number;
   published: boolean;
   verificationStatus: 'VERIFIED' | 'UNVERIFIED';
+  isDeleted?: boolean;
+};
+
+export type PreferenceCardDownload = {
+  userId: Types.ObjectId;
+  cardId: Types.ObjectId;
+  downloadDate: string; // YYYY-MM-DD
 };
