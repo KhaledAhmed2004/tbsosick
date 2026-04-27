@@ -10,8 +10,8 @@
 ### Home Screen Initial Load
 1. Login successful hole ba app open korle user Home screen-e land kore.
 2. Screen load-er shathe shathe parallel API calls trigger hoy:
-   - Dashboard stats (Public vs Personal card counts) → `GET /preference-cards/stats` (→ 2.2)
-   - User-er curated favorite list → `GET /users/me/favorites` (→ 2.3)
+   - Dashboard stats (Public vs Personal card counts) → [GET /preference-cards/stats](../modules/preference-card.md#32-get-cards-stats)
+   - User-er curated favorite list → [GET /users/me/favorites](../modules/user.md#28-list-favorite-cards)
 3. UI render hoy:
    - Top section-e Search bar thake quick finding-er jonno.
    - Header-e notification bell icon thake (→ [Notifications](./07-notifications.md)).
@@ -21,7 +21,7 @@
 
 ### Search & Discovery Flow
 1. User top search bar-e keyword type kore (e.g., surgeon name, card title, procedure).
-2. Input change hole ba search icon-e tap korle search trigger hoy → `GET /preference-cards?visibility=public&searchTerm=keyword` (→ 2.1)
+2. Input change hole ba search icon-e tap korle search trigger hoy → [GET /preference-cards?visibility=public&searchTerm=keyword](../modules/preference-card.md#31-listsearch-preference-cards)
 3. Matching results list akare niche render hoy. Results na thakle "No cards found" empty state dekhay.
 
 ### Quick Actions (Create Card)
@@ -34,8 +34,8 @@
 ### Favorite Management
 1. User favorite list theke "View All" button-e tap korle full favorite list screen-e navigate kore.
 2. List ba details screen theke kono card favorite icon toggle korle:
-   - Jodi favorite kora na thake: `PUT /preference-cards/favorites/cards/:cardId` (→ 2.4)
-   - Jodi already favorite thake: `DELETE /preference-cards/favorites/cards/:cardId` (→ 2.5)
+   - Jodi favorite kora na thake: [PUT /preference-cards/favorites/cards/:cardId](../modules/preference-card.md#38-favorite-a-card)
+   - Jodi already favorite thake: [DELETE /preference-cards/favorites/cards/:cardId](../modules/preference-card.md#39-unfavorite-a-card)
 3. Success hole backend update message pathay ebong Home screen-er favorite list refresh hoye naya data dekhay.
 4. Kono card-e tap korle full view-te navigate kore → [Details](./03-preference-card-details.md).
 
@@ -43,240 +43,18 @@
 
 ## Edge Cases
 
-- **No Favorites**: Jodi user-er kono favorite card na thake, tahole "No favorite cards yet" placeholder dekhabe (200 OK + `data: []`).
+- **No Favorites**: Jodi user-er kono favorite card na thake, tahole "No favorite cards yet" placeholder dekhabe.
 - **Search Latency**: Search korar somoy loading skeleton ba spinner dekhano dorkar (Rate limited to 60 req/min).
 - **Double Tap**: User bishal druto tap korle idempotent endpoints (POST/DELETE) state correct rakhe.
 
 ---
 
-<!-- ══════════════════════════════════════ -->
-<!--              SEARCH & LIST               -->
-<!-- ══════════════════════════════════════ -->
+## Endpoints Used
 
-### 2.1 Search Preference Cards
-
-```
-GET /preference-cards?visibility=public&searchTerm=keyword
-Auth: Bearer {{accessToken}}
-```
-
-> Top search field theke public cards search korar jonno.
-
-**Implementation:**
-- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `getCards`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `listPublicPreferenceCardsFromDB`
-
-**Business Logic (`listPublicPreferenceCardsFromDB`):**
-- `QueryBuilder` use kore search, filter, sort, ebong pagination handle kora hoy.
-- Shudhu matro `published: true` cards fetch kora hoy jate public items-i dekha jay.
-- Input query parameter theke `specialty` ba `surgeonSpecialty` check kora hoy ebong regex insensitive search logic apply kora hoy.
-- `cardTitle`, `surgeon.fullName`, ebong `medication` field-er upore default matching logic apply kora hoy.
-- Card details-er shathe `supplies` ebong `sutures` populate kora hoy ebong return-er age data flatten kora hoy.
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Public preference cards retrieved successfully",
-    "meta": {
-      "page": 1,
-      "limit": 10,
-      "total": 50,
-      "totalPages": 5,
-      "hasNext": true,
-      "hasPrev": false
-    },
-    "data": [
-      {
-        "id": "664a1b2c3d4e5f6a7b8c9d0e",
-        "cardTitle": "Knee Arthroscopy",
-        "surgeon": { "name": "Dr. Smith", "specialty": "Orthopedics" },
-        "verificationStatus": "VERIFIED",
-        "isFavorited": true
-      }
-    ]
-  }
-  ```
-
----
-
-<!-- ══════════════════════════════════════ -->
-<!--                STATS                     -->
-<!-- ══════════════════════════════════════ -->
-
-### 2.2 Get Cards Stats
-
-```
-GET /preference-cards/stats
-Auth: Bearer {{accessToken}}
-```
-
-> Home screen-e stats dekhate use hoy. Total public cards ebong user-er nijer cards er count return kore.
-
-**Implementation:**
-- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `getStats`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `getCountsForCards`
-
-**Business Logic (`getCountsForCards`):**
-- `Promise.all` use kore parallel-vabe database query run kora hoy.
-- Total published cards-er count (`AllCardsCount`) ebong current user-er create kora cards-er count (`myCardsCount`) calculate kora hoy.
-- Accurate counts return kora hoy jate dashboard stats update thake.
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Card statistics retrieved successfully",
-    "data": {
-      "publicCards": 120,
-      "myCards": 15
-    }
-  }
-  ```
-
----
-
-<!-- ══════════════════════════════════════ -->
-<!--              FAVORITES                  -->
-<!-- ══════════════════════════════════════ -->
-
-### 2.3 List Favorite Cards
-
-```
-GET /users/me/favorites
-Auth: Bearer {{accessToken}}
-```
-
-> Home screen-er niche favorite list dekhate use hoy.
-
-**Implementation:**
-- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
-- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getFavoriteCards`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `listFavoritePreferenceCardsForUserFromDB`
-
-**Business Logic (`listFavoritePreferenceCardsForUserFromDB`):**
-- Prothome user profile theke `favoriteCards` (ObjectIds array) fetch kora hoy.
-- Jodi user-er kono favorite card na thake, tahole empty data array ebong empty meta information return kora hoy.
-- Multiple favorites thakle `QueryBuilder` use kore selection criteria (search/filter/sort/pagination) apply kora hoy.
-- `$in` operator use kore specific cards-gulo retrieve kora hoy ebong flatten format-e return kora hoy.
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Favorite preference cards retrieved successfully",
-    "meta": {
-      "page": 1,
-      "limit": 10,
-      "total": 5,
-      "totalPages": 1,
-      "hasNext": false,
-      "hasPrev": false
-    },
-    "data": [
-      {
-        "id": "664a1b2c3d4e5f6a7b8c9d0f",
-        "cardTitle": "Hip Replacement",
-        "surgeon": { "name": "Dr. Brown", "specialty": "Orthopedics" },
-        "isFavorited": true,
-        "downloadCount": 12
-      }
-    ]
-  }
-  ```
-
----
-
-### 2.4 Favorite a Card
-
-```
-PUT /preference-cards/favorites/cards/:cardId
-Auth: Bearer {{accessToken}}
-```
-
-> Card favorite list-e add korar jonno. Idempotent behaviour follow kore (already favorite thakle 200 OK return kore).
-
-**Implementation:**
-- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `favoriteCard`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `favoritePreferenceCardInDB`
-
-**Business Logic (`favoritePreferenceCardInDB`):**
-- Card existence check kora hoy; na thakle `NOT_FOUND` error throw kore.
-- Card-ti soft-deleted (`isDeleted: true`) hole `GONE` (410) ashe.
-- Visibility check: Private card hole shudhu creator favorite korte pare.
-- Unique index on `(userId, cardId)` use kore idempotency ensure kora hoy. Already favorited thakle silently success return kore.
-
-#### Responses
-- **Scenario: Success (200)**: `{ "success": true, "message": "Preference card favorited" }`
-
----
-
-### 2.5 Unfavorite a Card
-
-```
-DELETE /preference-cards/favorites/cards/:cardId
-Auth: Bearer {{accessToken}}
-```
-
-> Favorite list theke remove korar jonno.
-
-**Implementation:**
-- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `unfavoriteCard`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `unfavoritePreferenceCardInDB`
-
-**Business Logic (`unfavoritePreferenceCardInDB`):**
-- Card existence check kora hoy.
-- Specific `userId` ebong `cardId` matching record favorite collection theke remove kora hoy.
-
-#### Responses
-- **Scenario: Success (200)**: `{ "success": true, "message": "Preference card unfavorited" }`
-
----
-
-### 2.6 Download a Card
-
-```
-POST /preference-cards/:cardId/download
-Auth: Bearer {{accessToken}}
-```
-
-> Card download-er sonkhya (Download Count) 1 baranor jonno.
-
-**Implementation:**
-- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `incrementDownloadCount`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `incrementDownloadCountInDB`
-
-**Business Logic (`incrementDownloadCountInDB`):**
-- Card existence validation kora hoy.
-- Authorization check: Private card-er khetre shudhu matro creator ba `SUPER_ADMIN` download count barate pare.
-- Atomic-ly `downloadCount` value 1 increment kore save kora hoy.
-
-#### Responses
-- **Scenario: Success (200)**: `{ "success": true, "message": "Download count incremented", "data": { "downloadCount": 13 } }`
-
----
-
-## API Status
-
-| # | Endpoint | Method | Auth | Status | Notes |
-|---|---|---|---|:---:|---|
-| 2.1 | `/preference-cards` | `GET` | Bearer | ✅ Done | Use `visibility=public` query |
-| 2.2 | `/preference-cards/stats` | `GET` | Bearer | ✅ Done | Stats (BOLA safe) |
-| 2.3 | `/users/me/favorites` | `GET` | Bearer | ✅ Done | Migrated to `/users` module |
-| 2.4 | `/preference-cards/favorites/cards/:cardId` | `PUT` | Bearer | ✅ Done | Add to favorites (Idempotent) |
-| 2.5 | `/preference-cards/favorites/cards/:cardId` | `DELETE` | Bearer | ✅ Done | Remove from favorites (Idempotent) |
-| 2.6 | `/preference-cards/:cardId/download` | `POST` | Bearer | ✅ Done | Increment downloads |
+| # | Method | Endpoint | Module Spec |
+|---|---|---|---|
+| 1 | GET | `/preference-cards?visibility=public&searchTerm=…` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) |
+| 2 | GET | `/preference-cards/stats` | [Module 3.2](../modules/preference-card.md#32-get-cards-stats) |
+| 3 | PUT | `/preference-cards/favorites/cards/:cardId` | [Module 3.8](../modules/preference-card.md#38-favorite-a-card) |
+| 4 | DELETE | `/preference-cards/favorites/cards/:cardId` | [Module 3.9](../modules/preference-card.md#39-unfavorite-a-card) |
+| 5 | GET | `/users/me/favorites` | [Module 2.8](../modules/user.md#28-list-favorite-cards) |

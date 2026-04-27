@@ -29,7 +29,7 @@
 | 3.7 | DELETE | `/preference-cards/:cardId` | Bearer | [App Card Details](../app-screens/03-preference-card-details.md), [Dashboard Card Mgmt](../dashboard-screens/04-preference-card-management.md) |
 | 3.8 | PUT | `/preference-cards/favorites/cards/:cardId` | Bearer | [App Home](../app-screens/02-home.md), [App Card Details](../app-screens/03-preference-card-details.md), [App Library](../app-screens/04-library.md), [Dashboard Card Mgmt](../dashboard-screens/04-preference-card-management.md) |
 | 3.9 | DELETE | `/preference-cards/favorites/cards/:cardId` | Bearer | [App Home](../app-screens/02-home.md), [App Card Details](../app-screens/03-preference-card-details.md), [App Library](../app-screens/04-library.md), [Dashboard Card Mgmt](../dashboard-screens/04-preference-card-management.md) |
-| 3.10 | POST | `/preference-cards/:cardId/download` | Bearer | [App Home](../app-screens/02-home.md), [App Card Details](../app-screens/03-preference-card-details.md), [App Library](../app-screens/04-library.md) |
+| 3.10 | POST | `/preference-cards/:cardId/download` | Bearer | [App Card Details](../app-screens/03-preference-card-details.md), [App Library](../app-screens/04-library.md) |
 | 3.11 | PATCH | `/preference-cards/:cardId` (with `{ verificationStatus }` body) | SUPER_ADMIN | [Dashboard Card Mgmt](../dashboard-screens/04-preference-card-management.md) |
 
 ---
@@ -675,27 +675,9 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-## Standard Error Scenarios (Shared)
+## Common errors
 
-#### Scenario: Unauthorized (401)
-```json
-{
-  "type": "https://api.tbsosick.com/problems/unauthorized",
-  "title": "Unauthorized",
-  "status": 401,
-  "detail": "Your session has expired. Please log in again to continue.",
-  "code": "UNAUTHORIZED",
-  "request_id": "req-xyz789"
-}
-```
-
-#### Scenario: Rate Limit (429)
-```json
-{
-  "success": false,
-  "message": "Too many requests, please try again later"
-}
-```
+For cross-cutting responses (401 Unauthorized, 402/403 Plan Required, 429 Rate Limit, 400 Validation), see [Common Error Scenarios in modules/README.md](./README.md#common-error-scenarios).
 
 ---
 
