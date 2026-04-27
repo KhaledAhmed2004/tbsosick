@@ -184,6 +184,7 @@ const favoriteCard = catchAsync(async (req: Request, res: Response) => {
   const result = await PreferenceCardService.favoritePreferenceCardInDB(
     req.params.cardId,
     (user as any).id,
+    (user as any).role,
   );
 
   sendResponse(res, {
@@ -200,6 +201,7 @@ const unfavoriteCard = catchAsync(async (req: Request, res: Response) => {
   const result = await PreferenceCardService.unfavoritePreferenceCardInDB(
     req.params.cardId,
     (user as any).id,
+    (user as any).role,
   );
 
   sendResponse(res, {

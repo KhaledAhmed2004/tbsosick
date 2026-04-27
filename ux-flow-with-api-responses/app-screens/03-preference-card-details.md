@@ -144,6 +144,39 @@ Auth: Bearer {{accessToken}} (USER)
 
 ---
 
+### 3.1a Favorite/Unfavorite Card
+
+```
+PUT/DELETE /preference-cards/favorites/cards/:cardId
+Auth: Bearer {{accessToken}} (USER)
+```
+
+> User card details theke favorite toggle korle eta call hoy.
+
+#### Responses
+
+- **Scenario: Favorite Success (200)**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Preference card favorited",
+    "data": { "favorited": true }
+  }
+  ```
+
+- **Scenario: Unfavorite Success (200)**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Preference card unfavorited",
+    "data": { "favorited": false, "deletedCount": 1 }
+  }
+  ```
+
+---
+
 ### 3.2 Increment Download Count
 
 ```

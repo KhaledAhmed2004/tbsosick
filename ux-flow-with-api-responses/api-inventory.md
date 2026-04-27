@@ -47,7 +47,8 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | 4.1 | `/preference-cards` | `GET` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
 | 4.2 | `/preference-cards/:cardId/status` | `PATCH` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
-| 4.4 | `/preference-cards/:cardId` | `DELETE` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
+| 4.3 | `/preference-cards/:cardId` | `DELETE` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
+| 4.4 | `/preference-cards/favorites/cards/:cardId` | `PUT/DELETE` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
 
 ### 5. [Legal Management](./dashboard-screens/05-legal-management.md)
 | ID | Endpoint | Method | Roles | Implementation | Status |
@@ -167,6 +168,4 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | **Subscription** | `/subscription/apple/webhook` | `POST` | Needs E2E testing with Apple Server Notifications V2 | High |
 | **Subscription** | `/subscription/google/webhook` | `POST` | Needs E2E testing with Google Pub/Sub push | High |
 | **Docs** | Subscription IAP screens | — | No UX flow doc for apple/google verify + choose-free flows | Medium |
-| **Docs** | Preference card moderation | — | No UX flow doc for `/preference-cards/:cardId/approve` and `/reject` | Medium |
-| **Docs** | Legal Management | — | No admin UX flow doc for `/legal` management | Low |
 

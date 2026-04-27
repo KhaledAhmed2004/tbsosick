@@ -788,7 +788,11 @@ const listFavoritePreferenceCardsForUserFromDB = async (
   };
 };
 
-const favoritePreferenceCardInDB = async (cardId: string, userId: string) => {
+const favoritePreferenceCardInDB = async (
+  cardId: string,
+  userId: string,
+  role?: string,
+) => {
   const card = await PreferenceCardModel.findById(cardId);
   if (!card) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
@@ -799,8 +803,11 @@ const favoritePreferenceCardInDB = async (cardId: string, userId: string) => {
     throw new ApiError(StatusCodes.GONE, 'This preference card has been deleted');
   }
 
-  // Visibility check: Card must be published OR the user must be the creator
-  if (!card.published && card.createdBy.toString() !== userId) {
+  // Visibility check: Card must be published OR the user must be the creator OR SUPER_ADMIN
+  const isOwner = card.createdBy.toString() === userId;
+  const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
+
+  if (!card.published && !isOwner && !isSuperAdmin) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Not authorized to favorite this private card',
@@ -823,7 +830,11 @@ const favoritePreferenceCardInDB = async (cardId: string, userId: string) => {
   return { favorited: true };
 };
 
-const unfavoritePreferenceCardInDB = async (cardId: string, userId: string) => {
+const unfavoritePreferenceCardInDB = async (
+  cardId: string,
+  userId: string,
+  role?: string,
+) => {
   // Check if card exists
   const card = await PreferenceCardModel.findById(cardId);
   if (!card) {
@@ -835,8 +846,11 @@ const unfavoritePreferenceCardInDB = async (cardId: string, userId: string) => {
     throw new ApiError(StatusCodes.GONE, 'This preference card has been deleted');
   }
 
-  // Visibility check
-  if (!card.published && card.createdBy.toString() !== userId) {
+  // Visibility check: Card must be published OR the user must be the creator OR SUPER_ADMIN
+  const isOwner = card.createdBy.toString() === userId;
+  const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
+
+  if (!card.published && !isOwner && !isSuperAdmin) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Not authorized to unfavorite this private card',

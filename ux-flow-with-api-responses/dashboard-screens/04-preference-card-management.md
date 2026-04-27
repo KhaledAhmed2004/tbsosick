@@ -15,8 +15,10 @@
 4. Admin filters use kore verified ba unverified card dekhte pare.
 5. Card table render hoy: Card Title, Surgeon Name, Specialty, Verification Status, Creation Date dekhay.
 6. Admin kono card review kore verification status change korte pare (Approve hole status "VERIFIED" hoy, Reject hole "UNVERIFIED") → `PATCH /preference-cards/:cardId/status` (→ 4.2)
-7. Status update hole system notification trigger hoy ebong front-end list sync hoy.
-8. Card delete korar proyojon hole delete action click kore → `DELETE /preference-cards/:cardId` (→ 4.3)
+7. Admin chaile kono card favorite list e add korte pare → `PUT /preference-cards/favorites/cards/:cardId` (→ 4.4)
+8. Admin chaile favorite list theke remove korte pare → `DELETE /preference-cards/favorites/cards/:cardId` (→ 4.4)
+9. Status update hole system notification trigger hoy ebong front-end list sync hoy.
+10. Card delete korar proyojon hole delete action click kore → `DELETE /preference-cards/:cardId` (→ 4.3)
 
 ---
 
@@ -27,6 +29,8 @@
 | **Approve Draft** | Draft card (published: false) approve korte chaile route allow kore kintu business logic completeness (medication, etc.) check kore check kore service layer e 400 error return korbe. |
 | **Invalid Card ID** | PATCH/DELETE request e non-existent ID dile 404 Not Found ashe. |
 | **Unauthorized Access** | USER role theke approve/reject attempt korle 403 Forbidden return kore. |
+| **Already Favorited** | Card already favorite thaka obosthay `PUT` request pathale idempotency maintained thake (200 OK return kore). |
+| **Not Favorited** | Card favorite list e na thaka obosthay `DELETE` request pathale 200 OK return kore. |
 
 ---
 
@@ -124,9 +128,20 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 > Admin manually kono card permanent-ly delete korte pare.
 
+---
+
+### 4.4 Favorite/Unfavorite Card (Admin)
+```http
+PUT/DELETE /preference-cards/favorites/cards/:cardId
+Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
+```
+
+> Admin chaile kono card nijer list e favorite kore rakhte pare. Operations gulo idempotent (multiple calls same result dibe).
+
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `deleteCard`
+- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `favoriteCard` / `unfavoriteCard`
+- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `favoritePreferenceCardInDB` / `unfavoritePreferenceCardInDB`
 
 ---
 
@@ -137,3 +152,4 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 | 4.1 | `GET /preference-cards` | ✅ Done | Aggregated list for moderation |
 | 4.2 | `PATCH /preference-cards/:cardId/status` | ✅ Done | Unified Approve/Reject endpoint |
 | 4.3 | `DELETE /preference-cards/:cardId` | ✅ Done | Hard delete by Admin |
+| 4.4 | `PUT/DELETE /favorites/cards/:cardId` | ✅ Done | Idempotent favorite actions |

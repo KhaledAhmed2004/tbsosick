@@ -48,8 +48,8 @@
 
 ### Card Actions (List View)
 1. User kono card-er favorite icon toggle korle:
-   - Jodi favorite kora na thake: `POST /preference-cards/:cardId/favorite` (→ 4.3)
-   - Jodi already favorite thake: `DELETE /preference-cards/:cardId/favorite` (→ 4.4)
+   - Jodi favorite kora na thake: `PUT /preference-cards/favorites/cards/:cardId` (→ 4.3)
+   - Jodi already favorite thake: `DELETE /preference-cards/favorites/cards/:cardId` (→ 4.4)
 2. User card theke download icon tap korle:
    - Backend-e count update hoy: `POST /preference-cards/:cardId/download` (→ 4.5).
    - Local device-e card PDF/image save hoy.
@@ -331,7 +331,7 @@ Auth: Bearer {{accessToken}}
 | 4.1 | `GET` | `/preference-cards` | List cards (public or private via `visibility` param) | Bearer | student | ✅ Done |
 | 4.2 | `GET` | `/preference-cards/specialties` | Fetch all distinct specialties for filter dropdown | Bearer | student | ✅ Done |
 | 4.3 | `GET` | `/preference-cards/:cardId` | Single card detail (Refer to Screen 3) | Bearer | student | ✅ Done |
-| 4.4 | `POST` | `/preference-cards/:cardId/favorite` | Add card to favorites | Bearer | student | ✅ Done |
-| 4.5 | `DELETE` | `/preference-cards/:cardId/favorite` | Remove card from favorites | Bearer | student | ✅ Done |
+| 4.4 | `PUT` | `/preference-cards/favorites/cards/:cardId` | Add card to favorites | Bearer | student | ✅ Done |
+| 4.5 | `DELETE` | `/preference-cards/favorites/cards/:cardId` | Remove card from favorites | Bearer | student | ✅ Done |
 | 4.6 | `POST` | `/preference-cards/:cardId/download` | Increment download count | Bearer | student | ✅ Done |
 | 4.7 | `Shared Errors` | `401, 400, 429` | Handled across all requests | - | - | ✅ Done |
