@@ -14,7 +14,7 @@
 3. Admin search bar use kore card title ba surgeon name search kore → `GET /preference-cards?searchTerm=Cardiology` (→ 4.1)
 4. Admin filters use kore verified ba unverified card dekhte pare.
 5. Card table render hoy: Card Title, Surgeon Name, Specialty, Verification Status, Creation Date dekhay.
-6. Admin kono card review kore verification status change korte pare (Approve hole status "VERIFIED" hoy, Reject hole "UNVERIFIED") → `PATCH /preference-cards/:cardId/status` (→ 4.2)
+6. Admin kono card review kore verification status change korte pare (Approve hole status "VERIFIED" hoy, Reject hole "UNVERIFIED") → `PATCH /preference-cards/:cardId` body `{ "verificationStatus": "VERIFIED" | "UNVERIFIED" }` (→ 4.2)
 7. Admin chaile kono card favorite list e add korte pare → `PUT /preference-cards/favorites/cards/:cardId` (→ 4.4)
 8. Admin chaile favorite list theke remove korte pare → `DELETE /preference-cards/favorites/cards/:cardId` (→ 4.4)
 9. Status update hole system notification trigger hoy ebong front-end list sync hoy.
@@ -85,17 +85,19 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ### 4.2 Update Verification Status (Approve/Reject)
 ```http
-PATCH /preference-cards/:cardId/status
+PATCH /preference-cards/:cardId
 Content-Type: application/json
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Card review korar por admin status update kore. `VERIFIED` (Approve) korar somoy completeness logic apply hoy. `UNVERIFIED` (Reject) kora holeo card record delete hoy na.
+> Verification update is a **partial card update** with `verificationStatus` in the body — same endpoint that owners use to edit their card, role-gated to `SUPER_ADMIN` when `verificationStatus` is present (per [D8](../overview.md#appendix-a--decisions-log-v1)). `VERIFIED` (Approve) apply korar somoy completeness logic apply hoy. `UNVERIFIED` (Reject) korlay card record delete hoy na.
+
+> **Code state**: Currently implemented at `PATCH /:cardId/status`. Refactor to the unified `PATCH /:cardId` contract is pending — clients should target the canonical contract documented here.
 
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `updateVerificationStatus`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `updateVerificationStatusInDB`
+- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `updateCard` (post-refactor) / `updateVerificationStatus` (current)
+- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `updatePreferenceCardInDB` / `updateVerificationStatusInDB`
 
 **Request Body:**
 ```json
@@ -115,6 +117,14 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
   "data": {
     "verificationStatus": "VERIFIED"
   }
+}
+```
+- **Scenario: Forbidden — non-admin sets `verificationStatus` (403)**
+```json
+{
+  "success": false,
+  "statusCode": 403,
+  "message": "Only SUPER_ADMIN can change verification status."
 }
 ```
 
@@ -150,6 +160,6 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 | # | Endpoint | Status | Notes |
 | :--- | :--- | :---: | :--- |
 | 4.1 | `GET /preference-cards` | ✅ Done | Aggregated list for moderation |
-| 4.2 | `PATCH /preference-cards/:cardId/status` | ✅ Done | Unified Approve/Reject endpoint |
+| 4.2 | `PATCH /preference-cards/:cardId` (`{ verificationStatus }` body) | Contract Done · Code Pending | Unified verify/reject per D8. Code currently uses `/:cardId/status` — refactor pending. |
 | 4.3 | `DELETE /preference-cards/:cardId` | ✅ Done | Hard delete by Admin |
 | 4.4 | `PUT/DELETE /favorites/cards/:cardId` | ✅ Done | Idempotent favorite actions |

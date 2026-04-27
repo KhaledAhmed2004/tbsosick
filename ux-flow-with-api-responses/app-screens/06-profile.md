@@ -23,10 +23,36 @@
 4. Success hole updated fields show kore ebong profile re-render hoy.
 
 ### Subscription Management
-1. User profile theke "My Subscription" section-e jay.
-2. Current plan details dekhay.
-3. Jodi Free user hoy, "Upgrade to Premium" button thake.
-4. Upgrade flow-te In-App Purchase (IAP) logic trigger hoy.
+
+**Read flow**:
+1. Profile load-er shathe `GET /subscriptions/me` (→ 6.3) parallel-vabe call hoy.
+2. "My Subscription" card-e current plan (`FREE` / `PREMIUM` / `ENTERPRISE`), `interval`, `expiresAt`, `autoRenew` dekhay.
+3. Free user-er jonno **"Upgrade to Premium"** ebong **"Upgrade to Enterprise"** CTA dekhay.
+4. Paid user-er jonno **"Manage Subscription"** button native store deep-link kholay (App Store / Play Store).
+
+**Upgrade flow (IAP)**:
+1. User "Upgrade" CTA tap kore → plan picker bottom-sheet open hoy:
+   - **Premium** ($5.99/mo · $59.99/yr) — 20 cards, Library, Basic Calendar.
+   - **Enterprise** ($9.99/mo · $99.99/yr) — Unlimited cards, Advanced Calendar, Verification eligibility.
+2. User plan + interval (monthly / yearly) select kore.
+3. App native IAP SDK trigger kore corresponding `productId` shoho:
+   - iOS: `com.tbsosick.premium.monthly`, `com.tbsosick.premium.yearly`, `com.tbsosick.enterprise.monthly`, `com.tbsosick.enterprise.yearly`
+   - Android: same IDs (Play Billing).
+4. Store payment sheet open hoy → user payment confirm kore.
+5. SDK theke purchase receipt (base64-encoded) pawa jay.
+6. App receipt server-e pathay → `POST /subscriptions/verify-receipt` (→ 6.6) body shoho `{ platform, productId, receipt }`.
+7. Server Apple / Google verify kore subscription upsert kore + updated plan return kore.
+8. Success → app `GET /subscriptions/me` re-fetch kore → "My Subscription" card naya plan dekhay → success toast ("Welcome to Premium!").
+9. Failure → user-ke current plan-e rakhe, error toast dekhay + "Retry" CTA. Client local-e receipt cache kore retry korte pare.
+
+**Restore purchases** (existing user, new device):
+1. Settings → "Restore Purchases" tap kore.
+2. Native SDK previously-bought transactions return kore.
+3. App receipt fresh `POST /subscriptions/verify-receipt` call kore.
+4. Server idempotent vabe verify kore — already-active subscription thakle existing record return kore.
+
+**Auto-renewal**:
+- Renewal / cancel events App Store / Play Store theke server webhook-e ashe (no client action). Server `expiresAt` ebong `plan` update kore. App next time `GET /subscriptions/me` call korle latest state pay.
 
 ### Legal Pages (Terms & Conditions)
 1. User profile menu theke "Terms and Conditions" ba "Privacy Policy"-te click kore.
@@ -184,6 +210,82 @@ Auth: Bearer {{accessToken}}
 
 ---
 
+## 6.6 Verify Receipt (IAP)
+
+```
+POST /subscriptions/verify-receipt
+Content-Type: application/json
+Auth: Bearer {{accessToken}}
+```
+
+> Mobile IAP SDK theke pawa store receipt server-e verify korar jonno. Apple App Store / Google Play r shathe verify hoy ebong subscription record upsert kore. Idempotent — same receipt re-submit korle existing subscription return kore (used by Restore Purchases).
+
+**Implementation:**
+- **Route**: [subscription.route.ts](file:///src/app/modules/subscription/subscription.route.ts)
+- **Controller**: [subscription.controller.ts](file:///src/app/modules/subscription/subscription.controller.ts) — `verifyReceipt`
+- **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `verifyReceiptAndUpsertSubscription`
+
+**Business Logic (`verifyReceiptAndUpsertSubscription`):**
+- Platform onujayi correct verifier select hoy (`AppleReceiptVerifier` / `GoogleReceiptVerifier`).
+- Receipt store-er API te pathay verify korar jonno; signature, expiry, ebong product validity check kora hoy.
+- Verified hole `plan` ebong `interval` `productId` theke derive kora hoy ebong subscription document upsert hoy current user-er jonno.
+- `expiresAt`, `autoRenew`, ebong `originalTransactionId` save kora hoy webhook reconciliation-er jonno.
+- Verification fail hole 400 throw kore — kono subscription state change hoy na.
+
+**Request Body:**
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `platform` | Yes | string | `"ios"` or `"android"` |
+| `productId` | Yes | string | Store product ID (e.g., `com.tbsosick.premium.yearly`) |
+| `receipt` | Yes | string | Base64-encoded receipt from native SDK |
+
+```json
+{
+  "platform": "ios",
+  "productId": "com.tbsosick.premium.yearly",
+  "receipt": "<base64-encoded-receipt>"
+}
+```
+
+### Responses
+
+**200 — Success**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Subscription verified and updated",
+  "data": {
+    "plan": "PREMIUM",
+    "interval": "yearly",
+    "status": "ACTIVE",
+    "expiresAt": "2027-04-28T00:00:00.000Z",
+    "autoRenew": true
+  }
+}
+```
+
+**400 — Invalid Receipt**
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Receipt verification failed. Please try again."
+}
+```
+
+**409 — Receipt Belongs to Another Account**
+```json
+{
+  "success": false,
+  "statusCode": 409,
+  "message": "This purchase is associated with a different account."
+}
+```
+
+---
+
 <!-- ══════════════════════════════════════ -->
 <!--              LEGAL FLOW                -->
 <!-- ══════════════════════════════════════ -->
@@ -261,3 +363,4 @@ Auth: None
 | 6.3 | `GET /subscriptions/me` | ✅ Done | Plan status check |
 | 6.4 | `GET /legal` | ✅ Done | List of legal titles |
 | 6.5 | `GET /legal/:slug` | ✅ Done | Full page content |
+| 6.6 | `POST /subscriptions/verify-receipt` | 🟡 Spec Done · Code Pending | IAP receipt verification (Apple + Google). Idempotent for restore-purchases. |
