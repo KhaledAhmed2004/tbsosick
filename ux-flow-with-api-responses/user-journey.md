@@ -586,8 +586,8 @@ GET /admin/preference-cards/monthly?year=2025&compare_year=2024&tz=Asia/Dhaka
 | Home | 2.1 | `GET` | `/preference-cards?visibility=public` | Bearer |
 | Home | 2.2 | `GET` | `/preference-cards/stats` | Bearer |
 | Home | 2.3 | `GET` | `/users/me/favorites` | Bearer |
-| Home | 2.4 | `POST` | `/preference-cards/:cardId/favorite` | Bearer |
-| Home | 2.5 | `DELETE` | `/preference-cards/:cardId/favorite` | Bearer |
+| Home | 2.4 | `PUT` | `/preference-cards/favorites/cards/:cardId` | Bearer |
+| Home | 2.5 | `DELETE` | `/preference-cards/favorites/cards/:cardId` | Bearer |
 | Home | 2.6 | `POST` | `/preference-cards/:cardId/download` | Bearer |
 | Card Details | 3.1 | `GET` | `/preference-cards/:cardId` | Bearer |
 | Card Details | 3.2 | `POST` | `/preference-cards/:cardId/download` | Bearer |
