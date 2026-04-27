@@ -46,7 +46,7 @@ Ei file ta screen-wise API list track rakhe. Proti ti UI screen-er against-e kon
 | ID | Endpoint | Method | Roles | Implementation | Status |
 | :--- | :--- | :---: | :--- | :--- | :---: |
 | 4.1 | `/preference-cards` | `GET` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
-| 4.2 | `/preference-cards/:cardId/status` | `PATCH` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
+| 4.2 | `/preference-cards/:cardId` (body `{ verificationStatus }`) | `PATCH` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | Contract ✅ · Code Pending (D8) |
 | 4.3 | `/preference-cards/:cardId` | `DELETE` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
 | 4.4 | `/preference-cards/favorites/cards/:cardId` | `PUT/DELETE` | SUPER_ADMIN | [04-preference-card-management.md](./dashboard-screens/04-preference-card-management.md) | ✅ |
 
