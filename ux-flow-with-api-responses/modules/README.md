@@ -37,6 +37,59 @@ All API responses follow a single unified envelope. See [`../README.md`](../READ
 
 ---
 
+## Common Error Scenarios
+
+These cross-cutting error responses can occur on **any** authenticated endpoint. Module-specific endpoint docs only list module-specific errors and link here for the common ones.
+
+#### Scenario: Unauthorized (401)
+Returned when the access token is missing, invalid, or expired.
+```json
+{
+  "type": "https://api.tbsosick.com/problems/unauthorized",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "Your session has expired. Please log in again to continue.",
+  "code": "UNAUTHORIZED",
+  "request_id": "req-xyz789"
+}
+```
+**Client behaviour**: auto-retry the original request via `POST /auth/refresh-token` (see [auth.md §1.5](./auth.md#15-refresh-token)). If refresh fails, force logout.
+
+#### Scenario: Forbidden — Plan Required (402 / 403)
+Returned when the user's subscription plan doesn't grant access to the resource (e.g., Free user hits Library or Calendar). See [overview.md §9 Subscription Plans](../overview.md#9-subscription-plans-iap).
+```json
+{
+  "success": false,
+  "statusCode": 403,
+  "message": "This feature requires a Premium plan.",
+  "code": "PLAN_REQUIRED"
+}
+```
+
+#### Scenario: Rate Limit (429)
+Returned when the per-route rate limit is exceeded (e.g., public search: 60 req/min; download: 20 req/min).
+```json
+{
+  "success": false,
+  "message": "Too many requests, please try again later"
+}
+```
+
+#### Scenario: Validation Error (400)
+Returned by Zod when request body / query / params fail schema validation. Includes the failing field path.
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Validation error",
+  "errors": [
+    { "path": "body.email", "message": "Invalid email format" }
+  ]
+}
+```
+
+---
+
 ## Modules
 
 | # | Module | Summary | File |

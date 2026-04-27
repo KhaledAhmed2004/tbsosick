@@ -10,6 +10,20 @@ Each screen e APIs called, method/URL, auth requirement, ebong expected response
 
 ---
 
+## How this folder is organized
+
+This folder has three layers, each with a single responsibility:
+
+| Folder / file | Purpose | Read this when… |
+|---|---|---|
+| [`app-screens/`](./app-screens/), [`dashboard-screens/`](./dashboard-screens/) | **UX flow only** — user journeys, screen behaviour, edge cases. | Building or designing a screen. |
+| [`modules/`](./modules/) | **Canonical API specs** — request/response shapes, business logic, implementation pointers. | Implementing or consuming an endpoint. |
+| [`api-inventory.md`](./api-inventory.md) | **Tracker view** — every endpoint with wiring status (which screen, implementation done). | Auditing coverage or finding orphaned endpoints. |
+
+**Source of truth rule**: contract changes go in `modules/` only. Journey changes go in `app-screens/` or `dashboard-screens/` only. Cross-link between layers via anchors so navigation stays one click.
+
+---
+
 ## Standard Response Envelope
 
 Shob API ei format follow kore:
@@ -48,4 +62,8 @@ Shob API ei format follow kore:
 |---|--------|-------------|
 | 1 | [Auth](./dashboard-screens/01-auth.md) | Admin login, token management, forget password flow |
 | 2 | [Overview](./dashboard-screens/02-overview.md) | Dashboard stats, counts, recent activity |
-| 3 | [Doctor](./dashboard-screens/03-doctor.md) | Doctor management — search, filter, table actions |
+| 3 | [User Management](./dashboard-screens/03-user-management.md) | Doctor / user management — search, filter, CRUD, block/activate |
+| 4 | [Preference Card Management](./dashboard-screens/04-preference-card-management.md) | Card moderation, verification (approve/reject), delete |
+| 5 | [Legal Management](./dashboard-screens/05-legal-management.md) | Legal pages CMS (Terms, Privacy) |
+| 6 | [Supplies Management](./dashboard-screens/06-supplies-management.md) | Supplies master catalog — single + bulk create, edit, delete |
+| 7 | [Sutures Management](./dashboard-screens/07-sutures-management.md) | Sutures master catalog — single + bulk create, edit, delete |

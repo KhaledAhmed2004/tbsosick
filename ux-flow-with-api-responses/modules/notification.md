@@ -60,6 +60,11 @@ GET /notifications
 Auth: Bearer {{accessToken}}
 ```
 
+**Implementation:**
+- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
+- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `getMyNotifications`
+- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `getNotificationsForUserFromDB`
+
 **Query Parameters:**
 - `page`: Pagination-er jonno (default: 1).
 - `limit`: Per page item count (default: 20).
@@ -97,6 +102,11 @@ Auth: Bearer {{accessToken}}
 
 > Single notification ke read mark kore. Tap-er shathe shathe (optimistic) call hoy background e.
 
+**Implementation:**
+- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
+- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `markAsRead`
+- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `markNotificationReadInDB`
+
 ---
 
 ### 5.3 Mark All as Read
@@ -107,6 +117,11 @@ Auth: Bearer {{accessToken}}
 ```
 
 > User top-right "Mark all as read" button e tap korle shob notifications `read: true` hoy ebong red dot disappear kore.
+
+**Implementation:**
+- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
+- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `markAllAsRead`
+- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `markAllNotificationsReadInDB`
 
 ---
 
@@ -119,14 +134,22 @@ Auth: Bearer {{accessToken}}
 
 > Swipe-to-delete ba long-press menu theke notification delete korar jonno. Optimistic UI: row immediately list theke remove hoy. Failure hole row restore hoy + error toast dekhay.
 
+**Implementation:**
+- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
+- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `deleteNotification`
+- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `deleteNotificationFromDB`
+
 ---
 
-## Implementation Details
+## Module-level helpers
 
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — Database logic and trigger helpers.
-- **Model**: [notification.model.ts](file:///src/app/modules/notification/notification.model.ts) — Schema defining fields like `userId`, `type`, `title`, `subtitle`, etc.
-- **Helper**: [notificationsHelper.ts](file:///src/app/modules/notification/notificationsHelper.ts) — Handles socket emission and push notification logic.
+Notifications use a multi-channel fan-out pattern that's shared across triggering services:
+
+- **Model**: [notification.model.ts](file:///src/app/modules/notification/notification.model.ts) — Schema (`userId`, `type`, `title`, `subtitle`, `read`, `icon`).
+- **Helper**: [notificationsHelper.ts](file:///src/app/modules/notification/notificationsHelper.ts) — Socket emission + FCM push.
 - **Builder**: [NotificationBuilder.ts](file:///src/app/builder/NotificationBuilder/NotificationBuilder.ts) — Unified API for complex multi-channel notifications.
+
+For cross-cutting error responses (401, 429, 400), see [Common Error Scenarios](./README.md#common-error-scenarios).
 
 ---
 
