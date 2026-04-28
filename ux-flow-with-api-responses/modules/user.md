@@ -19,10 +19,13 @@
 | 2.2 | GET | `/users` | SUPER_ADMIN | [Dashboard User Management](../dashboard-screens/03-user-management.md) |
 | 2.3 | GET | `/users/stats` | SUPER_ADMIN | [Dashboard User Management](../dashboard-screens/03-user-management.md) |
 | 2.4 | PATCH | `/users/:userId` | SUPER_ADMIN | [Dashboard User Management](../dashboard-screens/03-user-management.md) |
-| 2.5 | DELETE | `/users/:userId` | SUPER_ADMIN | [Dashboard User Management](../dashboard-screens/03-user-management.md) |
-| 2.6 | GET | `/users/profile` | Bearer | [App Profile](../app-screens/06-profile.md) |
-| 2.7 | PATCH | `/users/profile` | Bearer | [App Profile](../app-screens/06-profile.md) |
-| 2.8 | GET | `/users/me/favorites` | Bearer | [App Home](../app-screens/02-home.md) |
+| 2.5 | PATCH | `/users/:userId/status` | SUPER_ADMIN | Admin status toggle |
+| 2.6 | DELETE | `/users/:userId` | SUPER_ADMIN | [Dashboard User Management](../dashboard-screens/03-user-management.md) |
+| 2.7 | GET | `/users/:userId` | SUPER_ADMIN | Admin view user |
+| 2.8 | GET | `/users/:userId/user` | Bearer (User/Admin) | Public user details (rate limited) |
+| 2.9 | GET | `/users/profile` | Bearer | [App Profile](../app-screens/06-profile.md) |
+| 2.10 | PATCH | `/users/profile` | Bearer | [App Profile](../app-screens/06-profile.md) |
+| 2.11 | GET | `/users/me/favorites` | Bearer | [App Home](../app-screens/02-home.md) |
 
 ---
 
@@ -42,10 +45,9 @@ Auth: None (registration) | Bearer {{accessToken}} (SUPER_ADMIN admin create)
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `createUserToDB`
 
 **Business Logic (`createUserToDB`):**
-- Users register hoy unverified state-e.
-- Registration-er por automatically ekta verification OTP email pathano hoy (`sendVerificationOTP`).
-- OTP sending logic-ti "fire and forget" mode-e chole, jate email service down thakle signup block na hoy.
-- User-ke `verified: true` status pathiye verification bypass kora jay na.
+- Users start in an unverified state.
+- After creation, a verification OTP email is automatically sent (`sendVerificationOTP`).
+- OTP sending is "fire and forget" to avoid blocking signup on email transport issues.
 
 **Request Body (Mobile Registration):**
 ```json
@@ -57,20 +59,6 @@ Auth: None (registration) | Bearer {{accessToken}} (SUPER_ADMIN admin create)
   "country": "USA",
   "gender": "male",
   "dateOfBirth": "1995-05-15"
-}
-```
-
-**Request Body (Admin Create):**
-```json
-{
-  "name": "Dr. Jane Smith",
-  "email": "dr.jane@example.com",
-  "password": "Password123!",
-  "phone": "+123456789",
-  "specialty": "Dermatology",
-  "hospital": "Metro Clinic",
-  "gender": "female",
-  "dateOfBirth": "1985-05-15"
 }
 ```
 
@@ -87,70 +75,56 @@ Auth: None (registration) | Bearer {{accessToken}} (SUPER_ADMIN admin create)
       "name": "John Doe",
       "email": "john@example.com",
       "role": "USER",
+      "phone": "+123456789",
+      "country": "USA",
+      "gender": "male",
+      "dateOfBirth": "1995-05-15",
+      "profilePicture": "https://i.ibb.co/z5YHLV9/profile.png",
+      "status": "ACTIVE",
       "verified": false,
-      "status": "ACTIVE"
+      "isFirstLogin": true,
+      "deviceTokens": [],
+      "createdAt": "2026-04-29T10:00:00.000Z",
+      "updatedAt": "2026-04-29T10:00:00.000Z"
     }
-  }
-  ```
-- **Scenario: Success — Admin Create (201)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 201,
-    "message": "Doctor created",
-    "data": {
-      "_id": "664a1b2c3d4e5f6a7b8c9d0f",
-      "name": "Dr. Jane Smith",
-      "email": "dr.jane@example.com",
-      "role": "USER",
-      "status": "ACTIVE"
-    }
-  }
-  ```
-- **Scenario: Email Already Exists (400)**
-  ```json
-  {
-    "success": false,
-    "statusCode": 400,
-    "message": "Email already exist!"
   }
   ```
 
 ---
 
-### 2.2 Get/Search Users (Doctors)
+### 2.2 List Users (Admin)
 
 ```
 GET /users
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> User list search, filter, ebong pagination handle kore. Complex aggregation use kora hoyeche specialty ebong card counts calculate korar jonno.
+> Comprehensive user list with card counts, specialties, and subscription status.
 
 **Implementation:**
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getAllUserRoles`
-- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getAllUserRoles`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getAllUserRolesFromDB`
 
 **Business Logic (`getAllUserRolesFromDB`):**
-- Complex aggregation pipeline use kore users fetch kora hoy.
-- User-er create kora shob `PreferenceCard` join (`$lookup`) kora hoy.
-- Total `cardsCount` ebong card-gulo theke distinct `specialties` list calculate kora hoy.
-- Subscription status ebong plan (FREE/PREMIUM) check kora hoy.
-- `specialty` filter apply korle calculated specialties list-er opor regex match kora hoy.
-- Pagination handle kora hoy `$facet` use kore (data + total count ekbare fetch kora hoy).
+- Uses a complex aggregation pipeline to fetch users.
+- Joins with `PreferenceCard` to calculate `cardsCount` and a distinct list of `specialties`.
+- Joins with `Subscription` to fetch `subscriptionStatus` and `subscriptionPlan`.
+- Supports filtering by `role`, `status`, `email`, `search` (name/email), and `specialty`.
+- Pagination handled via `$facet`.
 
 **Query Parameters:**
-
 | Parameter | Description | Default |
 | :--- | :--- | :--- |
-| `search` | Name ba email search | — |
-| `specialty` | Filter by specialty (regex match) | — |
+| `search` | Name or email regex search | — |
+| `email` | Exact or regex email match | — |
+| `role` | Filter by role | `USER` |
 | `status` | Filter by status (`ACTIVE`, `INACTIVE`, `RESTRICTED`) | — |
+| `specialty` | Filter by specialty (regex match on calculated list) | — |
 | `page` | Pagination page number | `1` |
 | `limit` | Pagination limit | `10` |
 | `sortBy` | Field name for sorting | `createdAt` |
-| `sortOrder` | Sort direction (`asc` ba `desc`) | `desc` |
+| `sortOrder` | Sort direction (`asc` or `desc`) | `desc` |
 
 #### Responses
 
@@ -159,8 +133,15 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 {
   "success": true,
   "statusCode": 200,
-  "message": "Doctor list fetched",
-  "pagination": { "page": 1, "limit": 10, "total": 25, "totalPage": 3 },
+  "message": "User list fetched",
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 25,
+    "totalPages": 3,
+    "hasNext": true,
+    "hasPrev": false
+  },
   "data": [
     {
       "_id": "664a1b2c3d4e5f6a7b8c9d0e",
@@ -171,6 +152,7 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
       "hospital": "City Hospital",
       "status": "ACTIVE",
       "verified": true,
+      "role": "USER",
       "specialties": ["Cardiology", "Surgery"],
       "cardsCount": 5,
       "subscriptionStatus": "active",
@@ -183,37 +165,18 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ---
 
-### 2.3 User Stats (Overview Cards)
+### 2.3 User Stats (Dashboard)
 
 ```
 GET /users/stats
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Dashboard-er user section-er (Doctors focus) summary stat cards-er jonno. Total, active, inactive, blocked user count with monthly growth return kore.
-
-**Implementation:**
-- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
-- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getUsersStats`
-- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getUsersStats`
+> Aggregated growth metrics for the admin dashboard.
 
 **Business Logic (`getUsersStatsFromDB`):**
-- `AggregationBuilder` use kore current month ebong previous month-er comparison kora hoy.
-- Overall growth (`totalUsers`) ebong status-wise growth (`active`, `inactive`, `blocked`) calculate kora hoy.
-- Growth percentage (`changePct`) ebong growth direction (`up`/`down`/`neutral`) determine kora hoy.
-
-**Query Parameters:** None
-
-**Field Reference:**
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `meta.comparisonPeriod` | `string` | Always `"month"` — current vs last calendar month |
-| `{metric}.value` | `number` | Total count as of now |
-| `{metric}.changePct` | `number` | Always a positive magnitude (e.g. `25`, `7.14`). Use `direction` for sign. |
-| `{metric}.direction` | `"up" \| "down" \| "neutral"` | `"up"` = growth, `"down"` = decline, `"neutral"` = no change or first month with no prior data |
-
-> **Note:** `totalDoctors.value` is the authoritative total — sum of all statuses. Do not derive it by adding individual counts on the frontend; future statuses may be added.
+- Calculates monthly growth for `totalUsers`, `activeUsers`, `inactiveUsers`, and `blockedUsers`.
+- Returns `value`, `changePct`, and `direction` (`up` / `down` / `neutral`).
 
 #### Responses
 
@@ -222,36 +185,16 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 {
   "success": true,
   "statusCode": 200,
-  "message": "Doctor stats retrieved successfully",
+  "message": "User statistics retrieved",
   "data": {
-    "meta": {
-      "comparisonPeriod": "month"
-    },
-    "totalUsers": {
-      "value": 250,
-      "changePct": 25,
-      "direction": "up"
-    },
-    "activeUsers": {
-      "value": 198,
-      "changePct": 10,
-      "direction": "up"
-    },
-    "inactiveUsers": {
-      "value": 32,
-      "changePct": 5,
-      "direction": "down"
-    },
-    "blockedUsers": {
-      "value": 20,
-      "changePct": 0,
-      "direction": "neutral"
-    }
+    "meta": { "comparisonPeriod": "month" },
+    "totalUsers": { "value": 250, "changePct": 25, "direction": "up" },
+    "activeUsers": { "value": 198, "changePct": 10, "direction": "up" },
+    "inactiveUsers": { "value": 32, "changePct": 5, "direction": "down" },
+    "blockedUsers": { "value": 20, "changePct": 0, "direction": "neutral" }
   }
 }
 ```
-
-> **Note:** `changePct` is always a positive number; `direction` tells you whether it went up or down. `"neutral"` means no change compared to last month.
 
 ---
 
@@ -259,37 +202,20 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ```
 PATCH /users/:userId
-Content-Type: application/json
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> User details update kore. **Block / Unblock o eikhane diye hoy** — body-te `status: "RESTRICTED"` dile block, `status: "ACTIVE"` dile unblock. Alada `/block` ba `/unblock` route nai (REST principle: state change is just a field update on the resource, separate verb-route na rakha).
+> Update any user field (whitelist approach).
 
 **Implementation:**
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `adminUpdateUser`
-- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateUserByAdmin`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateUserByAdminInDB`
 
 **Business Logic (`updateUserByAdminInDB`):**
-- `findById` call kore existing user fetch kora hoy (password shoho, jate `user.save()` trigger hoy).
-- Shudhu matro specific allowed fields (whitelist) update kora hoy.
-- Security-r jonno return korar age response object theke `password` ebong `authentication` field-gulo delete kora hoy.
-
-**Request Body (any subset of these fields):**
-```json
-{
-  "name": "Dr. Jane Updated",
-  "specialty": "Oncology",
-  "hospital": "Central Hospital",
-  "status": "RESTRICTED"
-}
-```
-
-| Field | Type | Description |
-| :--- | :--- | :--- |
-| `name`, `email`, `phone`, `country`, `specialty`, `hospital`, `location`, `gender`, `dateOfBirth`, `profilePicture` | `string` | Profile fields |
-| `role` | `"SUPER_ADMIN" \| "USER"` | Role change |
-| `status` | `"ACTIVE" \| "INACTIVE" \| "RESTRICTED" \| "DELETE"` | **Block = `RESTRICTED`**, **Unblock = `ACTIVE`** |
+- Fetches user including password to trigger `user.save()`.
+- Updates specific whitelisted fields: `name`, `email`, `phone`, `country`, `specialty`, `hospital`, `location`, `gender`, `dateOfBirth`, `profilePicture`, `status`, `role`.
+- Removes sensitive fields (`password`, `authentication`) before returning.
 
 #### Responses
 
@@ -298,41 +224,63 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 {
   "success": true,
   "statusCode": 200,
-  "message": "Doctor updated",
+  "message": "User updated",
   "data": {
-    "_id": "664a1b2c3d4e5f6a7b8c9d0f",
-    "name": "Dr. Jane Updated",
-    "email": "dr.jane@example.com",
-    "specialty": "Oncology",
-    "hospital": "Central Hospital"
+    "_id": "664a1b2c3d4e5f6a7b8c9d0e",
+    "name": "Updated Name",
+    "email": "updated@example.com",
+    "role": "USER",
+    "status": "ACTIVE"
   }
-}
-```
-
-- **Scenario: Not Found (404)**
-```json
-{
-  "success": false,
-  "statusCode": 404,
-  "message": "User not found"
 }
 ```
 
 ---
 
-### 2.5 Delete User (Admin)
+### 2.5 Update User Status (Admin)
+
+```
+PATCH /users/:userId/status
+Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
+```
+
+> Simplified endpoint for status toggling (Block/Unblock).
+
+**Implementation:**
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `updateUserStatus`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateUserStatusInDB`
+
+#### Responses
+
+- **Scenario: Success (200)**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "User status updated",
+  "data": {
+    "_id": "664a1b2c3d4e5f6a7b8c9d0e",
+    "status": "RESTRICTED"
+  }
+}
+```
+
+---
+
+### 2.6 Delete User (Admin)
 
 ```
 DELETE /users/:userId
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> User account permanent-ly delete kore.
+> Permanently removes a user from the database.
 
 **Implementation:**
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `deleteUser`
-- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `deleteUserPermanently`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `deleteUserPermanentlyFromDB`
 
 #### Responses
 
@@ -341,58 +289,126 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 {
   "success": true,
   "statusCode": 200,
-  "message": "Doctor deleted"
+  "message": "User deleted",
+  "data": {
+    "_id": "664a1b2c3d4e5f6a7b8c9d0e"
+  }
 }
 ```
 
 ---
 
-### 2.6 Get Profile
+### 2.7 Get User by ID (Admin)
+
+```
+GET /users/:userId
+Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
+```
+
+> Admin specific view of a user's basic info. Returns user data wrapped in a `user` object.
+
+**Implementation:**
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getUserById`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getUserByIdFromDB`
+
+#### Responses
+
+- **Scenario: Success (200)**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "User data retrieved",
+  "data": {
+    "user": {
+      "_id": "664a1b2c3d4e5f6a7b8c9d0e",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "USER",
+      "status": "ACTIVE"
+    }
+  }
+}
+```
+
+---
+
+### 2.8 Get User Details (Public/User)
+
+```
+GET /users/:userId/user
+Authorization: Bearer {{accessToken}}
+```
+
+> Detailed user profile view for other users or admins. Rate limited.
+
+**Implementation:**
+- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getUserDetailsById`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getUserDetailsByIdFromDB`
+
+#### Responses
+
+- **Scenario: Success (200)**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "User details retrieved successfully",
+  "data": {
+    "_id": "664a1b2c3d4e5f6a7b8c9d0e",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": "USER",
+    "profilePicture": "https://cdn.example.com/pic.png",
+    "specialty": "Cardiology",
+    "hospital": "City Hospital"
+  }
+}
+```
+
+---
+
+### 2.9 Get Own Profile
 
 ```
 GET /users/profile
 Auth: Bearer {{accessToken}}
 ```
 
-> Logged-in user-er profile data fetch korar jonno.
-
-**Implementation:**
-- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
-- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getUserProfile`
-- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getUserProfileFromDB`
-
 #### Responses
 
 - **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Profile retrieved successfully",
-    "data": {
-      "_id": "664a1b2c3d4e5f6a7b8c9d0e",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "role": "USER",
-      "phone": "+123456789",
-      "hospital": "City Hospital",
-      "specialty": "Cardiology",
-      "profilePicture": "https://cdn.example.com/profile.png"
-    }
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Profile data retrieved successfully",
+  "data": {
+    "_id": "664a1b2c3d4e5f6a7b8c9d0e",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+123456789",
+    "role": "USER",
+    "status": "ACTIVE",
+    "verified": true,
+    "profilePicture": "https://i.ibb.co/z5YHLV9/profile.png",
+    "country": "USA",
+    "gender": "male",
+    "dateOfBirth": "1995-05-15",
+    "specialty": "Cardiology",
+    "hospital": "City Hospital",
+    "isFirstLogin": false,
+    "createdAt": "2026-03-15T10:30:00.000Z",
+    "updatedAt": "2026-04-29T11:00:00.000Z"
   }
-  ```
-- **Scenario: Unauthorized (401)** *(token missing or expired)*
-  ```json
-  {
-    "success": false,
-    "statusCode": 401,
-    "message": "Unauthorized"
-  }
-  ```
+}
+```
 
 ---
 
-### 2.7 Update Profile
+### 2.10 Update Own Profile
 
 ```
 PATCH /users/profile
@@ -400,96 +416,82 @@ Content-Type: multipart/form-data
 Auth: Bearer {{accessToken}}
 ```
 
-> Profile info update ebong/ba profile picture upload korar jonno. Shudhu updated fields pathano dorkar — sob field optional.
+> Supports text fields and a `profilePicture` file upload.
 
 **Implementation:**
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `updateProfile`
-- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateProfileInDB`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateProfileToDB`
 
 **Business Logic (`updateProfileToDB`):**
-- Logged-in user-er ID verify kora hoy.
-- Jodi notun `profilePicture` upload kora hoy, tobe server theke puraton image file-ti permanent-ly remove (`unlinkFile`) kora hoy disk space bachate.
-- Updated user profile return kora hoy.
-
-**Request Body (FormData):**
-
-| Field | Type | Required | Constraints |
-|---|---|---|---|
-| `name` | `string` | No | Min 2 chars, max 100 chars |
-| `hospital` | `string` | No | Max 150 chars |
-| `specialty` | `string` | No | Max 100 chars |
-| `phone` | `string` | No | Valid phone format |
-| `profilePicture` | `File` | No | JPEG or PNG only, max 5MB |
-
-> At least one field must be provided. Empty request body returns `422`.
+- If a new `profilePicture` is provided, the previous one is unlinked from the server disk.
 
 #### Responses
 
-- **Scenario: Success (200)** *(returns only the fields that were updated)*
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Profile updated successfully",
-    "data": {
-      "_id": "664a1b2c3d4e5f6a7b8c9d0e",
-      "name": "John Updated",
-      "hospital": "Metro Clinic",
-      "profilePicture": "https://cdn.example.com/new-pic.jpg"
-    }
+- **Scenario: Success (200)**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Profile updated successfully",
+  "data": {
+    "_id": "664a1b2c3d4e5f6a7b8c9d0e",
+    "name": "John Updated",
+    "email": "john@example.com",
+    "profilePicture": "uploads/profiles/new-pic.png"
   }
-  ```
+}
+```
 
 ---
 
-### 2.8 List Favorite Cards
+### 2.11 List Favorite Cards
 
 ```
 GET /users/me/favorites
 Auth: Bearer {{accessToken}}
 ```
 
-> Home screen-er niche favorite list dekhate use hoy.
-
 **Implementation:**
-- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
-- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getFavoriteCards`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `listFavoritePreferenceCardsForUserFromDB`
+- **Controller**: `getFavoriteCards`
+- **Service**: `PreferenceCardService.listFavoritePreferenceCardsForUserFromDB`
 
-**Business Logic (`listFavoritePreferenceCardsForUserFromDB`):**
-- Prothome user profile theke `favoriteCards` (ObjectIds array) fetch kora hoy.
-- Jodi user-er kono favorite card na thake, tahole empty data array ebong empty meta information return kora hoy.
-- Multiple favorites thakle `QueryBuilder` use kore selection criteria (search/filter/sort/pagination) apply kora hoy.
-- `$in` operator use kore specific cards-gulo retrieve kora hoy ebong flatten format-e return kora hoy.
+**Summarized Response Logic:**
+- Returns a flat array of summarized cards with `isFavorited: true`.
 
 #### Responses
 
 - **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Favorite preference cards retrieved successfully",
-    "meta": {
-      "page": 1,
-      "limit": 10,
-      "total": 5,
-      "totalPages": 1,
-      "hasNext": false,
-      "hasPrev": false
-    },
-    "data": [
-      {
-        "id": "664a1b2c3d4e5f6a7b8c9d0f",
-        "cardTitle": "Hip Replacement",
-        "surgeon": { "name": "Dr. Brown", "specialty": "Orthopedics" },
-        "isFavorited": true,
-        "downloadCount": 12
-      }
-    ]
-  }
-  ```
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Favorite preference cards retrieved successfully",
+  "meta": { "page": 1, "limit": 10, "total": 5 },
+  "data": [
+    {
+      "id": "664a1b2c3d4e5f6a7b8c9d0f",
+      "cardTitle": "Hip Replacement",
+      "surgeon": { "name": "Dr. Brown", "specialty": "Orthopedics" },
+      "verificationStatus": "VERIFIED",
+      "isFavorited": true,
+      "downloadCount": 12,
+      "createdAt": "...",
+      "updatedAt": "..."
+    }
+  ]
+}
+```
+
+- **Scenario: No Favorites Found (200)**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "No favorite cards found.",
+  "data": []
+}
+```
 
 ---
 
@@ -497,11 +499,14 @@ Auth: Bearer {{accessToken}}
 
 | # | Endpoint | Status | Roles | Notes |
 |---|---|:---:|:---:|---|
-| 2.1 | `POST /users` | Done | Public / SUPER_ADMIN | Registration + admin-create share the same handler |
-| 2.2 | `GET /users` | Done | SUPER_ADMIN | Detailed aggregation for stats added |
-| 2.3 | `GET /users/stats` | Done | SUPER_ADMIN | User growth metrics included |
-| 2.4 | `PATCH /users/:userId` | Done | SUPER_ADMIN | Admin update — also handles block/unblock via `status` field |
-| 2.5 | `DELETE /users/:userId` | Done | SUPER_ADMIN | Hard delete implemented |
-| 2.6 | `GET /users/profile` | Done | User | Profile load |
-| 2.7 | `PATCH /users/profile` | Done | User | Profile update + image upload |
-| 2.8 | `GET /users/me/favorites` | Done | User | Migrated to `/users` module |
+| 2.1 | `POST /users` | Done | Public / SUPER_ADMIN | Shared handler |
+| 2.2 | `GET /users` | Done | SUPER_ADMIN | Comprehensive aggregation |
+| 2.3 | `GET /users/stats` | Done | SUPER_ADMIN | Growth metrics |
+| 2.4 | `PATCH /users/:userId` | Done | SUPER_ADMIN | Whitelisted update |
+| 2.5 | `PATCH /users/:userId/status` | Done | SUPER_ADMIN | Status toggle |
+| 2.6 | `DELETE /users/:userId` | Done | SUPER_ADMIN | Permanent delete |
+| 2.7 | `GET /users/:userId` | Done | SUPER_ADMIN | Admin view |
+| 2.8 | `GET /users/:userId/user` | Done | User / Admin | Public details |
+| 2.9 | `GET /users/profile` | Done | User / Admin | Self profile |
+| 2.10 | `PATCH /users/profile` | Done | User / Admin | Self update + upload |
+| 2.11 | `GET /users/me/favorites` | Done | User / Admin | Summarized list |
