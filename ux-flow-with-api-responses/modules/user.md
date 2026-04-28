@@ -41,6 +41,12 @@ Auth: None (registration) | Bearer {{accessToken}} (SUPER_ADMIN admin create)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `createUser`
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `createUserToDB`
 
+**Business Logic (`createUserToDB`):**
+- Users register hoy unverified state-e.
+- Registration-er por automatically ekta verification OTP email pathano hoy (`sendVerificationOTP`).
+- OTP sending logic-ti "fire and forget" mode-e chole, jate email service down thakle signup block na hoy.
+- User-ke `verified: true` status pathiye verification bypass kora jay na.
+
 **Request Body (Mobile Registration):**
 ```json
 {
@@ -126,6 +132,14 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getAllUserRoles`
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getAllUserRoles`
 
+**Business Logic (`getAllUserRolesFromDB`):**
+- Complex aggregation pipeline use kore users fetch kora hoy.
+- User-er create kora shob `PreferenceCard` join (`$lookup`) kora hoy.
+- Total `cardsCount` ebong card-gulo theke distinct `specialties` list calculate kora hoy.
+- Subscription status ebong plan (FREE/PREMIUM) check kora hoy.
+- `specialty` filter apply korle calculated specialties list-er opor regex match kora hoy.
+- Pagination handle kora hoy `$facet` use kore (data + total count ekbare fetch kora hoy).
+
 **Query Parameters:**
 
 | Parameter | Description | Default |
@@ -182,6 +196,11 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getUsersStats`
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getUsersStats`
+
+**Business Logic (`getUsersStatsFromDB`):**
+- `AggregationBuilder` use kore current month ebong previous month-er comparison kora hoy.
+- Overall growth (`totalUsers`) ebong status-wise growth (`active`, `inactive`, `blocked`) calculate kora hoy.
+- Growth percentage (`changePct`) ebong growth direction (`up`/`down`/`neutral`) determine kora hoy.
 
 **Query Parameters:** None
 
@@ -250,6 +269,11 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `adminUpdateUser`
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateUserByAdmin`
+
+**Business Logic (`updateUserByAdminInDB`):**
+- `findById` call kore existing user fetch kora hoy (password shoho, jate `user.save()` trigger hoy).
+- Shudhu matro specific allowed fields (whitelist) update kora hoy.
+- Security-r jonno return korar age response object theke `password` ebong `authentication` field-gulo delete kora hoy.
 
 **Request Body (any subset of these fields):**
 ```json
@@ -382,6 +406,11 @@ Auth: Bearer {{accessToken}}
 - **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `updateProfile`
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `updateProfileInDB`
+
+**Business Logic (`updateProfileToDB`):**
+- Logged-in user-er ID verify kora hoy.
+- Jodi notun `profilePicture` upload kora hoy, tobe server theke puraton image file-ti permanent-ly remove (`unlinkFile`) kora hoy disk space bachate.
+- Updated user profile return kora hoy.
 
 **Request Body (FormData):**
 

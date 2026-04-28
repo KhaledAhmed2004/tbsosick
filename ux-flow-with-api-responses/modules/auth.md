@@ -39,6 +39,22 @@ Auth: None
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `loginUser`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `loginUserFromDB`
 
+**Business Logic:**
+1. **User Lookup**: Finds user by email, selecting `password` and `tokenVersion` (hidden by default).
+2. **Account Checks**:
+   - Throws `401 Unauthorized` if user not found.
+   - Throws `403 Forbidden` if status is `DELETED`, `RESTRICTED`, or `INACTIVE`.
+   - Throws `401 Unauthorized` if email is not `verified`.
+3. **Password Validation**: Compares input password with hashed password using `bcrypt`.
+4. **Token Generation**:
+   - Issues **Access Token** (short-lived).
+   - Issues **Refresh Token** (long-lived).
+   - Both tokens include `id`, `role`, `email`, and `tokenVersion`.
+5. **Session Management**:
+   - Updates `isFirstLogin` to `false` on successful first login.
+   - Registers/updates `deviceToken` for push notifications if provided.
+   - Sets `refreshToken` in a secure `httpOnly` cookie.
+
 **Request Body:**
 ```json
 {
@@ -98,6 +114,20 @@ Auth: None
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `verifyEmail`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `verifyEmailToDB`
 
+**Business Logic:**
+1. **Validation**: Atomic lookup for user with matching `email`, `otp`, and `expireAt > now`.
+2. **Scenario A: New User / Registration**:
+   - If user is not yet `verified`:
+     - Sets `verified: true` and clears OTP fields.
+     - **Auto-login**: Issues Access and Refresh tokens immediately so the user doesn't have to login manually after verification.
+3. **Scenario B: Forgot Password Flow**:
+   - If user is already `verified`:
+     - Sets `isResetPassword: true` flag on the user document (acts as a one-time permission for the reset endpoint).
+     - Clears OTP fields.
+     - Generates a cryptographically secure `resetToken` (via `cryptoToken()` helper).
+     - Saves this token in the `ResetToken` collection with a short TTL.
+     - Returns the `resetToken` to the client.
+
 **Request Body:**
 ```json
 {
@@ -155,6 +185,14 @@ Auth: None
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `forgetPassword`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `forgetPasswordToDB`
 
+**Business Logic:**
+1. **User Check**: Checks if user exists.
+2. **Silent Success**: If user doesn't exist, returns a success message anyway. This prevents "Account Enumeration" attacks where hackers check which emails are registered.
+3. **Cleanup**: Deletes any previously issued reset tokens for this user to ensure only the latest request is valid.
+4. **OTP Generation**: Generates a 6-digit random OTP.
+5. **Email Delivery**: Sends an email with the OTP using the `resetPassword` template.
+6. **Storage**: Saves the OTP and a TTL-based expiry (e.g., 3-5 minutes) to the user's `authentication` field in the database.
+
 **Request Body:**
 ```json
 {
@@ -189,6 +227,16 @@ Auth: Bearer {{resetToken}}
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `resetPassword`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `resetPasswordToDB`
 
+**Business Logic:**
+1. **Token Validation**: Verifies the `resetToken` exists in the database and has not expired.
+2. **Permission Check**: Verifies the user has the `isResetPassword: true` flag (set during OTP verification).
+3. **Password Update**: 
+   - Hashes the `newPassword` using `bcrypt`.
+   - Updates the user's password.
+   - Sets `isResetPassword: false` to prevent token reuse.
+4. **Session Invalidation**: **Increments `tokenVersion` by 1**. This immediately invalidates all currently active Access and Refresh tokens for this user across all devices (Global Logout).
+5. **Cleanup**: Deletes the used `resetToken` and any other pending reset tokens for this user.
+
 **Request Body:**
 ```json
 {
@@ -221,6 +269,19 @@ Auth: None (Uses refreshToken from cookie or body)
 - **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `refreshToken`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `refreshTokenToDB`
+
+**Business Logic:**
+1. **Extraction**: Reads `refreshToken` from `httpOnly` cookie (preferred) or request body.
+2. **Verification**: Verifies the JWT signature and expiration.
+3. **User Status**: Checks if the user still exists and is not `DELETED`.
+4. **Reuse Detection**:
+   - Compares the `tokenVersion` inside the JWT with the current `tokenVersion` in the database.
+   - If they don't match, it means the token has already been rotated or the user's sessions were invalidated (e.g., via password reset).
+   - Throws `401 Unauthorized` and forces a fresh login.
+5. **Token Rotation**:
+   - **Increments `tokenVersion` by 1** in the database.
+   - Issues a brand new **Access Token** and **Refresh Token** containing the updated `tokenVersion`.
+   - Updates the `httpOnly` cookie with the new refresh token.
 
 #### Responses
 
@@ -261,6 +322,11 @@ Auth: Bearer {{accessToken}}
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `logoutUser`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `logoutUserFromDB`
 
+**Business Logic:**
+1. **Device Cleanup**: Removes the provided `deviceToken` from the user's document in the database. This stops push notifications for this specific device.
+2. **Cookie Clearance**: Instructs the browser to clear the `refreshToken` `httpOnly` cookie.
+3. **Stateless Invalidation**: Since JWTs are stateless, the server doesn't "delete" the access token, but by clearing the refresh token and device token, the session is effectively terminated on the client side.
+
 **Request Body:**
 ```json
 {
@@ -296,6 +362,13 @@ Auth: None
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `resendVerifyEmail`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `resendVerifyEmailToDB`
 
+**Business Logic:**
+1. **User Lookup**: Checks if the user exists and is not `DELETED`.
+2. **OTP Generation**: Generates a new 6-digit OTP.
+3. **Database Update**: Overwrites the existing `authentication` OTP and expiry.
+4. **Email Delivery**: Sends the new OTP via email.
+5. **Rate Limiting**: (Handled by middleware) Prevents users from spamming the resend button.
+
 **Request Body:**
 ```json
 {
@@ -330,6 +403,21 @@ Auth: None
 - **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `socialLogin`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `socialLoginToDB`
+
+**Business Logic:**
+1. **Token Verification**:
+   - **Google**: Verifies the `idToken` against multiple Client IDs (iOS, Android, Web). Checks `email_verified` flag.
+   - **Apple**: Requires a `nonce` for replay protection. Verifies the `idToken` signature.
+2. **Identity Matching**:
+   - Finds user strictly by `googleId` or `appleId` (provider's `sub` field).
+   - *Security Note*: Does not match by email to prevent "Account Hijacking" (where an attacker controls a provider account with the same email as a local account).
+3. **Scenario: Existing User**:
+   - Checks account status (`DELETED`, `RESTRICTED`).
+   - Updates `deviceToken` and `isFirstLogin` if needed.
+4. **Scenario: New User**:
+   - Checks if the email already belongs to a password-based account. If yes, throws `409 Conflict` (no auto-linking for security).
+   - Creates a new user document with `verified: true` and the provider ID.
+5. **Token Issuance**: Issues Access and Refresh tokens and sets the `httpOnly` cookie.
 
 **Request Body:**
 ```json
@@ -421,6 +509,12 @@ Auth: Bearer {{accessToken}}
 - **Route**: [auth.route.ts](file:///src/app/modules/auth/auth.route.ts)
 - **Controller**: [auth.controller.ts](file:///src/app/modules/auth/auth.controller.ts) — `changePassword`
 - **Service**: [auth.service.ts](file:///src/app/modules/auth/auth.service.ts) — `changePasswordToDB`
+
+**Business Logic:**
+1. **Verification**: Validates that the `currentPassword` provided by the user matches the one stored in the database.
+2. **New Password Check**: Ensures the `newPassword` is different from the `currentPassword`.
+3. **Storage**: Hashes the `newPassword` using `bcrypt` and updates the user's record.
+4. **Auth Required**: This endpoint requires a valid `accessToken` and the user's ID is extracted from the JWT payload.
 
 **Request Body:**
 ```json

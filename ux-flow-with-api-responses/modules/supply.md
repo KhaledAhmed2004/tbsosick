@@ -35,6 +35,12 @@ Auth: Bearer {{accessToken}} (USER for catalog read, SUPER_ADMIN for management 
 - **Controller**: `src/app/modules/supplies/supplies.controller.ts` — `listSupplies`
 - **Service**: `src/app/modules/supplies/supplies.service.ts` — `listSuppliesFromDB`
 
+**Business Logic (`listSuppliesFromDB`):**
+- `QueryBuilder` use kore supplies fetch kora hoy.
+- `name` field-er opor full-text search (`searchTerm`) support kore.
+- Pagination, sorting, ebong field selection logic automatic handle kora hoy.
+- Performance optimization-er jonno `.lean()` use kora hoy plain JS object return korte.
+
 **Query Params:**
 - `searchTerm` — name diye search (optional)
 - `page` — page number (default: 1)
@@ -115,6 +121,10 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Controller**: `src/app/modules/supplies/supplies.controller.ts` — `createSupply`
 - **Service**: `src/app/modules/supplies/supplies.service.ts` — `createSupplyToDB`
 
+**Business Logic (`createSupplyToDB`):**
+- Database-e single supply record create kora hoy.
+- Schema level-e `name` field-e unique constraint thakai duplicate name-e error throw korbe.
+
 **Request Body:**
 ```json
 {
@@ -156,6 +166,12 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Route**: `src/app/modules/supplies/supplies.route.ts`
 - **Controller**: `src/app/modules/supplies/supplies.controller.ts` — `bulkCreate`
 - **Service**: `src/app/modules/supplies/supplies.service.ts` — `bulkCreateSuppliesToDB`
+
+**Business Logic (`bulkCreateSuppliesToDB`):**
+- Input items-gulo theke `name` trim kora hoy normalization-er jonno.
+- Database-e existing supplies check kora hoy `$in` operator use kore duplicates detect korte.
+- Shudhu unique (non-existing) supplies-gulo `insertMany` diye ekbare insert kora hoy.
+- Response-e successfully created items ebong skipped `duplicates` name list return kora hoy.
 
 **Request Body:**
 ```json
@@ -221,6 +237,10 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Controller**: `src/app/modules/supplies/supplies.controller.ts` — `updateSupply`
 - **Service**: `src/app/modules/supplies/supplies.service.ts` — `updateSupplyInDB`
 
+**Business Logic (`updateSupplyInDB`):**
+- `findById` call kore existing supply record check kora hoy.
+- Mongoose document instance use kore `save()` call kora hoy jate middleware trigger hoy.
+
 **Request Body:**
 ```json
 {
@@ -270,6 +290,10 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Route**: `src/app/modules/supplies/supplies.route.ts`
 - **Controller**: `src/app/modules/supplies/supplies.controller.ts` — `deleteSupply`
 - **Service**: `src/app/modules/supplies/supplies.service.ts` — `deleteSupplyFromDB`
+
+**Business Logic (`deleteSupplyFromDB`):**
+- Record existence check kora hoy delete process start korar age.
+- `findByIdAndDelete` use kore permanent (hard) delete execute kora hoy.
 
 #### Responses
 

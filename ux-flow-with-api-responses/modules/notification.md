@@ -60,14 +60,10 @@ GET /notifications
 Auth: Bearer {{accessToken}}
 ```
 
-**Implementation:**
-- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `getMyNotifications`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `getNotificationsForUserFromDB`
-
-**Query Parameters:**
-- `page`: Pagination-er jonno (default: 1).
-- `limit`: Per page item count (default: 20).
+**Business Logic (`getNotificationsForUserFromDB`):**
+- **Single-Query Aggregation**: Efficiency-er jonno `$facet` use kore notifications list, total count, ebong unread count ekshathe fetch kora hoy.
+- **Index Optimization**: `{ userId: 1, read: 1, createdAt: -1 }` compound index use kora hoy query performance fast korar jonno.
+- **Visibility**: Shudhu `isDeleted: false` records return kora hoy (Soft Delete implementation).
 
 #### Responses
 
@@ -107,6 +103,10 @@ Auth: Bearer {{accessToken}}
 - **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `markAsRead`
 - **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `markNotificationReadInDB`
 
+**Business Logic (`markNotificationReadInDB`):**
+- **Ownership Check**: Shudhu notification-er real owner-i eiti read mark korte pare.
+- **Validation**: Notification existence check kora hoy.
+
 ---
 
 ### 5.3 Mark All as Read
@@ -118,10 +118,8 @@ Auth: Bearer {{accessToken}}
 
 > User top-right "Mark all as read" button e tap korle shob notifications `read: true` hoy ebong red dot disappear kore.
 
-**Implementation:**
-- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `markAllAsRead`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `markAllNotificationsReadInDB`
+**Business Logic (`markAllNotificationsReadInDB`):**
+- **Bulk Update**: `updateMany` use kore ek-i call-e user-er shob unread notifications read mark kora hoy.
 
 ---
 
@@ -134,10 +132,30 @@ Auth: Bearer {{accessToken}}
 
 > Swipe-to-delete ba long-press menu theke notification delete korar jonno. Optimistic UI: row immediately list theke remove hoy. Failure hole row restore hoy + error toast dekhay.
 
-**Implementation:**
-- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `deleteNotification`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `deleteNotificationFromDB`
+**Business Logic (`deleteNotificationFromDB`):**
+- **Soft Delete**: Data permanent-ly delete na kore `isDeleted: true` flag set kora hoy.
+- **Authorization**: Owner validation mandatory.
+
+---
+
+## Fan-out & Infrastructure
+
+Notification system-er backend logic multiple layers-e divided:
+
+### 1. Multi-Channel Fan-out
+Kono trigger hole `sendNotifications` helper use kora hoy:
+- **Persistence**: MongoDB-te save hoy.
+- **Real-time**: Socket.io-r maddhome user-er specific room-e event emit hoy (`get-notification::${userId}`).
+- **Push**: User-er saved `deviceTokens` use kore Firebase (FCM) push notification pathano hoy.
+
+### 2. Notification Builder
+Complex logic ebong future scheduling-er jonno `NotificationBuilder` use kora hoy:
+- **Chainable API**: `.to(user).useTemplate(name).viaAll().send()`.
+- **Scheduling**: `scheduleAfter('2h')` use kore future notifications schedule kora jay.
+- **Polymorphic Reference**: `resourceType` ebong `resourceId` use kore notification-ke Preference Card ba Event-er shathe link kora hoy.
+
+### 3. Automatic Expiry
+- **TTL Index**: Notification schema-te `expiresAt` field-er opor TTL index ache, jeta default-e **30 days** por notification auto-delete kore dei.
 
 ---
 
