@@ -13,9 +13,9 @@
 
 | # | Method | Endpoint | Auth | Used By |
 |---|---|---|---|---|
-| 10.1 | GET | `/admin/growth-metrics` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) |
-| 10.2 | GET | `/admin/preference-cards/monthly` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) |
-| 10.3 | GET | `/admin/subscriptions/active/monthly` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) |
+| 10.1 | GET | `/admin/growth-metrics` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — summary cards (doctors, cards, verified cards, active subs) with month-over-month change |
+| 10.2 | GET | `/admin/preference-cards/monthly` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — plain monthly trend chart for preference cards (no YoY) |
+| 10.3 | GET | `/admin/subscriptions/active/monthly` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — monthly trend chart for active subscriptions with YoY + peak/slowest precomputed |
 
 ---
 
@@ -29,9 +29,9 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 > Dashboard-er summary cards-er jonno ei endpoint use hoy. Monthly growth calculate kore: current month vs last month.
 
 **Implementation:**
-- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
-- **Controller**: [admin.controller.ts](file:///src/app/modules/admin/admin.controller.ts) — `getDashboardStats`
-- **Service**: [admin.service.ts](file:///src/app/modules/admin/admin.service.ts) — `getAdminDashboardStats`
+- **Route**: `src/app/modules/admin/admin.route.ts`
+- **Controller**: `src/app/modules/admin/admin.controller.ts` — `getDashboardStats`
+- **Service**: `src/app/modules/admin/admin.service.ts` — `getAdminDashboardStats`
 
 **Business Logic:**
 1. **Aggregation Engine**: Uses `AggregationBuilder` to run complex MongoDB aggregation pipelines across multiple collections (`User`, `PreferenceCardModel`, `Subscription`).
@@ -102,51 +102,21 @@ GET /admin/preference-cards/monthly
 Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Preference cards-er monthly trend chart render korar jonno data return kore. YoY comparison inline series e embedded — frontend ke alada calculate korte hobe na.
+> Preference cards-er monthly trend chart render korar jonno data return kore. **Plain shape** — flat array of `{ label, count }` per month. No YoY, no peak/slowest, no params. Server `getTimeTrends({ timeUnit: 'month' })` use kore — chart x-axis e direct `label` use kora jay.
+
+**Query Parameters:** None
 
 **Implementation:**
-- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
-- **Controller**: [admin.controller.ts](file:///src/app/modules/admin/admin.controller.ts) — `getPreferenceCardMonthly`
-- **Service**: [admin.service.ts](file:///src/app/modules/admin/admin.service.ts) — `getPreferenceCardMonthlyTrend`
-
-**Business Logic:**
-1. **Time-Series Analysis**: Uses `AggregationBuilder.getTimeTrends` to group preference card creation by month.
-2. **Labeling**: Automatically generates localized month names (e.g., "January", "February").
-3. **Data Extraction**: Extracts `transactionCount` for each month to build the chart series.
-4. **Efficiency**: Executes a single aggregation query to retrieve the entire year's trend.
-
-**Query Parameters:**
-
-| Param | Type | Required | Default | Description |
-| :--- | :--- | :---: | :--- | :--- |
-| `year` | `number` | No | Current year | Primary year to fetch (e.g. `2025`) |
-| `compare_year` | `number` | No | `year - 1` | Year to compare against for YoY delta |
-| `tz` | `string` | No | `"UTC"` | IANA timezone for monthly bucket boundaries (e.g. `"Asia/Dhaka"`) |
-
-**Implementation:**
-- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
-- **Controller**: [admin.controller.ts](file:///src/app/modules/admin/admin.controller.ts) — `getPreferenceCardMonthly`
-- **Service**: [admin.service.ts](file:///src/app/modules/admin/admin.service.ts) — `getPreferenceCardMonthlyTrend`
+- **Route**: `src/app/modules/admin/admin.route.ts`
+- **Controller**: `src/app/modules/admin/admin.controller.ts` — `getPreferenceCardMonthly`
+- **Service**: `src/app/modules/admin/admin.service.ts` — `getPreferenceCardMonthlyTrend`
 
 **Field Reference:**
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `meta.timezone` | `string` | Timezone used for bucketing — echoes the `tz` query param |
-| `summary.total` | `number` | Sum of all 12 months for `year` |
-| `summary.monthly_avg` | `number` | `total / 12` rounded |
-| `summary.daily_avg` | `number` | `total / days_in_year` rounded — useful for day-level projections |
-| `summary.peak` | `object` | Month with highest count |
-| `summary.trend` | `"upward" \| "downward" \| "stable"` | Overall directional trend across the year. `"upward"` = H2 avg > H1 avg. `"stable"` = < 5% difference. |
-| `series[].month` | `string` | Lowercase month name (e.g. `"january"`) |
-| `series[].month_number` | `number` | 1-indexed integer (January = 1) — use this for sorting and chart indexing |
-| `series[].date_from` / `date_to` | `string` | ISO 8601 date range for the bucket (inclusive) |
-| `series[].count` | `number \| null` | Card count. `null` for future months not yet reached |
-| `series[].last_year_count` | `number` | Count for the same month in `compare_year` |
-| `series[].yoy_delta` | `number` | `count - last_year_count` (pre-computed — do not recalculate on frontend) |
-| `series[].yoy_delta_pct` | `number` | Percentage change vs same month last year |
-| `summary.yoy.total_change_pct` | `number` | Year-level total change vs `compare_year` |
-| `summary.yoy.avg_change_pct` | `number` | Average of monthly YoY percentages |
+| `data[].label` | `string` | Month label (server-formatted, e.g. `"January 2025"`) — directly usable as chart x-axis label |
+| `data[].count` | `number` | Total preference cards created in that month bucket |
 
 #### Responses
 
@@ -155,154 +125,16 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
   {
     "success": true,
     "statusCode": 200,
-    "message": "Monthly preference card trend for 2025 retrieved successfully.",
-    "data": {
-      "meta": {
-        "year": 2025,
-        "compare_year": 2024,
-        "granularity": "monthly",
-        "timezone": "Asia/Dhaka"
-      },
-      "summary": {
-        "total": 1284,
-        "monthly_avg": 107,
-        "daily_avg": 4,
-        "peak": {
-          "month": "august",
-          "month_number": 8,
-          "count": 152
-        },
-        "trend": "upward",
-        "yoy": {
-          "total_change_pct": 13.2,
-          "avg_change_pct": 12.6
-        }
-      },
-      "series": [
-        {
-          "month": "january",
-          "month_number": 1,
-          "date_from": "2025-01-01",
-          "date_to": "2025-01-31",
-          "count": 72,
-          "last_year_count": 61,
-          "yoy_delta": 11,
-          "yoy_delta_pct": 18.0
-        },
-        {
-          "month": "february",
-          "month_number": 2,
-          "date_from": "2025-02-01",
-          "date_to": "2025-02-28",
-          "count": 85,
-          "last_year_count": 70,
-          "yoy_delta": 15,
-          "yoy_delta_pct": 21.4
-        },
-        {
-          "month": "march",
-          "month_number": 3,
-          "date_from": "2025-03-01",
-          "date_to": "2025-03-31",
-          "count": 98,
-          "last_year_count": 83,
-          "yoy_delta": 15,
-          "yoy_delta_pct": 18.1
-        },
-        {
-          "month": "april",
-          "month_number": 4,
-          "date_from": "2025-04-01",
-          "date_to": "2025-04-30",
-          "count": 104,
-          "last_year_count": 89,
-          "yoy_delta": 15,
-          "yoy_delta_pct": 16.9
-        },
-        {
-          "month": "may",
-          "month_number": 5,
-          "date_from": "2025-05-01",
-          "date_to": "2025-05-31",
-          "count": 112,
-          "last_year_count": 97,
-          "yoy_delta": 15,
-          "yoy_delta_pct": 15.5
-        },
-        {
-          "month": "june",
-          "month_number": 6,
-          "date_from": "2025-06-01",
-          "date_to": "2025-06-30",
-          "count": 129,
-          "last_year_count": 110,
-          "yoy_delta": 19,
-          "yoy_delta_pct": 17.3
-        },
-        {
-          "month": "july",
-          "month_number": 7,
-          "date_from": "2025-07-01",
-          "date_to": "2025-07-31",
-          "count": 141,
-          "last_year_count": 122,
-          "yoy_delta": 19,
-          "yoy_delta_pct": 15.6
-        },
-        {
-          "month": "august",
-          "month_number": 8,
-          "date_from": "2025-08-01",
-          "date_to": "2025-08-31",
-          "count": 152,
-          "last_year_count": 130,
-          "yoy_delta": 22,
-          "yoy_delta_pct": 16.9
-        },
-        {
-          "month": "september",
-          "month_number": 9,
-          "date_from": "2025-09-01",
-          "date_to": "2025-09-30",
-          "count": 138,
-          "last_year_count": 118,
-          "yoy_delta": 20,
-          "yoy_delta_pct": 16.9
-        },
-        {
-          "month": "october",
-          "month_number": 10,
-          "date_from": "2025-10-01",
-          "date_to": "2025-10-31",
-          "count": 121,
-          "last_year_count": 104,
-          "yoy_delta": 17,
-          "yoy_delta_pct": 16.3
-        },
-        {
-          "month": "november",
-          "month_number": 11,
-          "date_from": "2025-11-01",
-          "date_to": "2025-11-30",
-          "count": 97,
-          "last_year_count": 82,
-          "yoy_delta": 15,
-          "yoy_delta_pct": 18.3
-        },
-        {
-          "month": "december",
-          "month_number": 12,
-          "date_from": "2025-12-01",
-          "date_to": "2025-12-31",
-          "count": 80,
-          "last_year_count": 68,
-          "yoy_delta": 12,
-          "yoy_delta_pct": 17.6
-        }
-      ]
-    }
+    "message": "Preference card monthly trend",
+    "data": [
+      { "label": "January 2025", "count": 72 },
+      { "label": "February 2025", "count": 85 },
+      { "label": "March 2025", "count": 98 }
+    ]
   }
   ```
+
+> Banglish: 10.2 ar 10.3 same shape **noy** — 10.2 plain `[{ label, count }]`, 10.3 e elaborate summary + YoY + peak/slowest ache. Frontend e duito ke ek shape vebe code kora jabe na.
 
 ---
 
@@ -313,44 +145,37 @@ GET /admin/subscriptions/active/monthly
 Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
-> Active subscriptions-er monthly analytics return kore — same shape as 10.2. YoY data inline series e embedded.
+> Active subscriptions-er monthly analytics return kore — current year vs last year er YoY comparison inline series e embedded, ar `peak` / `slowest` month server-side e pre-computed. Frontend ke max/min find korte hobe na.
+
+**Query Parameters:** None — controller currently `currentYear` hardcode kore (`new Date().getFullYear()`), `compareYear` automatic `currentYear - 1`, `timezone` always `"UTC"`. Year override karte hole controller signature update lagbe.
 
 **Implementation:**
-- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
-- **Controller**: [admin.controller.ts](file:///src/app/modules/admin/admin.controller.ts) — `getActiveSubscriptionMonthly`
-- **Service**: [admin.service.ts](file:///src/app/modules/admin/admin.service.ts) — `getActiveSubscriptionMonthlyTrend`
+- **Route**: `src/app/modules/admin/admin.route.ts`
+- **Controller**: `src/app/modules/admin/admin.controller.ts` — `getActiveSubscriptionMonthly`
+- **Service**: `src/app/modules/admin/admin.service.ts` — `getActiveSubscriptionMonthlyTrend`
 
-**Business Logic:**
-1. **Year-over-Year (YoY) Comparison**:
-   - Fetches monthly trends for the **current year** and the **previous year** in parallel.
-   - Calculates `yoy_growth_pct` for each month by comparing current count vs. last year's same month.
-2. **Advanced Analytics**:
-   - **Peak/Slowest Identification**: Iterates through the series to find and flag (`is_peak`, `is_slowest`) the months with highest and lowest counts.
-   - **Summary Stats**: Computes total year count, monthly average, and overall year-over-year growth percentage.
-3. **Status Filtering**: Strictly filters for `status: 'ACTIVE'` subscriptions to ensure analytics reflect current revenue-generating state.
-4. **Data Padding**: Ensures 12 items are always returned for a complete calendar year, even if some months have zero activity.
-
-**Query Parameters:**
-
-| Param | Type | Required | Default | Description |
-| :--- | :--- | :---: | :--- | :--- |
-| `year` | `number` | No | Current year | Primary year to fetch |
-| `compare_year` | `number` | No | `year - 1` | Year to compare against for YoY delta |
-| `tz` | `string` | No | `"UTC"` | IANA timezone for monthly bucket boundaries |
-
-**Implementation:**
-- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
-- **Controller**: [admin.controller.ts](file:///src/app/modules/admin/admin.controller.ts) — `getActiveSubscriptionMonthly`
-- **Service**: [admin.service.ts](file:///src/app/modules/admin/admin.service.ts) — `getActiveSubscriptionMonthlyTrend`
-
-**Field Reference:** Same schema as 10.2. Additional fields:
+**Field Reference:**
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `series[].is_peak` | `boolean` | `true` for the month with highest `count` — use for chart highlight |
-| `series[].is_slowest` | `boolean` | `true` for the month with lowest `count` — use for chart annotation |
+| `meta.year` | `number` | Primary year — currently hardcoded to server's `currentYear` |
+| `meta.granularity` | `string` | Always `"monthly"` |
+| `meta.compareYear` | `number` | Comparison year for YoY — currently hardcoded to `meta.year - 1` |
+| `meta.timezone` | `string` | Always `"UTC"` |
+| `summary.totalCount` | `number` | Sum of all months' `count` for `meta.year` |
+| `summary.periodAvg` | `number` | `Math.round(totalCount / 12)` — average active subs per month |
+| `summary.yoyGrowthPct` | `number` | Year-level total YoY % vs `compareYear` (rounded to 1 decimal). `0` if last year had no data. |
+| `summary.peak` | `object \| null` | `{ period, label, count }` for the month with highest `count`, or `null` if no months have data |
+| `summary.slowest` | `object \| null` | `{ period, label, count }` for the month with lowest non-zero `count`, or `null` if no data |
+| `series[].period` | `string` | Year-month key (e.g. `"2026-01"`) — stable for sorting and lookups |
+| `series[].label` | `string` | Server-formatted month label (e.g. `"January 2026"`) |
+| `series[].count` | `number` | Active subscription count for that month |
+| `series[].lastYearCount` | `number` | Same month's count in `compareYear` (`0` if no data) |
+| `series[].yoyGrowthPct` | `number` | Per-month YoY % vs same month last year. `100` if last year was 0 and this month > 0. `0` if both are 0. |
+| `series[].isPeak` | `boolean` | `true` for the month matching `summary.peak` (only set when count > 0) |
+| `series[].isSlowest` | `boolean` | `true` for the month matching `summary.slowest` (only set when count > 0) |
 
-> **Design note:** `is_peak` and `is_slowest` are pre-computed server-side so the frontend does not need to find max/min itself.
+> **Design note:** `isPeak` and `isSlowest` server-side e pre-computed — frontend e max/min hisheb korar dorkar nei. Field naming all camelCase because `sendResponse` auto-camelizes the service-side snake_case payload (per `system-concepts.md` "Field Transformations").
 
 #### Responses
 
@@ -359,59 +184,55 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
   {
     "success": true,
     "statusCode": 200,
-    "message": "Monthly active subscription trend for 2026 retrieved successfully.",
+    "message": "Monthly analytics for 2026 retrieved successfully.",
     "data": {
       "meta": {
         "year": 2026,
-        "compare_year": 2025,
         "granularity": "monthly",
+        "compareYear": 2025,
         "timezone": "UTC"
       },
       "summary": {
-        "total": 2847,
-        "monthly_avg": 237,
-        "daily_avg": 8,
+        "totalCount": 2847,
+        "periodAvg": 237,
+        "yoyGrowthPct": 20.0,
         "peak": {
-          "month": "august",
-          "month_number": 8,
+          "period": "2026-08",
+          "label": "August 2026",
           "count": 382
         },
-        "trend": "upward",
-        "yoy": {
-          "total_change_pct": 20.0,
-          "avg_change_pct": 18.4
+        "slowest": {
+          "period": "2026-01",
+          "label": "January 2026",
+          "count": 200
         }
       },
       "series": [
         {
-          "month": "january",
-          "month_number": 1,
-          "date_from": "2026-01-01",
-          "date_to": "2026-01-31",
+          "period": "2026-01",
+          "label": "January 2026",
           "count": 200,
-          "last_year_count": 172,
-          "yoy_delta": 28,
-          "yoy_delta_pct": 16.3,
-          "is_peak": false,
-          "is_slowest": false
+          "lastYearCount": 172,
+          "yoyGrowthPct": 16.3,
+          "isPeak": false,
+          "isSlowest": true
         },
         {
-          "month": "august",
-          "month_number": 8,
-          "date_from": "2026-08-01",
-          "date_to": "2026-08-31",
+          "period": "2026-08",
+          "label": "August 2026",
           "count": 382,
-          "last_year_count": 318,
-          "yoy_delta": 64,
-          "yoy_delta_pct": 20.1,
-          "is_peak": true,
-          "is_slowest": false
+          "lastYearCount": 318,
+          "yoyGrowthPct": 20.1,
+          "isPeak": true,
+          "isSlowest": false
         }
-        // ... 10 more months follow the same shape (always 12 items for a complete year)
+        // ... 10 more months follow the same shape
       ]
     }
   }
   ```
+
+> Banglish: backend message string ta generic — `` `Monthly analytics for ${currentYear} retrieved successfully.` `` — eta active-subs trend er response, kintu message e "active subscription" mention nei. Controller message ta tighten korle frontend e log/debug e clearer hobe.
 
 ---
 
@@ -419,11 +240,11 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 | Scenario | Behavior |
 | :--- | :--- |
-| **No Data (New System)** | `value` 0 return korbe, `changePct` 0 hobe, `direction` `"neutral"` hobe, ebong trend chart `series` empty array hobe (labels thakbe na). |
-| **First Month Data** | `lastPeriodCount` 0 hole `changePct` automatically `100` show korbe, `direction` `"up"` hobe — aggregation logic e handle kora. |
-| **Database Latency** | Parallel calls use kora hoyeche, tai dashboard partial load hote pare — **Skeleton screens strongly recommended**. |
-| **Unauthorized Access** | `SUPER_ADMIN` role chara dashboard stats access kora jabe na → `403 Forbidden`. |
-| **Future Month Data** | Current month er pore er months er `count` `null` hobe (0 noy) — frontend e null check kore chart point skip korbe. |
+| **No Data (New System)** | 10.1: `value` 0, `changePct` 0, `direction` `"neutral"`. 10.2: `data` empty array `[]`. 10.3: `summary.peak` ar `summary.slowest` `null` hobe, `series` te every month `count: 0` thakbe. |
+| **YoY Comparison — No Last-Year Data** | 10.3 e `lastYearCount` 0 hole, current month `count > 0` thakle `yoyGrowthPct` `100` set hoy (server-side aggregation logic). Both 0 hole `0`. |
+| **Database Latency** | Parallel aggregation calls use hoyeche — dashboard partial-load risk ache. **Skeleton screens recommended.** |
+| **Unauthorized Access** | `SUPER_ADMIN` role chara → `403 Forbidden`. |
+| **Future Month Data** | 10.2 / 10.3 always 12 series item return kore current year er. Future month gulor `count` `0` thakbe (`null` noy) — chart e `0` point e directly draw hobe. Skip korte chaile frontend e filter lagbe. |
 
 ---
 
@@ -431,6 +252,6 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 | # | Endpoint | Method | Auth | Status | Notes |
 |---|---|:---:|:---:|:---:|---|
-| 10.1 | `/admin/growth-metrics` | GET | SUPER_ADMIN | Done | Summary stats — `changePct` always positive, use `direction` for sign |
-| 10.2 | `/admin/preference-cards/monthly` | GET | SUPER_ADMIN | Done | Monthly trend — YoY inline per series item, accepts `year`/`compare_year`/`tz` params |
-| 10.3 | `/admin/subscriptions/active/monthly` | GET | SUPER_ADMIN | Done | Same shape as 10.2 + `is_peak`/`is_slowest` boolean flags per item |
+| 10.1 | `/admin/growth-metrics` | GET | SUPER_ADMIN | Done | Summary stats — `changePct` always positive magnitude, use `direction` for sign |
+| 10.2 | `/admin/preference-cards/monthly` | GET | SUPER_ADMIN | Done | Plain monthly trend — flat array of `{ label, count }`, no YoY, no params |
+| 10.3 | `/admin/subscriptions/active/monthly` | GET | SUPER_ADMIN | Done | Monthly trend with YoY + `peak`/`slowest` precomputed; no params (currentYear hardcoded server-side) |
