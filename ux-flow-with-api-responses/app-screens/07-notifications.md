@@ -6,46 +6,70 @@
 
 ## Overview
 
-User-der notification 3-ti channel-e jete pare: Push (FCM), Socket (real-time), and Database (persistent list). Trigger types ebong content templates documented in [`modules/notification.md` Overview](../modules/notification.md#overview).
+Users can receive notifications through three channels: Push (FCM), Socket (real-time), and Database (persistent storage). Trigger types and content templates are documented in the [`modules/notification.md` Overview](../modules/notification.md#overview).
 
 ---
 
 ## UX Flow
 
 ### Bell Icon & Unread Indicator
-1. Home screen header e ekta **bell icon** thake (related: [Home](./02-home.md)).
-2. App e foreground asar shathe shathe ba pull-to-refresh e [GET /notifications](../modules/notification.md#51-get-my-notifications) call hoy.
-3. Frontend response theke unread count compute kore: `data.filter(n => !n.read).length`.
-4. Jodi unread count `> 0` hoy → bell icon-er upore **red dot** dekhay (badge number nai, just dot)
-5. Unread count `0` hole red dot dekhay na.
 
-> **Note**: Kono dedicated unread-count API nai. Frontend list response theke compute kore (per [Decision D4](../overview.md#appendix-a--decisions-log-v1)).
+1. The home screen header includes a **bell icon** (related: [Home](./02-home.md)).
+2. When the app comes to the foreground or on pull-to-refresh, it calls: [GET /notifications](../modules/notification.md#51-get-my-notifications).
+3. The frontend checks `meta.unreadCount` from the response (industry best practice).
+4. If `meta.unreadCount > 0`, a **red dot indicator** is shown on the bell icon (no number badge, only a dot).
+5. If `meta.unreadCount === 0`, no red dot is displayed.
+
+> **Note:** Unread count is calculated on the backend. The frontend does not compute it from the list to avoid performance and scalability issues.
 
 ### Real-time Updates (Socket)
-1. App login-er por `Socket.IO` connection establish hoy.
-2. Server new notification trigger korle Socket event emit kore (`notification:new`).
-3. Client event receive kore in-memory list update kore + red dot toggle kore.
-4. App background e thakle FCM push notification dekhay (Event reminders only).
+
+1. After login, the app establishes a **Socket.IO** connection.
+2. When the server creates a new notification, it emits a socket event: `notification:new`.
+3. The client listens for the event and updates the in-memory notification list, as well as toggles the red dot indicator.
+4. When the app is in the background, **FCM push notifications** are shown (only for event reminders).
+
+### Notification Grouping (Reducing Noise)
+
+1. Multiple notifications of the same type (e.g., multiple comments or likes) can be **grouped at the backend**.
+2. Example: instead of showing 3 separate notifications, the UI shows a single entry like **"3 new event reminders"**.
+3. The grouping logic is handled on the backend. The frontend only uses the `isGrouped` flag and `groupCount` to render the UI.
+
+### Socket + DB Sync (Conflict Handling)
+
+1. **Server as Source of Truth:** Even if the client updates its local state based on socket events, the final state is always revalidated from the backend.
+2. The socket acts only as a **trigger**. When the client receives a socket event, it may re-fetch or revalidate the notification list in the background to keep the state in sync.
+3. When switching from background to foreground, the app fetches the latest notifications to ensure the state is fully synchronized.
+
+### Idempotency & Safety
+
+1. **Idempotent Updates:** The request `PATCH /notifications/:id/read` can be called multiple times without causing issues; if the notification is already marked as read, the server still maintains a consistent state and does not throw an error.
+2. **Duplicate Protection:** When receiving socket events, the client checks for duplicate `notificationId` values to prevent duplicate entries in the in-memory list.
+3. The delete action is also idempotent; if the notification is already deleted, the server responds gracefully with `200` or `204` without errors.
 
 ### Open Notification List
-1. User bell icon e tap kore → Notifications screen e navigate kore.
-2. Page load e [GET /notifications?page=1&limit=20](../modules/notification.md#51-get-my-notifications) call hoy.
-3. Skeleton loader dekhay (5–6 row placeholder) loading-er somoy.
-4. Response ashle list render hoy:
-   - Each row: icon (`type` based) + `title` + `subtitle` + relative time (e.g., "2h ago").
-   - **Unread rows** (`read: false`) highlighted background ba left bar marker shoho dekhay.
-   - **Read rows** muted/dimmed style.
-5. Top-right corner e **"Mark all as read"** button thake (jodi kono unread thake).
-6. Empty state: "You're all caught up" placeholder + bell illustration.
+
+1. When the user taps the bell icon, they are navigated to the **Notifications** screen.
+2. On page load, the API is called: [GET /notifications?page=1&limit=20](../modules/notification.md#51-get-my-notifications).
+3. While loading, a **skeleton loader** is shown with 5–6 placeholder rows.
+4. Once the response is received, the list is rendered:
+
+   * Each row includes an icon (based on `type`), `title`, `subtitle`, and a relative timestamp (e.g., "2h ago").
+   * **Unread notifications** (`read: false`) are visually highlighted with a different background or a left-side indicator bar.
+   * **Read notifications** appear in a muted or dimmed style.
+5. A **"Mark all as read"** button is shown in the top-right corner if there are any unread notifications.
+6. Empty state: displays **"You're all caught up"** along with a bell illustration.
 
 ### Tap on Notification → Deep Link
-1. User kono notification row e tap kore.
-2. Frontend tap-handler `notification.type` ebong related metadata theke target screen decide kore:
-   - **`REMINDER`** (event reminder) → Calendar event detail e navigate (`/events/:eventId`).
-   - **Preference Card** type → Card details screen e navigate (`/preference-cards/:cardId`).
-   - **Event scheduled** confirmation → Calendar screen-er oi date-e navigate.
-3. Tap-er shathe shathe (optimistic) → [PATCH /notifications/:notificationId/read](../modules/notification.md#52-mark-as-read) call hoy background e.
-4. Local state update hoy: oi notification `read: true` mark hoy ebong red dot recompute hoy.
+
+1. When the user taps on a notification row.
+2. The frontend determines the target screen based on `notification.type` and related metadata:
+
+   * **`REMINDER`** (event reminder) → navigates to event detail screen (`/events/:eventId`).
+   * **Preference Card** type → navigates to card details screen (`/preference-cards/:cardId`).
+   * **Event scheduled** confirmation → navigates to the Calendar screen on the specific date.
+3. On tap (optimistically), it triggers a background call: [PATCH /notifications/:notificationId/read](../modules/notification.md#52-mark-as-read).
+4. The local state is updated immediately by marking the notification as `read: true`, and the red dot indicator is recalculated accordingly.
 
 ### Mark All as Read
 1. User top-right "Mark all as read" button e tap kore.
@@ -54,17 +78,21 @@ User-der notification 3-ti channel-e jete pare: Push (FCM), Socket (real-time), 
 4. Button itself disable / hide hoye jay (jotokkhon na new unread ashe).
 
 ### Swipe-to-Delete
-1. User kono notification row left/right swipe kore.
-2. Red "Delete" action button reveal hoy.
-3. Tap korle → [DELETE /notifications/:notificationId](../modules/notification.md#54-delete-notification).
-4. Optimistic UI: row immediately list theke remove hoy.
-5. Failure hole: row restore hoy + error toast dekhay.
-6. Long-press menu o ekta alternative path hote pare ("Delete" / "Mark as read" options).
+
+1. The user swipes a notification row left or right.
+2. A red **"Delete"** action button is revealed.
+3. On tap, it calls: [DELETE /notifications/:notificationId](../modules/notification.md#54-delete-notification).
+4. **Optimistic UI:** the row is immediately removed from the list.
+5. If the request fails, the row is restored and an error toast is shown.
+6. A long-press menu can be provided as an alternative option, with actions like **"Delete"** and **"Mark as read"**.
+
 
 ### Pagination (Infinite Scroll)
-1. List bottom-er kache pouchle next page request trigger hoy: `GET /notifications?page=2&limit=20`.
-2. Bottom e small spinner loading-er somoy.
-3. `meta.hasNext: false` hole "You've reached the end" footer dekhay.
+
+1. When the user reaches near the bottom of the list, the next page request is triggered: `GET /notifications?page=2&limit=20`.
+2. A small spinner is shown at the bottom while loading.
+3. When `meta.hasNext: false`, show a footer message: **"You've reached the end"**.
+
 
 ---
 

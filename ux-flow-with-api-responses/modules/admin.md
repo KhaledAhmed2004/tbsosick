@@ -28,12 +28,23 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 > Dashboard-er summary cards-er jonno ei endpoint use hoy. Monthly growth calculate kore: current month vs last month.
 
-**Query Parameters:** None
-
 **Implementation:**
 - **Route**: `src/app/modules/admin/admin.route.ts`
 - **Controller**: `src/app/modules/admin/admin.controller.ts` — `getDashboardStats`
 - **Service**: `src/app/modules/admin/admin.service.ts` — `getAdminDashboardStats`
+
+**Business Logic:**
+1. **Aggregation Engine**: Uses `AggregationBuilder` to run complex MongoDB aggregation pipelines across multiple collections (`User`, `PreferenceCardModel`, `Subscription`).
+2. **Growth Calculation**:
+   - Calculates metrics for the **current month** (e.g., May) and the **previous month** (e.g., April).
+   - `doctors`: Total users in the system.
+   - `preferenceCards`: Total cards created.
+   - `verifiedPreferenceCards`: Cards where `published: true`.
+   - `activeSubscriptions`: Subscriptions where `status: 'ACTIVE'`.
+3. **Growth Logic**:
+   - `changePct`: The percentage difference between current and last month.
+   - `direction`: Maps the growth type to UI-friendly strings: `increase` → `"up"`, `decrease` → `"down"`, others → `"neutral"`.
+4. **Data Formatting**: Normalizes raw aggregation results into a consistent object structure for the frontend.
 
 **Field Reference:**
 
