@@ -31,74 +31,51 @@ Auth: Bearer {{accessToken}} (USER for catalog read, SUPER_ADMIN for management 
 > Shob sutures paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno.
 
 **Implementation:**
-- **Route**: `src/app/modules/sutures/sutures.route.ts`
-- **Controller**: `src/app/modules/sutures/sutures.controller.ts` — `listSutures`
-- **Service**: `src/app/modules/sutures/sutures.service.ts` — `listSuturesFromDB`
+- **Route**: [sutures.route.ts](file:///src/app/modules/sutures/sutures.route.ts)
+- **Controller**: [sutures.controller.ts](file:///src/app/modules/sutures/sutures.controller.ts) — `listSutures`
+- **Service**: [sutures.service.ts](file:///src/app/modules/sutures/sutures.service.ts) — `listSuturesFromDB`
 
 **Business Logic (`listSuturesFromDB`):**
 - `QueryBuilder` use kore sutures fetch kora hoy.
-- `name` field-er opor full-text search (`searchTerm`) support kore.
+- `name` field-er opor partial search (`searchTerm`) support kore.
 - Pagination, sorting, ebong field selection logic automatic handle kora hoy.
 - Performance optimization-er jonno `.lean()` use kora hoy.
 
 **Query Params:**
 - `searchTerm` — name diye search (optional)
 - `page` — page number (default: 1)
-- `limit` — items per page (default: 10)
-- `sortBy` — sort field (optional)
-- `sortOrder` — `asc` | `desc` (optional)
+- `limit` — items per page (default: 10, max: 50)
+- `sort` — sort field (default: `-createdAt`)
+- `fields` — comma-separated fields (optional)
 
 #### Responses
 
-- **Scenario: Success — Admin Management View (200)**
+- **Scenario: Success (200)**
   ```json
   {
     "success": true,
     "statusCode": 200,
     "message": "Sutures fetched",
-    "pagination": {
-      "page": 1,
-      "limit": 10,
+    "meta": {
       "total": 18,
-      "totalPage": 2
+      "limit": 10,
+      "page": 1,
+      "totalPages": 2,
+      "hasNext": true,
+      "hasPrev": false
     },
     "data": [
       {
-        "_id": "664b2c3d4e5f6a7b8c9d1a0e",
+        "id": "664b2c3d4e5f6a7b8c9d1a0e",
         "name": "3-0 Vicryl",
         "createdAt": "2026-03-15T10:30:00.000Z",
         "updatedAt": "2026-03-15T10:30:00.000Z"
       },
       {
-        "_id": "664b2c3d4e5f6a7b8c9d1a0f",
+        "id": "664b2c3d4e5f6a7b8c9d1a0f",
         "name": "4-0 Monocryl",
         "createdAt": "2026-03-15T10:30:00.000Z",
         "updatedAt": "2026-03-15T10:30:00.000Z"
-      }
-    ]
-  }
-  ```
-
-- **Scenario: Success — App Catalog View (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Sutures fetched",
-    "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 18,
-      "totalPage": 2
-    },
-    "data": [
-      {
-        "_id": "664b2c3d4e5f6a7b8c9d1a0e",
-        "name": "3-0 Vicryl"
-      },
-      {
-        "_id": "664b2c3d4e5f6a7b8c9d1a0f",
-        "name": "4-0 Monocryl"
       }
     ]
   }
@@ -117,20 +94,13 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 > Single suture create kore. Shudhu `name` field required.
 
 **Implementation:**
-- **Route**: `src/app/modules/sutures/sutures.route.ts`
-- **Controller**: `src/app/modules/sutures/sutures.controller.ts` — `createSuture`
-- **Service**: `src/app/modules/sutures/sutures.service.ts` — `createSutureToDB`
+- **Route**: [sutures.route.ts](file:///src/app/modules/sutures/sutures.route.ts)
+- **Controller**: [sutures.controller.ts](file:///src/app/modules/sutures/sutures.controller.ts) — `createSuture`
+- **Service**: [sutures.service.ts](file:///src/app/modules/sutures/sutures.service.ts) — `createSutureToDB`
 
-**Business Logic (`bulkCreateSuturesToDB`):**
-- Prothome input items-gulo theke `name` trim kora hoy ebong empty names filter kora hoy.
-- Existing database-e same name-er sutures ache kina ta check kora hoy (`$in` query).
-- Shudhu matro unique (non-existing) sutures-gulo `insertMany` diye ekbare insert kora hoy.
-- Response-e `createdCount`, successfully created items, ebong skipped `duplicates` name list return kora hoy.
-
-**Business Logic (`updateSutureInDB`):**
-- `findById` call kore existing suture fetch kora hoy.
-- Jodi suture na paoya jay, tobe `404 Not Found` error throw kora hoy.
-- Mongoose model instances-er logic use kore field update ebong `save()` call kora hoy.
+**Business Logic (`createSutureToDB`):**
+- Direct input data use kore Mongoose `create` method call kora hoy.
+- Schema validation ensure kore je `name` required.
 
 **Request Body:**
 ```json
@@ -148,9 +118,8 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     "statusCode": 201,
     "message": "Suture created",
     "data": {
-      "_id": "664b2c3d4e5f6a7b8c9d1a0e",
+      "id": "664b2c3d4e5f6a7b8c9d1a0e",
       "name": "3-0 Vicryl",
-      "isActive": true,
       "createdAt": "2026-03-15T10:30:00.000Z",
       "updatedAt": "2026-03-15T10:30:00.000Z"
     }
@@ -170,9 +139,15 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 > Multiple sutures ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.
 
 **Implementation:**
-- **Route**: `src/app/modules/sutures/sutures.route.ts`
-- **Controller**: `src/app/modules/sutures/sutures.controller.ts` — `bulkCreate`
-- **Service**: `src/app/modules/sutures/sutures.service.ts` — `bulkCreateSuturesToDB`
+- **Route**: [sutures.route.ts](file:///src/app/modules/sutures/sutures.route.ts)
+- **Controller**: [sutures.controller.ts](file:///src/app/modules/sutures/sutures.controller.ts) — `bulkCreate`
+- **Service**: [sutures.service.ts](file:///src/app/modules/sutures/sutures.service.ts) — `bulkCreateSuturesToDB`
+
+**Business Logic (`bulkCreateSuturesToDB`):**
+- Prothome input items-gulo theke `name` trim kora hoy ebong empty names filter kora hoy.
+- Existing database-e same name-er sutures ache kina ta check kora hoy (`$in` query).
+- Shudhu matro unique (non-existing) sutures-gulo `insertMany` diye ekbare insert kora hoy.
+- Response-e `createdCount`, successfully created items, ebong skipped `duplicates` name list return kora hoy.
 
 **Request Body:**
 ```json
@@ -187,25 +162,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 #### Responses
 
-- **Scenario: Success — all new (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Sutures created",
-    "data": {
-      "createdCount": 3,
-      "created": [
-        { "_id": "664b2c3d4e5f6a7b8c9d1a0e", "name": "3-0 Vicryl" },
-        { "_id": "664b2c3d4e5f6a7b8c9d1a0f", "name": "4-0 Monocryl" },
-        { "_id": "664b2c3d4e5f6a7b8c9d1a10", "name": "2-0 Silk" }
-      ],
-      "duplicates": []
-    }
-  }
-  ```
-
-- **Scenario: Success — with duplicates (200)**
+- **Scenario: Success (200)**
   ```json
   {
     "success": true,
@@ -214,7 +171,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     "data": {
       "createdCount": 1,
       "created": [
-        { "_id": "664b2c3d4e5f6a7b8c9d1a10", "name": "2-0 Silk" }
+        { "id": "664b2c3d4e5f6a7b8c9d1a10", "name": "2-0 Silk" }
       ],
       "duplicates": ["3-0 Vicryl", "4-0 Monocryl"]
     }
@@ -234,9 +191,14 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 > Suture er name update kore. Shudhu `name` field changeable.
 
 **Implementation:**
-- **Route**: `src/app/modules/sutures/sutures.route.ts`
-- **Controller**: `src/app/modules/sutures/sutures.controller.ts` — `updateSuture`
-- **Service**: `src/app/modules/sutures/sutures.service.ts` — `updateSutureInDB`
+- **Route**: [sutures.route.ts](file:///src/app/modules/sutures/sutures.route.ts)
+- **Controller**: [sutures.controller.ts](file:///src/app/modules/sutures/sutures.controller.ts) — `updateSuture`
+- **Service**: [sutures.service.ts](file:///src/app/modules/sutures/sutures.service.ts) — `updateSutureInDB`
+
+**Business Logic (`updateSutureInDB`):**
+- `findById` call kore existing suture fetch kora hoy.
+- Jodi suture na paoya jay, tobe `404 Not Found` error throw kora hoy.
+- Mongoose model instances-er logic use kore field update ebong `save()` call kora hoy.
 
 **Request Body:**
 ```json
@@ -254,9 +216,8 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     "statusCode": 200,
     "message": "Suture updated",
     "data": {
-      "_id": "664b2c3d4e5f6a7b8c9d1a0e",
+      "id": "664b2c3d4e5f6a7b8c9d1a0e",
       "name": "4-0 Monocryl",
-      "isActive": true,
       "createdAt": "2026-03-15T10:30:00.000Z",
       "updatedAt": "2026-03-16T08:00:00.000Z"
     }
@@ -284,12 +245,12 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 > Suture permanently delete kore. Hard delete — restore possible na.
 
 **Implementation:**
-- **Route**: `src/app/modules/sutures/sutures.route.ts`
-- **Controller**: `src/app/modules/sutures/sutures.controller.ts` — `deleteSuture`
-- **Service**: `src/app/modules/sutures/sutures.service.ts` — `deleteSutureFromDB`
+- **Route**: [sutures.route.ts](file:///src/app/modules/sutures/sutures.route.ts)
+- **Controller**: [sutures.controller.ts](file:///src/app/modules/sutures/sutures.controller.ts) — `deleteSuture`
+- **Service**: [sutures.service.ts](file:///src/app/modules/sutures/sutures.service.ts) — `deleteSutureFromDB`
 
 **Business Logic (`deleteSutureFromDB`):**
-- Suture existence check kora hoy delete korar age.
+- Suture existence check kora hoy delete korar age (findById).
 - `findByIdAndDelete` use kore permanent (hard) delete kora hoy.
 
 #### Responses
