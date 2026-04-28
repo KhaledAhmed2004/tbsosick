@@ -28,8 +28,13 @@ Auth: Bearer {{accessToken}}
 
 **Implementation:**
 - **Route**: [subscription.route.ts](file:///src/app/modules/subscription/subscription.route.ts)
-- **Controller**: [subscription.controller.ts](file:///src/app/modules/subscription/subscription.controller.ts) — `getMySubscription`
-- **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `getSubscriptionByUserIdFromDB`
+- **Controller**: [subscription.controller.ts](file:///src/app/modules/subscription/subscription.controller.ts) — `getMySubscriptionController`
+- **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `getMySubscription`
+
+**Business Logic (`getMySubscription`):**
+- Prothome User-er `userId` diye existing subscription check kora hoy.
+- Jodi database-e kono record na thake, tobe automatic ekta `FREE` plan logic upsert kora hoy (idempotent creation).
+- Ete kore client-side e sobshomoy ekta valid plan object pawa nishchit kora hoy (never returns 404 for valid users).
 
 #### Responses
 
@@ -53,41 +58,31 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 9.2 Verify Receipt (IAP)
+### 9.2 Verify Apple Purchase (iOS)
 
 ```
-POST /subscriptions/verify-receipt
+POST /subscriptions/apple/verify
 Content-Type: application/json
 Auth: Bearer {{accessToken}}
 ```
 
-> Mobile IAP SDK theke pawa store receipt server-e verify korar jonno. Apple App Store / Google Play r shathe verify hoy ebong subscription record upsert kore. **Idempotent** — same receipt re-submit korle existing subscription return kore (used by Restore Purchases).
+> iOS StoreKit 2 theke pawa `signedTransactionInfo` verify kore. Apple server-er shathe cryptographic verification hoy ebong user-er plan update kore.
 
 **Implementation:**
 - **Route**: [subscription.route.ts](file:///src/app/modules/subscription/subscription.route.ts)
-- **Controller**: [subscription.controller.ts](file:///src/app/modules/subscription/subscription.controller.ts) — `verifyReceipt`
-- **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `verifyReceiptAndUpsertSubscription`
+- **Controller**: [subscription.controller.ts](file:///src/app/modules/subscription/subscription.controller.ts) — `verifyApplePurchaseController`
+- **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `verifyApplePurchase`
 
-**Business Logic (`verifyReceiptAndUpsertSubscription`):**
-- Platform onujayi correct verifier select hoy (`AppleReceiptVerifier` / `GoogleReceiptVerifier`).
-- Receipt store-er API te pathay verify korar jonno; signature, expiry, ebong product validity check kora hoy.
-- Verified hole `plan` ebong `interval` `productId` theke derive kora hoy ebong subscription document upsert hoy current user-er jonno.
-- `expiresAt`, `autoRenew`, ebong `originalTransactionId` save kora hoy webhook reconciliation-er jonno.
-- Verification fail hole 400 throw kore — kono subscription state change hoy na.
+**Business Logic (`verifyApplePurchase`):**
+- **Cryptographic Verification**: Apple library use kore JWS signature verify kora hoy.
+- **Fraud Guard**: Check kora hoy ei `originalTransactionId` onno kono account-e already link kora kina (`409 Conflict` jodi thake).
+- **Plan Mapping**: `productId` theke server-side definition onujayi local `PREMIUM` plan map kora hoy.
+- **Persistence**: `upsertForUser` call kore user-er current state update kora hoy, jekhane `expiresDate`, `environment`, ebong `transactionId` save kora hoy.
 
 **Request Body:**
-
-| Field | Required | Type | Notes |
-|---|---|---|---|
-| `platform` | Yes | string | `"ios"` or `"android"` |
-| `productId` | Yes | string | Store product ID (e.g., `com.tbsosick.premium.yearly`) |
-| `receipt` | Yes | string | Base64-encoded receipt from native SDK |
-
 ```json
 {
-  "platform": "ios",
-  "productId": "com.tbsosick.premium.yearly",
-  "receipt": "<base64-encoded-receipt>"
+  "signedTransactionInfo": "<JWS-token-from-storekit2>"
 }
 ```
 
@@ -98,34 +93,86 @@ Auth: Bearer {{accessToken}}
   {
     "success": true,
     "statusCode": 200,
-    "message": "Subscription verified and updated",
+    "message": "Apple subscription verified successfully",
     "data": {
       "plan": "PREMIUM",
-      "interval": "yearly",
       "status": "ACTIVE",
-      "expiresAt": "2027-04-28T00:00:00.000Z",
-      "autoRenew": true
+      "platform": "APPLE",
+      "currentPeriodEnd": "2027-04-28T10:30:00.000Z"
     }
   }
   ```
-- **Scenario: Invalid Receipt (400)**
+
+---
+
+### 9.3 Verify Google Purchase (Android)
+
+```
+POST /subscriptions/google/verify
+Content-Type: application/json
+Auth: Bearer {{accessToken}}
+```
+
+> Android BillingClient theke pawa `purchaseToken` verify kore. Google Play Developer API use kore state fetch kora hoy.
+
+**Implementation:**
+- **Route**: [subscription.route.ts](file:///src/app/modules/subscription/subscription.route.ts)
+- **Controller**: [subscription.controller.ts](file:///src/app/modules/subscription/subscription.controller.ts) — `verifyGooglePurchaseController`
+- **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `verifyGooglePurchase`
+
+**Business Logic (`verifyGooglePurchase`):**
+- **State Fetching**: Google Play API (v2) theke latest subscription state fetch kora hoy.
+- **Fraud Guard**: Purchase token check kora hoy jate same purchase multiple accounts-e link na hoy.
+- **Status Normalization**: Google-er `subscriptionState` (e.g., Active, Grace Period) local `ACTIVE` ba `PAST_DUE` status-e convert kora hoy.
+- **Persistence**: User-er subscription record update kora hoy including `autoRenewing`, `googleOrderId`, ebong `expiryTime`.
+
+**Request Body:**
+```json
+{
+  "purchaseToken": "<token-from-google-play>",
+  "productId": "com.tbsosick.premium.yearly"
+}
+```
+
+#### Responses
+
+- **Scenario: Success (200)**
   ```json
   {
-    "success": false,
-    "statusCode": 400,
-    "message": "Receipt verification failed. Please try again."
-  }
-  ```
-- **Scenario: Receipt Belongs to Another Account (409)**
-  ```json
-  {
-    "success": false,
-    "statusCode": 409,
-    "message": "This purchase is associated with a different account."
+    "success": true,
+    "statusCode": 200,
+    "message": "Google subscription verified successfully",
+    "data": {
+      "plan": "PREMIUM",
+      "status": "ACTIVE",
+      "platform": "GOOGLE",
+      "currentPeriodEnd": "2027-04-28T10:30:00.000Z"
+    }
   }
   ```
 
-> **Note**: Renewal / cancel events update `expiresAt` + plan via App Store / Play Store webhook handlers (server-side), no client action needed.
+---
+
+### 9.4 Set Free Plan (Internal/Manual)
+
+```
+POST /subscriptions/choose/free
+Auth: Bearer {{accessToken}}
+```
+
+> User-ke manually free plan-e downgrade ba switch korte allow kore.
+
+**Business Logic (`setFreePlan`):**
+- User-er current subscription record-ke `FREE` plan ebong `ACTIVE` status-e reset kore dey.
+
+---
+
+### 9.5 Platform Webhooks (Server-to-Server)
+
+- **Apple Webhook**: `POST /subscriptions/apple/webhook`
+- **Google Webhook**: `POST /subscriptions/google/webhook`
+
+> Store theke renewal, cancellation, ba billing issue-r update gulo automatically process hoy. Auth middleware thake na karon signature (Apple JWS / Google JWT) service level-e verify kora hoy.
 
 ---
 
@@ -134,4 +181,7 @@ Auth: Bearer {{accessToken}}
 | # | Endpoint | Status | Notes |
 |---|---|:---:|---|
 | 9.1 | `GET /subscriptions/me` | Done | Plan status check — never returns 404 (free users get `plan: "FREE"`) |
-| 9.2 | `POST /subscriptions/verify-receipt` | 🟡 Spec Done · Code Pending | IAP receipt verification (Apple + Google). Idempotent for restore-purchases. Spec from [App Profile §6.6](../app-screens/06-profile.md). |
+| 9.2 | `POST /subscriptions/apple/verify` | Done | iOS IAP verification using StoreKit 2 JWS |
+| 9.3 | `POST /subscriptions/google/verify` | Done | Android IAP verification via Google Publisher API |
+| 9.4 | `POST /subscriptions/choose/free` | Done | Downgrade to FREE plan |
+| 9.5 | `POST /subscriptions/.../webhook` | Done | Apple/Google server notifications (auto-sync) |

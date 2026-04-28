@@ -57,11 +57,15 @@ Auth: Bearer {{accessToken}}
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `listPublicPreferenceCardsFromDB` / `listPrivatePreferenceCardsForUserFromDB`
 
 **Business Logic (`listPublicPreferenceCardsFromDB`):**
-- `QueryBuilder` use kore search, filter, sort, ebong pagination handle kora hoy.
-- Shudhu matro `published: true` cards fetch kora hoy jate public items-i dekha jay.
-- Input query parameter theke `specialty` ba `surgeonSpecialty` check kora hoy ebong regex insensitive search logic apply kora hoy.
-- `cardTitle`, `surgeon.fullName`, ebong `medication` field-er upore default matching logic apply kora hoy.
-- Card details-er shathe `supplies` ebong `sutures` populate kora hoy ebong return-er age data flatten kora hoy.
+- **Aggregation Pipeline**: Efficiency-er jonno MongoDB aggregation use kore search ebong filters apply kora hoy.
+- **Text Search**: `cardTitle`, `surgeon.fullName`, ebong `medication` field-er opor full-text index (`$text`) use kore search kora hoy.
+- **Specialty Filter**: `surgeon.specialty` field-er opor exact matching apply kora hoy.
+- **Data Flattening**: `supplies` ebong `sutures` populate kore name extract kora hoy jate client-side rendering shohoj hoy.
+- **Visibility Control**: Shudhu matro `published: true` ebong `isDeleted: false` cards return kora hoy.
+
+**Business Logic (`listPrivatePreferenceCardsForUserFromDB`):**
+- `QueryBuilder` use kore user-er nijer draft (unpublished) cards fetch kora hoy.
+- Shudhu `createdBy: userId` filter apply kora hoy privacy maintain korte.
 
 #### Responses
 
@@ -253,6 +257,12 @@ Auth: Bearer {{accessToken}} (USER)
 - **Controller**: `src/app/modules/preference-card/preference-card.controller.ts` — `createCard`
 - **Service**: `src/app/modules/preference-card/preference-card.service.ts` — `createPreferenceCardInDB`
 
+**Business Logic (`createPreferenceCardInDB`):**
+- **Draft Support**: Schema level-e long-form fields optional thakai incomplete card draft hisebe save kora jay.
+- **Publish Validation**: Jodi `published: true` pathano hoy, tobe `medication`, `instruments`, `workflow` ityadi required fields fill-up kora ache kina ta verify kora hoy.
+- **Auto-Cataloging**: Supplies ebong Sutures-er field-e jodi notun name pawa jay, tobe backend automatically segulo respective catalog-e insert kore.
+- **Ownership**: `createdBy` field-e current user-er ID set kora hoy.
+
 **Middleware chain**: `auth(USER) → fileHandler(photoLibrary max 5) → parseBody → validateRequest`
 
 **Request Body:**
@@ -353,6 +363,11 @@ Auth: Bearer {{accessToken}} (USER)
 - **Controller**: `src/app/modules/preference-card/preference-card.controller.ts` — `getById`
 - **Service**: `src/app/modules/preference-card/preference-card.service.ts` — `getPreferenceCardByIdFromDB`
 
+**Business Logic (`getPreferenceCardByIdFromDB`):**
+- **Authorization**: Private (unpublished) card shudhu owner ba SUPER_ADMIN access korte pare.
+- **Data Enrichment**: Supplies ebong Sutures populate kore details return kora hoy.
+- **Flattening**: Data-ke flatten kora hoy jate UI-te map kora shohoj hoy.
+
 #### Responses
 
 - **Scenario: Success (200)**
@@ -429,6 +444,11 @@ Auth: Bearer {{accessToken}} (USER)
 - **Controller**: `src/app/modules/preference-card/preference-card.controller.ts` — `updateCard`
 - **Service**: `src/app/modules/preference-card/preference-card.service.ts` — `updatePreferenceCardInDB`
 
+**Business Logic (`updatePreferenceCardInDB`):**
+- **Ownership Check**: Shudhu card owner ba SUPER_ADMIN update korte pare.
+- **Verification Reset**: Jodi card-er critical fields update kora hoy, tobe verification status automatically `UNVERIFIED` state-e back kore (moderation maintain korar jonno).
+- **Photo Management**: Notun photos upload hole `photoLibrary` array-te append kora hoy.
+
 **Middleware chain**: `auth(USER) → fileHandler(photoLibrary max 5) → parseBody → validateRequest`
 
 **Request Body (partial):**
@@ -491,6 +511,10 @@ Auth: Bearer {{accessToken}} (USER or SUPER_ADMIN)
 - **Route**: `src/app/modules/preference-card/preference-card.route.ts`
 - **Controller**: `src/app/modules/preference-card/preference-card.controller.ts` — `deleteCard`
 - **Service**: `src/app/modules/preference-card/preference-card.service.ts` — `deletePreferenceCardFromDB`
+
+**Business Logic (`deletePreferenceCardFromDB`):**
+- **Authorization**: Record existence check kora hoy ebong owner ba SUPER_ADMIN check kora hoy.
+- **Hard Delete**: `findByIdAndDelete` use kore record permanent delete kora hoy.
 
 #### Responses
 
@@ -592,86 +616,32 @@ Auth: Bearer {{accessToken}}
 
 ---
 
-### 3.10 Increment Download Count
+### 3.10 Download Preference Card
 
 ```
 POST /preference-cards/:cardId/download
 Auth: Bearer {{accessToken}}
 ```
 
-> Card download-er sonkhya (Download Count) 1 baranor jonno.
+> Card download count increment kore ebong download history log kore.
 
-**Implementation:**
-- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `incrementDownloadCount`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `incrementDownloadCountInDB`
-
-**Business Logic (`incrementDownloadCountInDB`):**
-- Card existence validation kora hoy.
-- Authorization check: Private card-er khetre shudhu matro creator ba `SUPER_ADMIN` download count barate pare.
-- Atomic-ly `downloadCount` value 1 increment kore save kora hoy.
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Download count incremented",
-    "data": {
-      "downloadCount": 16
-    }
-  }
-  ```
+**Business Logic (`downloadPreferenceCardInDB`):**
+- **Idempotency**: Same user same card ek-i dine bar bar download korle shudhu matro ekta download count increment kora hoy (Spam control).
+- **Atomic Increment**: Log success hole `$inc` operator use kore atomicity maintain kora hoy.
 
 ---
 
-### 3.11 Update Verification Status (Approve/Reject — Admin)
+### 3.11 Admin Verification
 
 ```
 PATCH /preference-cards/:cardId
-Content-Type: application/json
-Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
+Auth: Bearer {{accessToken}} (SUPER_ADMIN)
+Body: { "verificationStatus": "VERIFIED" | "UNVERIFIED" }
 ```
 
-> Verification update is a **partial card update** with `verificationStatus` in the body. The same `PATCH /:cardId` endpoint that owners use to edit their card is reused — when `verificationStatus` is present the request is role-gated to `SUPER_ADMIN`. `VERIFIED` (Approve) apply korar somoy completeness logic apply hoy. `UNVERIFIED` (Reject) kora holeo card record delete hoy na.
-
-> **Code state**: Currently implemented at `PATCH /:cardId/status`. Refactor to the unified contract is pending — see banner at top of this file.
-
-**Implementation:**
-- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
-- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `updateCard` (post-refactor) / `updateVerificationStatus` (current)
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `updatePreferenceCardInDB` / `updateVerificationStatusInDB`
-
-**Request Body:**
-```json
-{
-  "verificationStatus": "VERIFIED"  // Enum: "VERIFIED" | "UNVERIFIED"
-}
-```
-
-#### Responses
-
-- **Scenario: Success (200)**
-  ```json
-  {
-    "success": true,
-    "statusCode": 200,
-    "message": "Preference card status updated to VERIFIED",
-    "data": {
-      "verificationStatus": "VERIFIED"
-    }
-  }
-  ```
-- **Scenario: Forbidden — non-admin sets `verificationStatus` (403)**
-  ```json
-  {
-    "success": false,
-    "statusCode": 403,
-    "message": "Only SUPER_ADMIN can change verification status."
-  }
-  ```
+**Business Logic (`updateVerificationStatusInDB`):**
+- Card publishable state-e thaklei shudhu verify kora jay.
+- Status change hole original owner notification pabe (implemented via Event/Notification logic).
 
 ---
 

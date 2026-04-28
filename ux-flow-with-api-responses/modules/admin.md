@@ -28,12 +28,23 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 > Dashboard-er summary cards-er jonno ei endpoint use hoy. Monthly growth calculate kore: current month vs last month.
 
-**Query Parameters:** None
-
 **Implementation:**
 - **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
 - **Controller**: [admin.controller.ts](file:///src/app/modules/admin/admin.controller.ts) — `getDashboardStats`
 - **Service**: [admin.service.ts](file:///src/app/modules/admin/admin.service.ts) — `getAdminDashboardStats`
+
+**Business Logic:**
+1. **Aggregation Engine**: Uses `AggregationBuilder` to run complex MongoDB aggregation pipelines across multiple collections (`User`, `PreferenceCardModel`, `Subscription`).
+2. **Growth Calculation**:
+   - Calculates metrics for the **current month** (e.g., May) and the **previous month** (e.g., April).
+   - `doctors`: Total users in the system.
+   - `preferenceCards`: Total cards created.
+   - `verifiedPreferenceCards`: Cards where `published: true`.
+   - `activeSubscriptions`: Subscriptions where `status: 'ACTIVE'`.
+3. **Growth Logic**:
+   - `changePct`: The percentage difference between current and last month.
+   - `direction`: Maps the growth type to UI-friendly strings: `increase` → `"up"`, `decrease` → `"down"`, others → `"neutral"`.
+4. **Data Formatting**: Normalizes raw aggregation results into a consistent object structure for the frontend.
 
 **Field Reference:**
 
@@ -92,6 +103,17 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
 > Preference cards-er monthly trend chart render korar jonno data return kore. YoY comparison inline series e embedded — frontend ke alada calculate korte hobe na.
+
+**Implementation:**
+- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
+- **Controller**: [admin.controller.ts](file:///src/app/modules/admin/admin.controller.ts) — `getPreferenceCardMonthly`
+- **Service**: [admin.service.ts](file:///src/app/modules/admin/admin.service.ts) — `getPreferenceCardMonthlyTrend`
+
+**Business Logic:**
+1. **Time-Series Analysis**: Uses `AggregationBuilder.getTimeTrends` to group preference card creation by month.
+2. **Labeling**: Automatically generates localized month names (e.g., "January", "February").
+3. **Data Extraction**: Extracts `transactionCount` for each month to build the chart series.
+4. **Efficiency**: Executes a single aggregation query to retrieve the entire year's trend.
 
 **Query Parameters:**
 
@@ -292,6 +314,21 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
 > Active subscriptions-er monthly analytics return kore — same shape as 10.2. YoY data inline series e embedded.
+
+**Implementation:**
+- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
+- **Controller**: [admin.controller.ts](file:///src/app/modules/admin/admin.controller.ts) — `getActiveSubscriptionMonthly`
+- **Service**: [admin.service.ts](file:///src/app/modules/admin/admin.service.ts) — `getActiveSubscriptionMonthlyTrend`
+
+**Business Logic:**
+1. **Year-over-Year (YoY) Comparison**:
+   - Fetches monthly trends for the **current year** and the **previous year** in parallel.
+   - Calculates `yoy_growth_pct` for each month by comparing current count vs. last year's same month.
+2. **Advanced Analytics**:
+   - **Peak/Slowest Identification**: Iterates through the series to find and flag (`is_peak`, `is_slowest`) the months with highest and lowest counts.
+   - **Summary Stats**: Computes total year count, monthly average, and overall year-over-year growth percentage.
+3. **Status Filtering**: Strictly filters for `status: 'ACTIVE'` subscriptions to ensure analytics reflect current revenue-generating state.
+4. **Data Padding**: Ensures 12 items are always returned for a complete calendar year, even if some months have zero activity.
 
 **Query Parameters:**
 

@@ -38,8 +38,6 @@ Current system-e nicher dhoron-er notification gula trigger hoy:
 - **Content**: `Event Scheduled: {{title}} on {{whenText}}`.
 - **Logic**: `EventService` theke `NotificationService.createForEventScheduled` call kora hoy.
 
-> **Note**: Kono dedicated unread-count API nai. Frontend list response theke compute kore (per [Decision D4](../overview.md#appendix-a--decisions-log-v1)).
-
 ---
 
 ## Endpoints Index
@@ -60,14 +58,11 @@ GET /notifications
 Auth: Bearer {{accessToken}}
 ```
 
-**Implementation:**
-- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `getMyNotifications`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `getNotificationsForUserFromDB`
-
-**Query Parameters:**
-- `page`: Pagination-er jonno (default: 1).
-- `limit`: Per page item count (default: 20).
+**Business Logic (`getNotificationsForUserFromDB`):**
+- **Single-Query Aggregation**: Efficiency-er jonno `$facet` use kore notifications list, total count, ebong **unreadCount** ekshathe fetch kora hoy.
+- **Index Optimization**: `{ userId: 1, read: 1, createdAt: -1 }` compound index use kora hoy query performance fast korar jonno.
+- **Visibility**: Shudhu `isDeleted: false` records return kora hoy (Soft Delete implementation).
+- **Grouping**: Backend may group similar notifications to reduce noise.
 
 #### Responses
 
@@ -87,7 +82,13 @@ Auth: Bearer {{accessToken}}
         "icon": "calendar",
         "createdAt": "2026-04-09T08:00:00.000Z"
       }
-    ]
+    ],
+    "meta": {
+      "page": 1,
+      "limit": 20,
+      "total": 1,
+      "unreadCount": 1
+    }
   }
   ```
 
@@ -107,6 +108,11 @@ Auth: Bearer {{accessToken}}
 - **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `markAsRead`
 - **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `markNotificationReadInDB`
 
+**Business Logic (`markNotificationReadInDB`):**
+- **Ownership Check**: Shudhu notification-er real owner-i eiti read mark korte pare.
+- **Validation**: Notification existence check kora hoy.
+- **Idempotency**: Notification jodi aggei `read: true` thake, tobeo server success response return korbe without error.
+
 ---
 
 ### 5.3 Mark All as Read
@@ -118,10 +124,9 @@ Auth: Bearer {{accessToken}}
 
 > User top-right "Mark all as read" button e tap korle shob notifications `read: true` hoy ebong red dot disappear kore.
 
-**Implementation:**
-- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `markAllAsRead`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `markAllNotificationsReadInDB`
+**Business Logic (`markAllNotificationsReadInDB`):**
+- **Bulk Update**: `updateMany` use kore ek-i call-e user-er shob unread notifications read mark kora hoy.
+- **Idempotency**: Jodi kono unread notification na thake, tobeo request successful hobe (0 documents updated).
 
 ---
 
@@ -134,10 +139,31 @@ Auth: Bearer {{accessToken}}
 
 > Swipe-to-delete ba long-press menu theke notification delete korar jonno. Optimistic UI: row immediately list theke remove hoy. Failure hole row restore hoy + error toast dekhay.
 
-**Implementation:**
-- **Route**: [notification.route.ts](file:///src/app/modules/notification/notification.route.ts)
-- **Controller**: [notification.controller.ts](file:///src/app/modules/notification/notification.controller.ts) — `deleteNotification`
-- **Service**: [notification.service.ts](file:///src/app/modules/notification/notification.service.ts) — `deleteNotificationFromDB`
+**Business Logic (`deleteNotificationFromDB`):**
+- **Soft Delete**: Data permanent-ly delete na kore `isDeleted: true` flag set kora hoy.
+- **Authorization**: Owner validation mandatory.
+- **Idempotency**: Jodi notification aggei delete kora hoye thake, server graceful success return korbe.
+
+---
+
+## Fan-out & Infrastructure
+
+Notification system-er backend logic multiple layers-e divided:
+
+### 1. Multi-Channel Fan-out
+Kono trigger hole `sendNotifications` helper use kora hoy:
+- **Persistence**: MongoDB-te save hoy.
+- **Real-time**: Socket.io-r maddhome user-er specific room-e event emit hoy (`get-notification::${userId}`).
+- **Push**: User-er saved `deviceTokens` use kore Firebase (FCM) push notification pathano hoy.
+
+### 2. Notification Builder
+Complex logic ebong future scheduling-er jonno `NotificationBuilder` use kora hoy:
+- **Chainable API**: `.to(user).useTemplate(name).viaAll().send()`.
+- **Scheduling**: `scheduleAfter('2h')` use kore future notifications schedule kora jay.
+- **Polymorphic Reference**: `resourceType` ebong `resourceId` use kore notification-ke Preference Card ba Event-er shathe link kora hoy.
+
+### 3. Automatic Expiry
+- **TTL Index**: Notification schema-te `expiresAt` field-er opor TTL index ache, jeta default-e **30 days** por notification auto-delete kore dei.
 
 ---
 
@@ -157,7 +183,7 @@ For cross-cutting error responses (401, 429, 400), see [Common Error Scenarios](
 
 | # | Endpoint | Method | Auth | Status | Notes |
 |---|---|---|---|:---:|---|
-| 5.1 | `/notifications` | `GET` | Bearer | Done | Paginated list — frontend computes unread count from response |
+| 5.1 | `/notifications` | `GET` | Bearer | Done | Paginated list — backend returns `unreadCount` in `meta` |
 | 5.2 | `/notifications/:notificationId/read` | `PATCH` | Bearer | Done | Mark single as read |
 | 5.3 | `/notifications/read-all` | `PATCH` | Bearer | Done | Mark all as read |
 | 5.4 | `/notifications/:notificationId` | `DELETE` | Bearer | Done | Hard delete |

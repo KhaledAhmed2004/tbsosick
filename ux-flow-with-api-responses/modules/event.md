@@ -41,8 +41,9 @@ Auth: Bearer {{accessToken}}
 
 **Business Logic (`listEventsForUserFromDB`):**
 - `userId` ebong optional `from`/`to` date range diye event filter kora hoy.
-- Date range thakle `$gte` ebong `$lte` operator use kore search kora hoy.
-- Shudhu matro proyojoniyo field gula (`title`, `eventType`, `date`, `time`, `durationHours`, `location`, `notes`, `personnel`, `preferenceCard`) select kore return kora hoy.
+- Date range thakle `startsAt` field-er opor `$gte` ebong `$lte` operator use kore search kora hoy.
+- Shudhu matro proyojoniyo field gula (`title`, `eventType`, `startsAt`, `endsAt`, `location`, `notes`, `personnel`, `preferenceCard`) select kore return kora hoy.
+- Performance optimization-er jonno `.lean()` use kora hoy.
 
 #### Responses
 
@@ -56,9 +57,8 @@ Auth: Bearer {{accessToken}}
       {
         "_id": "664a1b2c3d4e5f6a7b8c9d0e",
         "title": "Knee Arthroscopy Surgery",
-        "date": "2026-04-10T00:00:00.000Z",
-        "time": "08:00",
-        "durationHours": 2,
+        "startsAt": "2026-04-10T08:00:00.000Z",
+        "endsAt": "2026-04-10T10:00:00.000Z",
         "eventType": "SURGERY",
         "location": "Operating Room 4",
         "notes": "Prepare all preference cards",
@@ -86,11 +86,16 @@ Auth: Bearer {{accessToken}}
 - **Service**: [event.service.ts](file:///src/app/modules/event/event.service.ts) — `createEventInDB`
 
 **Business Logic (`createEventInDB`):**
-- Input `date` (YYYY-MM-DD) ebong `time` (HH:mm) format-e ache kina check kora hoy; na thakle `BAD_REQUEST` error throw kore.
+- **Time Normalization (`resolveTimeRange`)**:
+    - Input data theke `startsAt` ebong `endsAt` resolve kora hoy.
+    - Legacy format (`date`, `time`, `durationHours`) support kore, jeta internal-y `startsAt` ebong `endsAt`-e convert hoy.
+    - `endsAt` oboshshoi `startsAt`-er pore hote hobe, na hole `BAD_REQUEST` error throw kore.
 - `userId` shoho event database-e create kora hoy → `EventModel.create()`.
-- Event successfully toiri hole 2-ti kaj automatically hoy:
-    1. Event shuru hovar 24 ghonta age ekta push reminder schedule kora hoy.
-    2. Event shuru hovar 1 ghonta age aro ekta reminder schedule kora hoy.
+- Legacy field gula (`date`, `time`, `durationHours`) database-e save kora hoy na.
+- Event successfully toiri hole 2-ti reminder automatically schedule kora hoy:
+    1. Event shuru hovar 24 ghonta age.
+    2. Event shuru hovar 1 ghonta age.
+- Reminders push notification ebong database notification hishebe schedule kora hoy via `NotificationBuilder`.
 - Shob sheshe create hoyeche emon `event` object-ti return kora hoy.
 
 **Request Body:**
@@ -122,9 +127,8 @@ Auth: Bearer {{accessToken}}
     "data": {
       "_id": "664a1b2c3d4e5f6a7b8c9d0f",
       "title": "Surgery with Dr. Smith",
-      "date": "2026-04-15T00:00:00.000Z",
-      "time": "09:30",
-      "durationHours": 3,
+      "startsAt": "2026-04-15T09:30:00.000Z",
+      "endsAt": "2026-04-15T12:30:00.000Z",
       "eventType": "SURGERY",
       "location": "Main Hospital - OR 2",
       "preferenceCard": "664a1b2c3d4e5f6a7b8c9d0x",
@@ -155,10 +159,10 @@ Auth: Bearer {{accessToken}}
 
 **Business Logic (`getEventByIdFromDB`):**
 - Database theke `eventId` diye event search kora hoy.
-- Jodi event na pauya jay → `NOT_FOUND` error return kore.
+- Jodi event na pauya jay → `null` return kore (controller setake handle kore).
 - Authorization check: Event-ti jodi onno kono user-er hoy ebong requester `SUPER_ADMIN` na hoy → `FORBIDDEN` error throw kore.
-- `preferenceCard` field-ti populate kora hoy.
-- Shob sheshe event-er details return kora hoy.
+- `preferenceCard` field-ti populate kora hoy (shudhu `cardTitle` select kora hoy).
+- Performance optimization-er jonno `.lean()` use kora hoy.
 
 #### Responses
 
@@ -171,9 +175,8 @@ Auth: Bearer {{accessToken}}
     "data": {
       "_id": "664a1b2c3d4e5f6a7b8c9d0f",
       "title": "Surgery with Dr. Smith",
-      "date": "2026-04-15T00:00:00.000Z",
-      "time": "09:30",
-      "durationHours": 3,
+      "startsAt": "2026-04-15T09:30:00.000Z",
+      "endsAt": "2026-04-15T12:30:00.000Z",
       "eventType": "SURGERY",
       "location": "Main Hospital - OR 2",
       "preferenceCard": {
@@ -212,7 +215,8 @@ Auth: Bearer {{accessToken}}
 - Database theke `eventId` diye event search kora hoy.
 - Jodi event na pauya jay → `NOT_FOUND` error return kore.
 - Authorization check: Event-ti jodi onno kono user-er hoy ebong requester `SUPER_ADMIN` na hoy → `FORBIDDEN` error throw kore.
-- Request body theke asha notun data diye event object update kora hoy.
+- **Time Re-resolution**: Jodi payload-e time related field (`startsAt`, `endsAt`, `date`, `time`, `durationHours`) thake, tobe `resolveTimeRange` logic call kore notun `startsAt` ebong `endsAt` calculate kora hoy.
+- Request body theke asha data `Object.assign()`-er maddhome existing event object-e merge kora hoy.
 - Shob sheshe update hoyeche emon `updatedEvent` return kora hoy.
 
 **Request Body (Partial Update supported):**
@@ -241,9 +245,8 @@ Auth: Bearer {{accessToken}}
     "data": {
       "_id": "664a1b2c3d4e5f6a7b8c9d0f",
       "title": "Updated Surgery Title",
-      "date": "2026-04-15T00:00:00.000Z",
-      "time": "10:00",
-      "durationHours": 4,
+      "startsAt": "2026-04-15T10:00:00.000Z",
+      "endsAt": "2026-04-15T14:00:00.000Z",
       "location": "Operating Room 1 - Main Wing",
       "eventType": "SURGERY",
       "notes": "Updated case notes for the surgical team.",
@@ -276,7 +279,7 @@ Auth: Bearer {{accessToken}}
 - Database theke `eventId` diye event search kora hoy.
 - Jodi event na pauya jay → `NOT_FOUND` error return kore.
 - Authorization check: Event-ti jodi onno kono user-er hoy ebong requester `SUPER_ADMIN` na hoy → `FORBIDDEN` error throw kore.
-- Shob sheshe event-ti delete kora hoy ebong deleted object-ti return kora hoy.
+- `findByIdAndDelete` call kore event-ti permanent-ly remove kora hoy ebong deleted object-ti return kora hoy.
 
 #### Responses
 

@@ -35,6 +35,12 @@ Auth: Bearer {{accessToken}} (USER for catalog read, SUPER_ADMIN for management 
 - **Controller**: `src/app/modules/sutures/sutures.controller.ts` — `listSutures`
 - **Service**: `src/app/modules/sutures/sutures.service.ts` — `listSuturesFromDB`
 
+**Business Logic (`listSuturesFromDB`):**
+- `QueryBuilder` use kore sutures fetch kora hoy.
+- `name` field-er opor full-text search (`searchTerm`) support kore.
+- Pagination, sorting, ebong field selection logic automatic handle kora hoy.
+- Performance optimization-er jonno `.lean()` use kora hoy.
+
 **Query Params:**
 - `searchTerm` — name diye search (optional)
 - `page` — page number (default: 1)
@@ -114,6 +120,17 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Route**: `src/app/modules/sutures/sutures.route.ts`
 - **Controller**: `src/app/modules/sutures/sutures.controller.ts` — `createSuture`
 - **Service**: `src/app/modules/sutures/sutures.service.ts` — `createSutureToDB`
+
+**Business Logic (`bulkCreateSuturesToDB`):**
+- Prothome input items-gulo theke `name` trim kora hoy ebong empty names filter kora hoy.
+- Existing database-e same name-er sutures ache kina ta check kora hoy (`$in` query).
+- Shudhu matro unique (non-existing) sutures-gulo `insertMany` diye ekbare insert kora hoy.
+- Response-e `createdCount`, successfully created items, ebong skipped `duplicates` name list return kora hoy.
+
+**Business Logic (`updateSutureInDB`):**
+- `findById` call kore existing suture fetch kora hoy.
+- Jodi suture na paoya jay, tobe `404 Not Found` error throw kora hoy.
+- Mongoose model instances-er logic use kore field update ebong `save()` call kora hoy.
 
 **Request Body:**
 ```json
@@ -270,6 +287,10 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 - **Route**: `src/app/modules/sutures/sutures.route.ts`
 - **Controller**: `src/app/modules/sutures/sutures.controller.ts` — `deleteSuture`
 - **Service**: `src/app/modules/sutures/sutures.service.ts` — `deleteSutureFromDB`
+
+**Business Logic (`deleteSutureFromDB`):**
+- Suture existence check kora hoy delete korar age.
+- `findByIdAndDelete` use kore permanent (hard) delete kora hoy.
 
 #### Responses
 

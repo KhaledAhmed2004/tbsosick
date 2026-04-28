@@ -225,7 +225,7 @@ Login (SUPER_ADMIN) → Overview (Growth metrics + Trend charts)
 | New preference card created | — | ✅ | ✅ |
 | Event scheduled confirmation | — | ✅ | ✅ |
 
-**List screen UX**: Bell icon → list view → swipe-to-delete + "Mark all as read". Unread badge is **client-computed** from list (red dot when any `read: false` present in the list response) — no dedicated count endpoint.
+**List screen UX**: Bell icon → list view → swipe-to-delete + "Mark all as read". Unread badge is **backend-provided** in `meta.unreadCount` from the list response (Industry best practice).
 
 ### Observability
 - Auto-labelling on `*Controller` / `*Service` classes (must load before routes).
@@ -301,7 +301,7 @@ All decisions confirmed across the alignment rounds. Source of truth for any lat
 | **D1** | Card moderation | Cards always start `UNVERIFIED`. Admin manually verifies. Verification is the **gate** (not just a badge): only `VERIFIED` + `visibility=public` cards appear in the public library. |
 | **D2** | Public vs Private | `visibility` field is the single source of truth (`public` vs `private`), set at creation. "My Cards" filter is a separate `creator=me` query. |
 | **D3** | IAP integration | Client posts store receipt to `POST /subscriptions/verify-receipt`; server verifies with Apple/Google and updates plan. |
-| **D4** | Notification list UX | Add list-screen UX flow. **No** unread-count endpoint — frontend computes red dot from `unread length > 0` in the existing list response. |
+| **D4** | Notification list UX | Add list-screen UX flow. **Unread count** is returned by backend in `meta.unreadCount` (Industry best practice) to avoid frontend computation on large lists. |
 | **D5** | Card download | Counter-only. Client renders the PDF locally; `POST /preference-cards/:cardId/download` only increments the counter. |
 | **D6** | Calendar `personnel` | `string[]` (chip input — names as strings, no foreign-key collaboration in v1). |
 | **D7** | Onboarding | None. After auto-login, user lands directly on Home. References to "Welcome/Onboarding" should be removed from `01-auth.md`. |

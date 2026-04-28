@@ -8,41 +8,57 @@
 ## UX Flow     
 
 ### Registration Flow
-1. User "Create Account" e tap kore
-2. Name, email, password, phone, country input kore
-3. Submit → [POST /users](../modules/user.md#21-create-user-registration--admin-create)
-4. Success → OTP verify screen e navigate + email check korte bole
-5. Email na pele → "Resend" button → [POST /auth/resend-verify-email](../modules/auth.md#17-resend-otp-resend-verify-email)
+1. User taps "Create Account"
+2. Enters name, email, and password
+3. Submits the form → calls [POST /users](../modules/user.md#21-create-user-registration--admin-create)
+4. On success → navigates to the `OTP verification screen` and is asked to check their email
+5. If the email is not received → taps "Resend" → calls [POST /auth/resend-verify-email](../modules/auth.md#17-resend-otp-resend-verify-email)
 6. OTP input kore submit → [POST /auth/verify-otp](../modules/auth.md#12-verify-otp)
-7. Verification success hole → auto-login hoy → tokens receive kore → Welcome/Onboarding screen e navigate kore
+7. If verification successful:
+
+   * User is auto-logged in
+   * Receives access + refresh tokens
+   * Navigates to **Onboarding screen (only first-time users)**
+   * Otherwise → directly goes to **Home screen**
+
  
 ### Login Flow
-1. User email + password input kore submit e tap kore
-2. Submit → [POST /auth/login](../modules/auth.md#11-login) — optionally `deviceToken` for push notifications
-3. Success → tokens receive kore + `refreshToken` httpOnly cookie auto-set hoy → Home/Dashboard screen e navigate kore
-4. "Forgot Password?" link e tap korle → forgot password flow start hoy
+1. User enters email + password and taps **Login**
+2. On submit → [POST /auth/login](../modules/auth.md#11-login) — optionally includes `deviceToken` for push notifications
+3. On success:
+
+   * Tokens are received
+   * Refresh token is set as httpOnly cookie
+   * User navigates to **Home screen**
+4. If user taps **"Forgot Password?"** → starts forgot password flow
 
 ### Social Login Flow (Google / Apple)
-1. User "Sign in with Google" ba "Sign in with Apple" button e tap kore
-2. Flutter SDK (google_sign_in / sign_in_with_apple) login UI dekhay
-3. User authenticate korle SDK theke `idToken` pawa jay
-4. App server-e pathay → [POST /auth/social-login](../modules/auth.md#18-social-login-google--apple)
-5. Server token verify kore → tokens return kore → Home screen e navigate kore
-6. **409 Conflict** asle → "This email already has an account. Please login with email and password." dekhay
+1. User taps **"Sign in with Google / Apple"**
+2. The Flutter SDK (google_sign_in / sign_in_with_apple) displays the login UI
+3. After successful authentication, the SDK returns an `idToken`
+4. The app sends the token to the server → calls [POST /auth/social-login](../modules/auth.md#18-social-login-google--apple)
+5. On success:
+
+   * Tokens returned
+   * User navigates to **Home screen**
+6. If **409 Conflict**:
+
+   * Show message:
+     **"This email already has an account. Please login with email and password."**
 
 ### Forgot Password Flow
-1. User "Forgot Password?" e tap kore
-2. Email input kore OTP request pathay → [POST /auth/forgot-password](../modules/auth.md#13-forgot-password)
-3. Success message ashe (enumeration-safe) → OTP verify screen e navigate kore
-4. OTP input kore verify kore → [POST /auth/verify-otp](../modules/auth.md#12-verify-otp)
-5. Success hole `resetToken` ashe → New password screen e navigate kore
-6. New password input kore confirm kore → [POST /auth/reset-password](../modules/auth.md#14-reset-password)
-7. Success → Login screen e navigate kore
+1. User taps **"Forgot Password?"**
+2. Enters their email and requests an OTP → calls [POST /auth/forgot-password](../modules/auth.md#13-forgot-password)
+3. A success message is shown → navigates to the OTP verification screen
+4. The user enters the OTP and verifies → calls [POST /auth/verify-otp](../modules/auth.md#12-verify-otp)
+5. On success → receives a `resetToken` → navigates to the New Password screen
+6. The user enters and confirms the new password → calls [POST /auth/reset-password](../modules/auth.md#14-reset-password)
+7. On success → navigates to the Login screen
 
 ### Token Refresh (Background)
-1. App e thaka accessToken expire hoye 401 return korle
-2. Background e client auto-retry kore → [POST /auth/refresh-token](../modules/auth.md#15-refresh-token)
-3. New token pair receive kore original request retry kore
+1. When the `access token expires`, the app receives a `401 Unauthorized` response
+2. In the background, the client automatically retries → calls [POST /auth/refresh-token](../modules/auth.md#15-refresh-token)
+3. A new token pair is received, and the original request is retried automatically
 
 ---
 

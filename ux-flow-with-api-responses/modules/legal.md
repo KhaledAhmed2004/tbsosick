@@ -30,10 +30,10 @@ Auth: None
 
 > Shob available legal pages (Terms, Privacy, etc.) er title ebong slug list fetch korar jonno. Admin-side e same endpoint use kora hoy CMS list view-er jonno.
 
-**Implementation:**
-- **Route**: [legal.route.ts](file:///src/app/modules/legal/legal.route.ts)
-- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `getLegalPages` / `getAll`
-- **Service**: [legal.service.ts](file:///src/app/modules/legal/legal.service.ts) — `getLegalPagesFromDB` / `getAll`
+**Business Logic (`getAll`):**
+- **Public Access**: Authentication chada-i access kora jay.
+- **Sorting**: Title-er upor vitti kore alphabetical order-e sort kora hoy (`sort({ title: 1 })`).
+- **Data Selection**: Efficiency-er jonno shudhu matro `slug` ebong `title` select kora hoy, full content bad diye.
 
 #### Responses
 
@@ -77,10 +77,9 @@ Auth: None
 
 > Slug diye specific legal page-er full HTML/Markdown content fetch korar jonno.
 
-**Implementation:**
-- **Route**: [legal.route.ts](file:///src/app/modules/legal/legal.route.ts)
-- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `getLegalPageBySlug` / `getBySlug`
-- **Service**: [legal.service.ts](file:///src/app/modules/legal/legal.service.ts) — `getLegalPageBySlugFromDB`
+**Business Logic (`getBySlug`):**
+- **Public Access**: Authentication chada-i access kora jay.
+- **Error Handling**: Jodi slug match na kore, tobe 404 Not Found error return kora hoy.
 
 #### Responses
 
@@ -111,9 +110,10 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 > Notun legal page create kore.
 
-**Implementation:**
-- **Route**: [legal.route.ts](file:///src/app/modules/legal/legal.route.ts)
-- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `createLegalPage`
+**Business Logic (`createLegalPage`):**
+- **Admin Only**: Shudhu SUPER_ADMIN create korte pare.
+- **Slug Generation**: Title theke `slugify` use kore unique slug generate kora hoy (lowercase & strict mode).
+- **Uniqueness Check**: Jodi ek-i title-er page age thekei thake, tobe 409 Conflict error return kora hoy.
 
 **Request Body:**
 ```json
@@ -135,9 +135,9 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 > Existing legal page update kore.
 
-**Implementation:**
-- **Route**: [legal.route.ts](file:///src/app/modules/legal/legal.route.ts)
-- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `updateBySlug`
+**Business Logic (`updateBySlug`):**
+- **Slug Re-generation**: Jodi title change kora hoy, tobe automatically notun slug generate hoy ebong uniqueness verify kora hoy.
+- **Partial Update**: Shudhu pathano fields (title ba content) update kora hoy.
 
 ---
 
@@ -150,9 +150,9 @@ Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 
 > Legal page delete kore.
 
-**Implementation:**
-- **Route**: [legal.route.ts](file:///src/app/modules/legal/legal.route.ts)
-- **Controller**: [legal.controller.ts](file:///src/app/modules/legal/legal.controller.ts) — `deleteBySlug`
+**Business Logic (`deleteBySlug`):**
+- **Hard Delete**: `findOneAndDelete` use kore record permanent delete kora hoy.
+- **Existence Check**: Delete korar age page-ti ache kina ta verify kora hoy (404 check).
 
 ---
 
