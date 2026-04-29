@@ -1,76 +1,98 @@
-# Screen 4: Library
+# Screen 5: Library (Mobile)
 
 > **Section**: App APIs (Student-Facing)
-> **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
-> **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Home](./02-home.md) (Quick access), [Preference Card Details](./03-preference-card-details.md) (Navigation from list)
+> **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
+> **Response format**: see [Standard Response Envelope](../system-concepts.md#standard-response-envelope)
+> **Roles**: see [system-concepts.md → User Roles](../system-concepts.md#user-roles)
+> **Related screens**: [Home](./02-home.md) (quick access), [Preference Card Details](./03-preference-card-details.md) (navigation from list)
+> **Doc version**: `v2` — last reviewed `2026-04-30`
+
+---
+
+## Common UI Rules
+
+See [system-concepts.md → Common UI Rules](../system-concepts.md#common-ui-rules) for the canonical list (submit protection, offline pre-flight, 5xx toast, 422 field-level inline, 429 `Retry-After` countdown, 401 redirect / auto-refresh).
+
+---
+
+## Scope
+
+Library is a global search surface over **public preference cards only**. It is the discovery experience for paid users — a single search bar with filters, no tabs. Private cards are managed from [Home → My Cards](./02-home.md), not here.
+
+---
 
 ## UX Flow
 
 ### Library Initial Load
-1. User "Library" icon tap kore.
-2. Screen immediately skeleton UI dekhay (3–4 card placeholder).
-3. [GET /preference-cards?visibility=public](../modules/preference-card.md#31-listsearch-preference-cards) API call hoy.
-   - Success → skeleton replace hoy real cards diye.
-   - Error → "Couldn't load cards. Check your connection." + Retry button.
+
+1. User taps the **Library** icon in the bottom navigation bar.
+2. Screen mounts and immediately shows a skeleton (3–4 card placeholders).
+3. [`GET /preference-cards?visibility=public`](../modules/preference-card.md#31-listsearch-preference-cards) call fires.
+   - Success → skeleton replaced with the card list.
+   - Error → *"Couldn't load cards. Check your connection."* + Retry button.
 4. Screen render:
-   - Sticky top-e Search bar (placeholder: "Search cards, surgeons, medications...").
-   - Search bar-er niche Filter button (active filter thakle badge: "Filter (2)") + Sort dropdown.
-   - Tab switcher: Preference Cards | Private Cards (count badge).
-   - Card list.
+   - Sticky search bar at the top (placeholder: *"Search cards, surgeons, medications..."*).
+   - Filter button (with active-filter badge: *"Filter (2)"*) and Sort dropdown sit immediately below the search bar.
+   - Card list fills the body.
+
+---
 
 ### Search
-User search bar-e text type kore.
-350ms debounce pore calls GET /preference-cards with searchTerm and page=1.
-Typing phase-e skeleton overlay dekhay.
-On 404 or empty array → "No cards found" illustration dekhay.
-Search clear korle initial visibility=public list reload hoy.
-Banglish — WHY reset page on search? Industry standard holo search term change hole pagination logic zero theke start kora, nahole user result-er majhkhane land korbe (confusing UX).
 
-> **Banglish — WHY reset page on search?** Industry standard holo search term change hole pagination logic zero theke start kora, nahole user result-er majhkhane land korbe (confusing UX).
+1. User types into the search bar.
+2. After a **350ms debounce** the call fires: [`GET /preference-cards?visibility=public&searchTerm=…&page=1`](../modules/preference-card.md#31-listsearch-preference-cards).
+3. While typing or fetching, a skeleton overlay covers the results.
+4. Empty array → *"No cards found"* illustration.
+5. Clearing the search bar reloads the default `visibility=public` list.
+
+> **Why this design**
+> Industry standard: when the search term changes, pagination resets to page 1. Otherwise the user lands in the middle of a fresh result set, which is confusing UX.
+
+---
 
 ### Filtering
-1. User Filter button tap kore → Bottom sheet opens.
-2. Bottom sheet open hobar shathe shathe (ba aagei load kora) [GET /preference-cards/specialties](../modules/preference-card.md#33-fetch-distinct-specialties) API call trigger hoy dynamic options load korar jonno.
-3. Bottom sheet-e:
-   - Specialty picker (single select dynamic list).
-   - Verified Only toggle.
-   - Cancel (discard) | Apply (trigger API) buttons.
-4. Apply tap → Bottom sheet close → skeleton → results.
-5. Filter icon-e active count badge dekhay.
-6. Active filter pill(s) search bar-er niche dekhate paro (swipeable, X tap kore individual filter remove).
-here also is verifed filter o ase tokhon only verifd card e show kora hobe
 
-> **Banglish — WHY dynamic specialty fetch?** Hardcoded specialties maintenance cost barhay. Backend theke dynamic fetch korle new specialty add hole code change charai UI update hoye jay.
+1. User taps the Filter button → bottom sheet opens.
+2. On open (or pre-loaded earlier), [`GET /preference-cards/specialties`](../modules/preference-card.md#33-fetch-distinct-specialties) fires to load the specialty options dynamically.
+3. Bottom sheet contains:
+   - Specialty picker (single-select from the dynamic list).
+   - **Verified Only** toggle — when enabled, only `verificationStatus=VERIFIED` cards are shown.
+   - Cancel (discard) and Apply (trigger fetch) buttons.
+4. Apply tap → bottom sheet closes → skeleton → results.
+5. The Filter icon shows an active-count badge.
+6. Active filter pills can render under the search bar (swipeable; tap the X to remove an individual filter).
 
-### Tab Switching
-1. User "Private Cards" tab select kore.
-2. Current Public list-er scroll position ebong search state memory-te preserve kora hoy.
-3. Calls [GET /preference-cards](../modules/preference-card.md#31-listsearch-preference-cards) with `visibility=private`.
-4. If result empty → "You haven't created any cards yet" + "Create Card" CTA.
-5. User Public tab-e fire ashle preserved state restore hoy without refetch.
+> **Why this design**
+> Hardcoded specialty lists raise maintenance cost. Fetching dynamically from the backend means new specialties show up in the UI as soon as cards using them are published, with no client deploy required.
+
+---
 
 ### Card Actions (List View)
-1. User kono card-er favorite icon toggle korle:
-   - Jodi favorite kora na thake: [PUT /preference-cards/favorites/cards/:cardId](../modules/preference-card.md#38-favorite-a-card)
-   - Jodi already favorite thake: [DELETE /preference-cards/favorites/cards/:cardId](../modules/preference-card.md#39-unfavorite-a-card)
-2. User card theke download icon tap korle:
-   - Backend-e count update hoy: [POST /preference-cards/:cardId/download](../modules/preference-card.md#310-increment-download-count).
-   - Local device-e card PDF/image save hoy.
 
-### Error States (all tabs)
-- Network failure: "Couldn't load cards. Check your connection." + Retry.
-- Server error: "Something went wrong. Please try again." + Retry.
-- Timeout (>10s): Same as network error.
+1. Tap the favorite icon on a card row:
+   - Not favorited → [`PUT /preference-cards/favorites/cards/:cardId`](../modules/preference-card.md#38-favorite-a-card).
+   - Already favorited → [`DELETE /preference-cards/favorites/cards/:cardId`](../modules/preference-card.md#39-unfavorite-a-card).
+2. Tap the download icon on a card row:
+   - Backend counter increments via [`POST /preference-cards/:cardId/download`](../modules/preference-card.md#310-increment-download-count).
+   - Client renders the PDF locally and saves it to device storage.
+
+---
+
+### Error States
+
+- **Network failure**: *"Couldn't load cards. Check your connection."* + Retry.
+- **Server error**: *"Something went wrong. Please try again."* + Retry.
+- **Timeout (>10s)**: same as network error.
+
+---
 
 ## Edge Cases
 
-- **No Cards Found**: Search ba filter query-r shathe kisu match na korle empty list illustration ("No cards match your filter") dekhabe.
-- **Empty Library (Private tab)**: User-er jodi kono nijer card na thake, tab switch korle "You haven't created any cards yet" + "Create Card" CTA dekhabe.
-- **Session Expired**: Access token invalid ba expire hole standardized 401 problem details response asbe; client logout flow trigger korbe.
-- **BOLA Protection**: User onno karow private card access korar cheshta korle Forbidden state dekhabe.
-- **Validation Error**: Input query-te error thakle (e.g., `limit > 50`, `page` negative, field length `> 100`) Zod validation message path shoho dekhabe.
-- **Rate Limit**: Search-e 1 minute-e 60 bar-er beshi request hole rate limit trigger hobe; UI throttling/backoff message dekhabe.
+- **No Cards Found**: Search or filter query returning an empty list shows the *"No cards match your filter"* illustration.
+- **Session Expired**: Access token invalid or expired → standardized `401` problem-details response → client logout flow triggers.
+- **BOLA Protection**: Trying to access another user's private card via direct ID surfaces a `403` Forbidden state. (Library never lists private cards, so this only fires on direct deep-links.)
+- **Validation Error**: Invalid query params (e.g., `limit > 50`, negative `page`, field length `> 100`) return a Zod validation message with the field path.
+- **Rate Limit**: More than 60 search requests per minute trigger `429`; UI shows the throttling / backoff countdown.
 
 ---
 
@@ -79,9 +101,8 @@ here also is verifed filter o ase tokhon only verifd card e show kora hobe
 | # | Method | Endpoint | Module Spec |
 |---|---|---|---|
 | 1 | GET | `/preference-cards?visibility=public&searchTerm=…` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) |
-| 2 | GET | `/preference-cards?visibility=private&searchTerm=…` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) |
-| 3 | GET | `/preference-cards/specialties` | [Module 3.3](../modules/preference-card.md#33-fetch-distinct-specialties) |
-| 4 | GET | `/preference-cards/:cardId` | [Module 3.5](../modules/preference-card.md#35-get-card-details) |
-| 5 | PUT | `/preference-cards/favorites/cards/:cardId` | [Module 3.8](../modules/preference-card.md#38-favorite-a-card) |
-| 6 | DELETE | `/preference-cards/favorites/cards/:cardId` | [Module 3.9](../modules/preference-card.md#39-unfavorite-a-card) |
-| 7 | POST | `/preference-cards/:cardId/download` | [Module 3.10](../modules/preference-card.md#310-increment-download-count) |
+| 2 | GET | `/preference-cards/specialties` | [Module 3.3](../modules/preference-card.md#33-fetch-distinct-specialties) |
+| 3 | GET | `/preference-cards/:cardId` | [Module 3.5](../modules/preference-card.md#35-get-card-details) |
+| 4 | PUT | `/preference-cards/favorites/cards/:cardId` | [Module 3.8](../modules/preference-card.md#38-favorite-a-card) |
+| 5 | DELETE | `/preference-cards/favorites/cards/:cardId` | [Module 3.9](../modules/preference-card.md#39-unfavorite-a-card) |
+| 6 | POST | `/preference-cards/:cardId/download` | [Module 3.10](../modules/preference-card.md#310-increment-download-count) |

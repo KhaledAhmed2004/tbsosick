@@ -14,6 +14,11 @@
 >
 > **Code state**: Source still uses `PATCH /:cardId/status` (see `preference-card.route.ts`). Code refactor pending — clients should target the unified `PATCH /:cardId` contract documented here.
 
+> **Canonical user's-own-cards endpoint (Q1):**
+> User's own cards are fetched via `GET /preference-cards?visibility=private` — there is no separate `/my-cards` or `/private` endpoint in the canonical API surface. UX tab labels stay product-friendly (e.g. Home shows "All Cards / My Cards"); the underlying call is the same `?visibility=…` shape with different params.
+>
+> **Code state**: Source still exposes a transitional `/preference-cards/private` route (see `preference-card.route.ts`). It is **being deprecated** — clients should target `GET /preference-cards?visibility=private` documented here.
+
 ---
 
 ## Endpoints Index
@@ -66,6 +71,7 @@ Auth: Bearer {{accessToken}}
 **Business Logic (`listPrivatePreferenceCardsForUserFromDB`):**
 - `QueryBuilder` use kore user-er nijer draft (unpublished) cards fetch kora hoy.
 - Shudhu `createdBy: userId` filter apply kora hoy privacy maintain korte.
+- When `visibility=private`, results are scoped to `creator === authenticatedUser` — the endpoint never returns another user's private cards, even to `SUPER_ADMIN`.
 
 #### Responses
 

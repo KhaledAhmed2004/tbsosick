@@ -35,7 +35,8 @@
 6. Jodi subscription request fail kore but profile success hoy, tahole profile usable thake ebong subscription card retry state dekhay.
 7. On `401` → see [Session Expired](#session-expired).
 
-> **Banglish — WHY parallel fetch?** Profile ar subscription independent data. Serial call korle unnecessary waiting hoy. Parallel fetch first-contentful-state fast kore, especially weak mobile network-e.
+> **Why this design**
+> Profile and subscription are independent payloads. Calling them serially adds avoidable wait time. Parallel fetch reaches first-contentful-state faster, which matters most on weak mobile networks.
 
 ---
 
@@ -54,9 +55,11 @@
 11. On `422` → invalid field-er niche inline validation show hoy.
 12. On failed image upload → see [Profile Photo Upload Failed](#profile-photo-upload-failed).
 
-> **Banglish — WHY dirty-state check?** Empty PATCH spam backend noise baray ar accidental double-submit hoy. User-keo clear feedback dey je kono change hoyni.
+> **Why this design**
+> A dirty-state check stops empty PATCH spam from reaching the backend and avoids accidental double-submits. It also gives the user clear feedback that nothing has changed since they opened the form.
 
-> **Banglish — WHY direct multipart upload?** Single request flow mobile-e simpler. Separate pre-signed upload orchestration na thakle retry ar optimistic refresh logic maintain kora easy hoy.
+> **Why this design**
+> A single multipart request is simpler on mobile. Skipping a separate pre-signed upload step keeps retry and optimistic-refresh logic easy to maintain.
 
 ---
 
@@ -70,7 +73,8 @@
 6. Expired subscription hole downgraded state badge show hoy.
 7. Renewal pending/cancelled hole warning label show hoy without blocking access immediately.
 
-> **Banglish — WHY subscription card alada refresh hoy?** Payment-related state frequently change hoy webhook diye. Pure profile reload korle unnecessary flicker ar layout jump create hoy.
+> **Why this design**
+> Payment-related state changes often, driven by webhooks. Forcing a full profile reload every time the subscription card updates causes unnecessary flicker and layout jumps; section-scoped refresh keeps the rest of the screen stable.
 
 ---
 
@@ -92,9 +96,11 @@
 14. On receipt verification fail → see [Receipt Verification Failed](#receipt-verification-failed).
 15. User cancel payment sheet korle silent dismiss hoy — no error toast.
 
-> **Banglish — WHY no polling after verification success?** Backend immediate consistency guarantee dey. Additional polling unnecessary network load ar duplicate loading state create korbe.
+> **Why this design**
+> The backend guarantees immediate consistency after receipt verification. Additional polling would add network load and produce a duplicate loading state for no benefit.
 
-> **Banglish — WHY no error toast on user-cancel?** User intentionally back koreche. Cancel-ke failure hishebe treat korle unnecessary anxiety create hoy.
+> **Why this design**
+> The user intentionally backed out. Treating a deliberate cancel as a failure produces unnecessary anxiety and makes the app feel buggy.
 
 ---
 
@@ -136,9 +142,11 @@
 8. Back navigation disabled hoy.
 9. On network fail during logout → local session clear korar confirmation prompt dekhano uchit.
 
-> **Banglish — WHY current-device-only logout important to clarify?** User jodi multiple phone/tablet use kore, ek device logout diye shob session close hoye gele unexpected forced logout create hobe.
+> **Why this design**
+> If the user has multiple phones / tablets, signing out on one device should not invalidate the others. Otherwise the user gets unexpected forced logouts on devices they never touched.
 
-> **Banglish — WHY back-stack clear mandatory?** Android gesture/back diye protected screen-e fire jawa ekta common auth leak. Navigation stack reset non-negotiable.
+> **Why this design**
+> An Android gesture / back navigation that lands on a protected screen post-logout is a common auth-leak path. Resetting the navigation stack on logout is non-negotiable.
 
 ---
 
@@ -153,7 +161,8 @@
 
 **Never** plain `SharedPreferences` / `UserDefaults` / Hive. **Never** log tokens.
 
-> **Banglish — WHY cached receipt encrypted?** Purchase receipt replay-sensitive data. Plain local storage leak hole fake restore attempt possible hoy.
+> **Why this design**
+> Purchase receipts are replay-sensitive. If they leak from plain local storage, an attacker can attempt fake restores against the verification endpoint.
 
 ### Push token lifecycle
 

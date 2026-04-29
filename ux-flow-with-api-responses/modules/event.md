@@ -42,7 +42,7 @@ Auth: Bearer {{accessToken}}
 **Business Logic (`listEventsForUserFromDB`):**
 - `userId` ebong optional `from`/`to` date range diye event filter kora hoy.
 - Date range thakle `startsAt` field-er opor `$gte` ebong `$lte` operator use kore search kora hoy.
-- Shudhu matro proyojoniyo field gula (`title`, `eventType`, `startsAt`, `endsAt`, `location`, `notes`, `personnel`, `preferenceCard`) select kore return kora hoy.
+- Returned fields: `title`, `eventType`, `startsAt`, `endsAt`, `duration`, `location`, `notes`, `personnel`, `linkedPreferenceCard`.
 - Performance optimization-er jonno `.lean()` use kora hoy.
 
 #### Responses
@@ -58,9 +58,13 @@ Auth: Bearer {{accessToken}}
         "_id": "664a1b2c3d4e5f6a7b8c9d0e",
         "title": "Knee Arthroscopy Surgery",
         "startsAt": "2026-04-10T08:00:00.000Z",
-        "endsAt": "2026-04-10T10:00:00.000Z",
-        "eventType": "SURGERY",
+        "endsAt": "2026-04-10T09:30:00.000Z",
+        "duration": 90,
+        "eventType": "surgery",
         "location": "Operating Room 4",
+        "personnel": [
+          { "name": "Dr. Smith", "role": "Lead Surgeon" }
+        ],
         "notes": "Prepare all preference cards",
         "createdAt": "2026-04-07T10:30:00.000Z"
       }
@@ -87,32 +91,44 @@ Auth: Bearer {{accessToken}}
 
 **Business Logic (`createEventInDB`):**
 - **Time Normalization (`resolveTimeRange`)**:
-    - Input data theke `startsAt` ebong `endsAt` resolve kora hoy.
-    - Legacy format (`date`, `time`, `durationHours`) support kore, jeta internal-y `startsAt` ebong `endsAt`-e convert hoy.
-    - `endsAt` oboshshoi `startsAt`-er pore hote hobe, na hole `BAD_REQUEST` error throw kore.
+    - Input `date` (ISO `YYYY-MM-DD`) + `time` (`HH:mm`) + `duration` (minutes) is resolved into `startsAt` and `endsAt` server-side.
+    - `endsAt` must always be after `startsAt`, otherwise the server throws `BAD_REQUEST`.
 - `userId` shoho event database-e create kora hoy → `EventModel.create()`.
-- Legacy field gula (`date`, `time`, `durationHours`) database-e save kora hoy na.
 - Event successfully toiri hole 2-ti reminder automatically schedule kora hoy:
     1. Event shuru hovar 24 ghonta age.
     2. Event shuru hovar 1 ghonta age.
 - Reminders push notification ebong database notification hishebe schedule kora hoy via `NotificationBuilder`.
 - Shob sheshe create hoyeche emon `event` object-ti return kora hoy.
 
+**Field Reference:**
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `title` | Yes | string | Event title. |
+| `date` | Yes | string (ISO date `YYYY-MM-DD`) | Calendar date. |
+| `time` | Yes | string (`HH:mm`) | 24-hour clock. |
+| `duration` | Yes | integer (minutes) | Positive. Resolved into `endsAt = startsAt + duration` server-side. |
+| `location` | Yes | string | Free text. |
+| `eventType` | Yes | enum | One of `surgery`, `meeting`, `consultation`, `other`. |
+| `linkedPreferenceCard` | No | `cardId` | Optional reference to one of the user's own preference cards. |
+| `personnel` | No | array of `{ name: string, role: string }` | Common roles: `Lead Surgeon`, `Surgical Team`, `Assistant`, `Anesthesiologist`. |
+| `notes` | No | string | Multiline. |
+
 **Request Body:**
 ```json
 {
-  "title": "Surgery with Dr. Smith",
-  "date": "2026-04-15",
-  "time": "09:30",
-  "durationHours": 3,
-  "eventType": "SURGERY",
-  "location": "Main Hospital - OR 2",
-  "preferenceCard": "664a1b2c3d4e5f6a7b8c9d0x",
-  "notes": "Hip Replacement case",
-  "personnel": {
-    "leadSurgeon": "Dr. Smith",
-    "surgicalTeam": ["Nurse Joy", "Anesthesiologist Bob"]
-  }
+  "title": "Knee Arthroscopy — Smith",
+  "date": "2026-05-15",
+  "time": "08:30",
+  "duration": 90,
+  "location": "OR-3, St. Mary's Hospital",
+  "eventType": "surgery",
+  "linkedPreferenceCard": "664a1b2c3d4e5f6a7b8c9d0e",
+  "personnel": [
+    { "name": "Dr. Smith", "role": "Lead Surgeon" },
+    { "name": "Jane Doe", "role": "Surgical Team" }
+  ],
+  "notes": "Patient has prior ACL repair on same knee."
 }
 ```
 
@@ -126,17 +142,18 @@ Auth: Bearer {{accessToken}}
     "message": "Event created successfully",
     "data": {
       "_id": "664a1b2c3d4e5f6a7b8c9d0f",
-      "title": "Surgery with Dr. Smith",
-      "startsAt": "2026-04-15T09:30:00.000Z",
-      "endsAt": "2026-04-15T12:30:00.000Z",
-      "eventType": "SURGERY",
-      "location": "Main Hospital - OR 2",
-      "preferenceCard": "664a1b2c3d4e5f6a7b8c9d0x",
-      "notes": "Hip Replacement case",
-      "personnel": {
-        "leadSurgeon": "Dr. Smith",
-        "surgicalTeam": ["Nurse Joy", "Anesthesiologist Bob"]
-      }
+      "title": "Knee Arthroscopy — Smith",
+      "startsAt": "2026-05-15T08:30:00.000Z",
+      "endsAt": "2026-05-15T10:00:00.000Z",
+      "duration": 90,
+      "eventType": "surgery",
+      "location": "OR-3, St. Mary's Hospital",
+      "linkedPreferenceCard": "664a1b2c3d4e5f6a7b8c9d0e",
+      "personnel": [
+        { "name": "Dr. Smith", "role": "Lead Surgeon" },
+        { "name": "Jane Doe", "role": "Surgical Team" }
+      ],
+      "notes": "Patient has prior ACL repair on same knee."
     }
   }
   ```
@@ -161,7 +178,7 @@ Auth: Bearer {{accessToken}}
 - Database theke `eventId` diye event search kora hoy.
 - Jodi event na pauya jay → `null` return kore (controller setake handle kore).
 - Authorization check: Event-ti jodi onno kono user-er hoy ebong requester `SUPER_ADMIN` na hoy → `FORBIDDEN` error throw kore.
-- `preferenceCard` field-ti populate kora hoy (shudhu `cardTitle` select kora hoy).
+- `linkedPreferenceCard` field-ti populate kora hoy (shudhu `cardTitle` select kora hoy).
 - Performance optimization-er jonno `.lean()` use kora hoy.
 
 #### Responses
@@ -174,20 +191,21 @@ Auth: Bearer {{accessToken}}
     "message": "Event details fetched successfully",
     "data": {
       "_id": "664a1b2c3d4e5f6a7b8c9d0f",
-      "title": "Surgery with Dr. Smith",
-      "startsAt": "2026-04-15T09:30:00.000Z",
-      "endsAt": "2026-04-15T12:30:00.000Z",
-      "eventType": "SURGERY",
-      "location": "Main Hospital - OR 2",
-      "preferenceCard": {
-        "_id": "664a1b2c3d4e5f6a7b8c9d0x",
-        "cardTitle": "Hip Replacement Card"
+      "title": "Knee Arthroscopy — Smith",
+      "startsAt": "2026-05-15T08:30:00.000Z",
+      "endsAt": "2026-05-15T10:00:00.000Z",
+      "duration": 90,
+      "eventType": "surgery",
+      "location": "OR-3, St. Mary's Hospital",
+      "linkedPreferenceCard": {
+        "_id": "664a1b2c3d4e5f6a7b8c9d0e",
+        "cardTitle": "Knee Arthroscopy"
       },
-      "notes": "Hip Replacement case details and preparations.",
-      "personnel": {
-        "leadSurgeon": "Dr. Smith",
-        "surgicalTeam": ["Nurse Joy", "Anesthesiologist Bob"]
-      },
+      "personnel": [
+        { "name": "Dr. Smith", "role": "Lead Surgeon" },
+        { "name": "Jane Doe", "role": "Surgical Team" }
+      ],
+      "notes": "Patient has prior ACL repair on same knee.",
       "createdAt": "2026-04-01T10:00:00.000Z",
       "updatedAt": "2026-04-01T10:00:00.000Z"
     }
@@ -204,7 +222,7 @@ Content-Type: application/json
 Auth: Bearer {{accessToken}}
 ```
 
-> Existing event-er (`:eventId`) title, date, time, location, notes, ba personnel update korar jonno. Reminders automatically reschedule hoy.
+> Existing event-er (`:eventId`) `title`, `date`, `time`, `duration`, `location`, `eventType`, `linkedPreferenceCard`, `personnel`, ba `notes` update korar jonno. Reminders automatically reschedule hoy.
 
 **Implementation:**
 - **Route**: [event.route.ts](file:///src/app/modules/event/event.route.ts)
@@ -215,7 +233,7 @@ Auth: Bearer {{accessToken}}
 - Database theke `eventId` diye event search kora hoy.
 - Jodi event na pauya jay → `NOT_FOUND` error return kore.
 - Authorization check: Event-ti jodi onno kono user-er hoy ebong requester `SUPER_ADMIN` na hoy → `FORBIDDEN` error throw kore.
-- **Time Re-resolution**: Jodi payload-e time related field (`startsAt`, `endsAt`, `date`, `time`, `durationHours`) thake, tobe `resolveTimeRange` logic call kore notun `startsAt` ebong `endsAt` calculate kora hoy.
+- **Time Re-resolution**: Jodi payload-e time-related fields (`date`, `time`, `duration`) thake, tobe `resolveTimeRange` logic call kore notun `startsAt` ebong `endsAt` calculate kora hoy.
 - Request body theke asha data `Object.assign()`-er maddhome existing event object-e merge kora hoy.
 - Shob sheshe update hoyeche emon `updatedEvent` return kora hoy.
 
@@ -224,13 +242,14 @@ Auth: Bearer {{accessToken}}
 {
   "title": "Updated Surgery Title",
   "time": "10:00",
-  "durationHours": 4,
+  "duration": 240,
   "location": "Operating Room 1 - Main Wing",
+  "eventType": "surgery",
   "notes": "Updated case notes for the surgical team.",
-  "personnel": {
-    "leadSurgeon": "Dr. House",
-    "surgicalTeam": ["Nurse Joy", "Dr. Wilson", "Intern Foreman"]
-  }
+  "personnel": [
+    { "name": "Dr. House", "role": "Lead Surgeon" },
+    { "name": "Dr. Wilson", "role": "Assistant" }
+  ]
 }
 ```
 
@@ -247,13 +266,14 @@ Auth: Bearer {{accessToken}}
       "title": "Updated Surgery Title",
       "startsAt": "2026-04-15T10:00:00.000Z",
       "endsAt": "2026-04-15T14:00:00.000Z",
+      "duration": 240,
       "location": "Operating Room 1 - Main Wing",
-      "eventType": "SURGERY",
+      "eventType": "surgery",
       "notes": "Updated case notes for the surgical team.",
-      "personnel": {
-        "leadSurgeon": "Dr. House",
-        "surgicalTeam": ["Nurse Joy", "Dr. Wilson", "Intern Foreman"]
-      },
+      "personnel": [
+        { "name": "Dr. House", "role": "Lead Surgeon" },
+        { "name": "Dr. Wilson", "role": "Assistant" }
+      ],
       "updatedAt": "2026-04-09T14:30:00.000Z"
     }
   }
