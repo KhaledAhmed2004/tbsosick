@@ -1,4 +1,4 @@
-# Screen 3: Preference Card Details (Student App)
+# Screen 3: Preference Card Details (Mobile)
 
 > **Section**: App APIs (Student-Facing)
 > **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
@@ -35,9 +35,9 @@
    - **Photo Library** (horizontally scrollable image strip; jodi kono photo na thake → *"No photos added."* placeholder show hoy).
 5. On `403` → see [Private Card Access](#private-card-access).
 6. On `404` → see [Card Not Found](#card-not-found).
-4. Favorite toggle available on header icon.
 
-> **Banglish — WHY skeleton instead of spinner?** Card-e multiple sections ache — surgeon info, supplies, sutures, photos. Skeleton dile user bujhte pare content kothay thakbe, layout shift kome jay. Spinner dile blank screen perception time bere jay — Doherty Threshold (400 ms rule) break hoy.
+> **Why this design**
+> A card has multiple distinct sections (surgeon info, supplies, sutures, photos). A skeleton previews where each section will land, which removes layout shift on render. A spinner instead leaves the screen blank, which inflates perceived load time and breaks the Doherty Threshold (400 ms rule).
 
 ---
 
@@ -50,7 +50,8 @@
 5. On `200` → optimistic state confirmed; `pointerEvents` restored.
 6. On any error → optimistic update rollback hoy (icon previous state-e fire jay); `pointerEvents` restored; toast: *"Could not update favorite. Try again."*
 
-> **Banglish — WHY optimistic update + pointer block?** Favorite toggle low-stakes — user tap kore immediate feedback expect kore. Network roundtrip wait korle icon "lag" kore, feel broken. Pointer block in-flight-e race condition prevent kore: rapid double-tap korle PUT + DELETE simultaneously queue hoye server-side inconsistent state create korte pare.
+> **Why this design**
+> Favoriting is a low-stakes action — the user expects instant feedback on tap. Waiting for the round-trip makes the icon feel laggy and broken. Locking the icon while in-flight prevents a race: a rapid double-tap could otherwise queue PUT + DELETE simultaneously and leave server state inconsistent.
 
 ---
 
@@ -74,7 +75,8 @@
 8. On PDF generation failure → toast: *"Download failed. Please try again."*; button re-enabled.
 9. On `POST /download` error → silently log (count increment non-critical); PDF save still attempted.
 
-> **Banglish — WHY POST error silently ignored for count?** Download count ekta analytics metric — user experience-er part na. Count fail korle user-ke block kora wrong: they got the PDF, mission accomplished. Error log koro, user-ke distract koro na.
+> **Why this design**
+> The download count is an analytics metric, not part of the user-facing experience. Blocking the user when the counter call fails is the wrong trade-off: they already got the PDF, mission accomplished. Log the error, but don't surface it.
 
 ---
 

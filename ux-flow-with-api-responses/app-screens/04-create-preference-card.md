@@ -1,4 +1,4 @@
-# Screen 4: Create Preference Card
+# Screen 4: Create Preference Card (Mobile)
 
 > **Section**: App APIs (Student-Facing)
 > **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
@@ -46,7 +46,8 @@
 17. On `400` (published + missing required fields) → see [Publish Validation Error](#publish-validation-error).
 18. On `422` → field-level inline errors show hoy.
 
-> **Banglish — WHY parallel catalog fetch?** Supplies আর Sutures duto independent endpoint — sequentially call korle form-er load time double hoy.
+> **Why this design**
+> Supplies and Sutures live on independent endpoints. Calling them sequentially would double the form's load time; firing them in parallel halves the wait before the dropdowns become interactive.
 
 ---
 

@@ -87,7 +87,7 @@ Two parallel surfaces consume the same backend:
 | 01 | **Auth** | Account, Sessions | `POST /users`, `POST /auth/login`, `/auth/social-login`, `/auth/verify-otp`, `/auth/forgot-password`, `/auth/reset-password`, `/auth/refresh-token`, `/auth/logout`, `/auth/resend-verify-email` |
 | 02 | **Home** | Discovery + Stats | `GET /preference-cards/stats`, `/users/me/favorites`, `/preference-cards?visibility=public&searchTerm=…`, favorite/unfavorite |
 | 03 | **Card Details** | Card CRUD | `GET/PATCH/DELETE /preference-cards/:cardId`, `POST /preference-cards`, `POST /preference-cards/:cardId/download` (counter-only), `GET /supplies`, `GET /sutures` |
-| 04 | **Library** | Browse + Filter (paid only) | `GET /preference-cards?visibility=public\|private`, `GET /preference-cards/specialties`, favorite/unfavorite/download |
+| 04 | **Library** | Global search (paid only) | `GET /preference-cards?visibility=public`, `GET /preference-cards/specialties`, favorite/unfavorite/download |
 | 05 | **Calendar** | Personal Events (paid only) | `GET/POST /events`, `GET/PATCH/DELETE /events/:eventId` |
 | 06 | **Profile** | Account + Sub + Legal | `GET/PATCH /users/profile`, `GET /subscriptions/me`, `POST /subscriptions/verify-receipt`, `GET /legal`, `GET /legal/:slug` |
 | 07 | **Notifications** | Cross-cutting | `GET /notifications`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`, `DELETE /notifications/:id` |
@@ -117,10 +117,10 @@ Register → Verify OTP → Auto-Login → Home  (no onboarding screen, direct t
    │
    ├─ Browse / Search (Home + Library)
    │      └► Library tab is locked behind paywall for Free users
-   │      └► Public library shows only VERIFIED cards (paid users only)
+   │      └► Library = global search over PUBLIC verified cards (paid users only)
    │      └► Card Details ──► Download (counter++) / Favorite / Share
    │
-   ├─ Library tabs: Public (verified, paid) ⇆ Private (own cards)
+   ├─ Home tabs: All Cards (public discovery) ⇆ My Cards (own cards via ?visibility=private)
    │
    ├─ Create Card (+ FAB)
    │      └► Pre-check: hit card-count limit? → FAB disabled + tooltip
@@ -164,7 +164,7 @@ Login (SUPER_ADMIN) → Overview (Growth metrics + Trend charts)
 | **User** | self / admin | `name`, `email`, `password` (optional for OAuth), `phone`, `country`, `role`, `status` (`ACTIVE` / `RESTRICTED`), `verified`, `favoriteCards[]`, `tokenVersion`, `deviceToken`, `subscriptionPlan`, `subscriptionExpiresAt` | Created → OTP-verified → Active → (optionally Restricted / Deleted) |
 | **PreferenceCard** | creator (USER) | `cardTitle`, `surgeon{ fullName, specialty, handPreference, contactNumber, musicPreference }`, `medication`, `supplies[]`, `sutures[]`, `instruments`, `positioningEquipment`, `prepping`, `workflow`, `keyNotes`, `photos[]`, `published`, `verificationStatus` (`UNVERIFIED` / `VERIFIED` / `REJECTED`), `visibility` (`public` / `private`), `downloadCount` | Created (always `UNVERIFIED`) → admin verifies (Enterprise creators only) → `VERIFIED` (visible in public library to paid users) |
 | **Supply** / **Suture** | admin | `name` (unique) | Master catalog entries; auto-created when referenced by name in card payloads. |
-| **Event** | user | `title`, `date`, `time`, `duration`, `location`, `notes`, `personnel: string[]` | Created → Reminders fire at T-24h and T-1h |
+| **Event** | user | `title`, `date`, `time`, `duration` (minutes), `location`, `eventType` (`surgery` \| `meeting` \| `consultation` \| `other`), `linkedPreferenceCard` (optional), `personnel: Array<{ name, role }>` (optional), `notes` (optional) | Created → Reminders fire at T-24h and T-1h |
 | **Notification** | system | `userId`, `type` (`REMINDER` / card / event), `title`, `subtitle`, `read`, `icon`, `createdAt` | Persisted in DB + emitted over Socket + (optionally) FCM push |
 | **LegalPage** | admin | `slug` (unique), `title`, `content` | CMS-managed |
 | **Subscription** | user | `plan` (`FREE` / `PREMIUM` / `ENTERPRISE`), `interval` (`monthly` / `yearly`), IAP receipt + product ID, `expiresAt`, `autoRenew` | Free by default → upgraded via IAP receipt verification → expires / renews on store webhook |
@@ -284,7 +284,7 @@ Three tiers, billed via Apple App Store / Google Play. Server-side receipt verif
 | `/auth/*` | login, OTP, refresh, logout, social-login | mostly public | |
 | `/preference-cards` | list, create, CRUD, favorite, download (counter), verify (admin), specialties, stats | auth | Visibility filter via `?visibility=public\|private`. Public list returns only `verificationStatus: VERIFIED`, gated to paid plans. |
 | `/events` | personal calendar | auth (USER, paid plan only) | Free users get 402/403 with `code: PLAN_REQUIRED`. |
-| `/notifications` | list, read, delete | auth | No unread-count endpoint — client computes red dot from list. |
+| `/notifications` | list, read, delete | auth | List response carries `meta.unreadCount`; client renders red dot from `meta.unreadCount > 0`. No separate `/unread-count` endpoint. |
 | `/legal/*` | list/get public; CMS admin-only | mixed | Reads public; writes `SUPER_ADMIN`. |
 | `/supplies`, `/sutures` | catalog | auth + admin for writes | Reads available to USERs (card-creation dropdown). |
 | `/subscriptions/me`, `/subscriptions/verify-receipt` | plan + IAP verification | auth (USER) | `GET /subscriptions/me` returns `plan: "FREE"` for free users — never 404. |
@@ -301,9 +301,9 @@ All decisions confirmed across the alignment rounds. Source of truth for any lat
 | **D1** | Card moderation | Cards always start `UNVERIFIED`. Admin manually verifies. Verification is the **gate** (not just a badge): only `VERIFIED` + `visibility=public` cards appear in the public library. |
 | **D2** | Public vs Private | `visibility` field is the single source of truth (`public` vs `private`), set at creation. "My Cards" filter is a separate `creator=me` query. |
 | **D3** | IAP integration | Client posts store receipt to `POST /subscriptions/verify-receipt`; server verifies with Apple/Google and updates plan. |
-| **D4** | Notification list UX | Add list-screen UX flow. **Unread count** is returned by backend in `meta.unreadCount` (Industry best practice) to avoid frontend computation on large lists. |
+| **D4** | Notification list UX | Server returns `meta.unreadCount` on the `GET /notifications` list response. Client renders the bell-icon red dot from `meta.unreadCount > 0`. (Reverses the earlier "client computes from list" position; no separate `/unread-count` endpoint exists.) |
 | **D5** | Card download | Counter-only. Client renders the PDF locally; `POST /preference-cards/:cardId/download` only increments the counter. |
-| **D6** | Calendar `personnel` | `string[]` (chip input — names as strings, no foreign-key collaboration in v1). |
+| **D6** | Calendar event schema | `personnel` is now `Array<{ name: string, role: string }>` (supersedes the original `string[]`). Event also has an `eventType` enum (`surgery` \| `meeting` \| `consultation` \| `other`), an optional `linkedPreferenceCard` reference, and a `duration` (minutes). |
 | **D7** | Onboarding | None. After auto-login, user lands directly on Home. References to "Welcome/Onboarding" should be removed from `01-auth.md`. |
 | **D8** | Admin moderation routes | Refactor `PATCH /:cardId/approve` + `/reject` → single `PATCH /:cardId` with `{ verificationStatus }` body, per project convention. |
 | **D9** | Yearly pricing | Premium **$59.99/year**, Enterprise **$99.99/year** (≈ 2 months free vs monthly). |
@@ -321,7 +321,8 @@ Captured here so they aren't accidentally added to screen docs:
 - **Welcome / Onboarding screen** — no onboarding; user lands directly on Home after auto-login (D7).
 - **Team workspaces / invites / shared cards** — Enterprise pricing teaser only; deferred (D12).
 - **Server-rendered card PDFs** — client renders locally; revisit if a canonical PDF is needed (D5).
-- **Notification unread-count endpoint** — frontend-only computation (D4).
+- **Dedicated notification unread-count endpoint** — unread count is delivered inline via `meta.unreadCount` on `GET /notifications`; no separate `/unread-count` route (D4).
+- **Notification grouping** — deferred to v2. No `isGrouped` / `groupCount` fields in the v1 response shape.
 - **Approve / Reject mirrored routes** — folded into `PATCH /:cardId` body field (D8).
 
 ---

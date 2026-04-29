@@ -1,9 +1,19 @@
-# Screen 5: Calendar
+# Screen 6: Calendar (Mobile)
 
 > **Section**: App APIs (Student-Facing)
-> **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
-> **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Home](./02-home.md) (Quick access)
+> **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
+> **Response format**: see [Standard Response Envelope](../system-concepts.md#standard-response-envelope)
+> **Roles**: see [system-concepts.md → User Roles](../system-concepts.md#user-roles)
+> **Related screens**: [Home](./02-home.md) (quick access)
+> **Doc version**: `v2` — last reviewed `2026-04-30`
+
+---
+
+## Common UI Rules
+
+See [system-concepts.md → Common UI Rules](../system-concepts.md#common-ui-rules) for the canonical list (submit protection, offline pre-flight, 5xx toast, 422 field-level inline, 429 `Retry-After` countdown, 401 redirect / auto-refresh).
+
+---
 
 ## UX Flow
 
@@ -25,7 +35,21 @@
 
 ### Create Event Flow
 1. User "Create Event" button-e tap kore.
-2. Ekta modal/bottom-sheet open hoy jekhane title, date, time, duration, location, notes, ebong personnel input deya jay.
+2. A modal / bottom-sheet opens with the following structured form:
+
+   ```
+   Form fields:
+   - title (required, string)
+   - date (required, ISO date)
+   - time (required, HH:mm)
+   - duration (required, minutes — integer)
+   - location (required, string)
+   - eventType (required, enum: "surgery" | "meeting" | "consultation" | "other")
+   - linkedPreferenceCard (optional, cardId — typeahead picker over user's own cards via GET /preference-cards?visibility=private)
+   - personnel (optional, array of { name: string, role: string }; common roles: "Lead Surgeon", "Surgical Team", "Assistant", "Anesthesiologist")
+   - notes (optional, multiline string)
+   ```
+
 3. Submit → [POST /events](../modules/event.md#42-create-event).
 4. Success hole list update hoy ebong success message dekhay.
 
@@ -35,6 +59,22 @@
 3. Details modal-e user data dekhte pare ebong "Edit" icon-e tap kore update korte pare → [PATCH /events/:eventId](../modules/event.md#44-update-event).
 4. User chaile event delete-o korte pare "Delete" button-e tap kore → [DELETE /events/:eventId](../modules/event.md#45-delete-event).
 5. Success hole calendar refresh hoy.
+
+---
+
+## Validation Rules
+
+| Field | Rule | Inline error |
+|---|---|---|
+| `title` | Required, non-empty string | *"Event title is required."* |
+| `date` | Required, valid ISO date (`YYYY-MM-DD`) | *"Pick a valid date."* |
+| `time` | Required, `HH:mm` 24-hour format | *"Pick a valid time."* |
+| `duration` | Required, positive integer (minutes) | *"Duration must be a positive number of minutes."* |
+| `location` | Required, non-empty string | *"Location is required."* |
+| `eventType` | Required; one of `surgery`, `meeting`, `consultation`, `other` | *"Pick an event type."* |
+| `linkedPreferenceCard` | Optional; if provided must be a valid `cardId` owned by the requesting user | *"Pick one of your own cards."* |
+| `personnel` | Optional array of `{ name, role }`; each entry needs both fields when present | *"Each person needs a name and role."* |
+| `notes` | Optional, multiline string | — |
 
 ---
 
@@ -55,3 +95,4 @@
 | 3 | GET | `/events/:eventId` | [Module 4.3](../modules/event.md#43-get-event-details) |
 | 4 | PATCH | `/events/:eventId` | [Module 4.4](../modules/event.md#44-update-event) |
 | 5 | DELETE | `/events/:eventId` | [Module 4.5](../modules/event.md#45-delete-event) |
+| 6 | GET | `/preference-cards?visibility=private` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) (typeahead for `linkedPreferenceCard`) |

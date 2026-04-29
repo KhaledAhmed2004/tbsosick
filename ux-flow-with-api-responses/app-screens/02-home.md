@@ -31,7 +31,7 @@
 
 * [`GET /preference-cards/stats`](../modules/preference-card.md#32-get-cards-stats) — fetches the “Total Available” and “My Created” counts.
 * [`GET /users/me/favorites`](../modules/user.md#28-list-favorite-cards) — fetches the user’s bookmarked (favorite) card list.
-* [`GET /preference-cards/my-cards`](../modules/preference-card.md#33-list-my-preference-cards) — fetches cards created by the current user (for the My Cards tab).
+* [`GET /preference-cards?visibility=private`](../modules/preference-card.md#31-listsearch-preference-cards) — fetches cards created by the current user (for the My Cards tab).
 
 4. While API calls are pending, a **skeleton loader** is displayed in the Stats section, Favorites list, and My Cards list.
 
@@ -52,8 +52,8 @@
     - Favorite cards horizontal carousel (bottom section)
     - Floating “+” action button
 
-> **English — WHY parallel fetch?**
-> It reduces UX latency. If the user waits for the entire page as a single request, it feels slower. When independent endpoints are resolved separately in parallel, the UI becomes responsive faster and feels significantly quicker.
+> **Why this design**
+> Parallel fetch reduces perceived latency. Waiting on a single combined request blocks the whole page; resolving independent endpoints in parallel lets each section render as soon as its data lands, so the UI feels significantly faster.
 
 ---
 
@@ -75,14 +75,14 @@
 
 9. When the user clears the search bar or dismisses the keyboard, the default Home state is restored (Favorites list becomes visible).
 
-> **English — WHY debounce?**
-> If an API call is made on every keystroke, it can lead to rate-limit hits and unnecessary load on the backend. Debouncing is essential to keep the UI smooth and efficient by reducing the number of API requests.
+> **Why this design**
+> Firing an API call on every keystroke hits rate-limits and wastes backend cycles. Debouncing is essential to keep typing smooth and to cut the number of API requests to the few that actually represent the user's intent.
 
 ---
 
 ### 3. My Cards (Manage My Cards)
 1. User **My Cards** tab-e tap kore.
-2. User-er create kora card list show hoy (data from [`GET /preference-cards/my-cards`](../modules/preference-card.md#33-list-my-preference-cards)).
+2. User-er create kora card list show hoy (data from [`GET /preference-cards?visibility=private`](../modules/preference-card.md#31-listsearch-preference-cards)).
 3. Each card item contains **Edit** and **Delete** actions (quick actions).
 
 #### Edit Card
@@ -109,21 +109,19 @@
 ---
 
 ### 5. Favorite Interaction Flow
-1. Home screen favorites section shows horizontal cards.
-2. Tap **View All** → navigate full favorites screen.
-Kono card-e tap korle Details screen-e navigate kore → Preference Card Details.
-
-3. Toggle favorite from card/detail:
+1. User taps the favorite (heart) icon on a card header.
+2. **Optimistic update**: heart icon flips state immediately; the icon is locked (in-flight tap ignored — see [Double Tap on Favorite Toggle](#double-tap-on-favorite-toggle)).
+3. Toggle call fires:
    - Add → [PUT `/preference-cards/favorites/cards/:cardId`](../modules/preference-card.md#38-favorite-a-card)
    - Remove → [DELETE `/preference-cards/favorites/cards/:cardId`](../modules/preference-card.md#39-unfavorite-a-card)
-Call pending thakle heart icon-e optimistic update dekhay (immediate toggle) — call fail hole revert kore previous state-e.
-Heart icon call in-flight thakle second tap ignore kore (lock) — see Double Tap on Favorite Toggle.
-4. On success → local UI updates + background refresh favorites list.
-5. Tap card → navigate to details screen.
-404 → see Card No Longer Exists.
-5xx → optimistic state revert; toast dekhay
+4. On success → optimistic state is confirmed; the favorites list silently refreshes in the background.
+5. Tap on a card body → navigate to [Preference Card Details](./03-preference-card-details.md).
+6. Errors:
+   - `404` → see [Card No Longer Exists](#card-no-longer-exists).
+   - `5xx` → optimistic state reverts; toast: *"Could not update favorite. Try again."*
 
-> **Banglish — WHY optimistic update?** User experience instant lag-free feel korte pare. Backend confirm pore sync kore final consistency maintain kore.
+> **Why this design**
+> Optimistic update keeps the UI feeling instant and lag-free. The backend round-trip then confirms (or reverts) the change so the final state stays consistent.
 
 ---
 
@@ -198,10 +196,11 @@ Heart icon call in-flight thakle second tap ignore kore (lock) — see Double Ta
 | # | Method | Endpoint | Module Spec | Used in flow |
 | --- | --- | --- | --- | --- |
 | 1 | GET | `/preference-cards?visibility=public&searchTerm=…` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) | Search & Discovery |
-| 2 | GET | `/preference-cards/stats` | [Module 3.2](../modules/preference-card.md#32-get-cards-stats) | Initial Load |
-| 3 | PUT | `/preference-cards/favorites/cards/:cardId` | [Module 3.8](../modules/preference-card.md#38-favorite-a-card) | Favorite Toggle |
-| 4 | DELETE | `/preference-cards/favorites/cards/:cardId` | [Module 3.9](../modules/preference-card.md#39-unfavorite-a-card) | Favorite Toggle |
-| 5 | GET | `/users/me/favorites` | [Module 2.8](../modules/user.md#28-list-favorite-cards) | Initial Load |
+| 2 | GET | `/preference-cards?visibility=private` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) | Initial Load (My Cards tab) |
+| 3 | GET | `/preference-cards/stats` | [Module 3.2](../modules/preference-card.md#32-get-cards-stats) | Initial Load |
+| 4 | PUT | `/preference-cards/favorites/cards/:cardId` | [Module 3.8](../modules/preference-card.md#38-favorite-a-card) | Favorite Toggle |
+| 5 | DELETE | `/preference-cards/favorites/cards/:cardId` | [Module 3.9](../modules/preference-card.md#39-unfavorite-a-card) | Favorite Toggle |
+| 6 | GET | `/users/me/favorites` | [Module 2.8](../modules/user.md#28-list-favorite-cards) | Initial Load |
 
 
 > Note: stats + favorites are independent modules; failure of one must not block rendering of the other.

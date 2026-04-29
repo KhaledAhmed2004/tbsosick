@@ -1,8 +1,11 @@
-# Notifications Flow
+# Screen 8: Notifications (Mobile)
 
 > **Section**: System-Wide Notifications
-> **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
-> **Standard Envelope**: See [README.md](../README.md#standard-response-envelope)
+> **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
+> **Response format**: see [Standard Response Envelope](../system-concepts.md#standard-response-envelope)
+> **Roles**: see [system-concepts.md → User Roles](../system-concepts.md#user-roles)
+> **Common UI Rules**: see [system-concepts.md → Common UI Rules](../system-concepts.md#common-ui-rules)
+> **Doc version**: `v2` — last reviewed `2026-04-30`
 
 ## Overview
 
@@ -16,11 +19,8 @@ Users can receive notifications through three channels: Push (FCM), Socket (real
 
 1. The home screen header includes a **bell icon** (related: [Home](./02-home.md)).
 2. When the app comes to the foreground or on pull-to-refresh, it calls: [GET /notifications](../modules/notification.md#51-get-my-notifications).
-3. The frontend checks `meta.unreadCount` from the response (industry best practice).
-4. If `meta.unreadCount > 0`, a **red dot indicator** is shown on the bell icon (no number badge, only a dot).
-5. If `meta.unreadCount === 0`, no red dot is displayed.
-
-> **Note:** Unread count is calculated on the backend. The frontend does not compute it from the list to avoid performance and scalability issues.
+3. Frontend reads `meta.unreadCount` from the response. If `meta.unreadCount > 0`, render the red dot; otherwise hide it.
+4. Unread count is computed server-side across all unread notifications for the user, not just the current page.
 
 ### Real-time Updates (Socket)
 
@@ -28,12 +28,6 @@ Users can receive notifications through three channels: Push (FCM), Socket (real
 2. When the server creates a new notification, it emits a socket event: `notification:new`.
 3. The client listens for the event and updates the in-memory notification list, as well as toggles the red dot indicator.
 4. When the app is in the background, **FCM push notifications** are shown (only for event reminders).
-
-### Notification Grouping (Reducing Noise)
-
-1. Multiple notifications of the same type (e.g., multiple comments or likes) can be **grouped at the backend**.
-2. Example: instead of showing 3 separate notifications, the UI shows a single entry like **"3 new event reminders"**.
-3. The grouping logic is handled on the backend. The frontend only uses the `isGrouped` flag and `groupCount` to render the UI.
 
 ### Socket + DB Sync (Conflict Handling)
 
@@ -72,10 +66,11 @@ Users can receive notifications through three channels: Push (FCM), Socket (real
 4. The local state is updated immediately by marking the notification as `read: true`, and the red dot indicator is recalculated accordingly.
 
 ### Mark All as Read
-1. User top-right "Mark all as read" button e tap kore.
-2. → [PATCH /notifications/read-all](../modules/notification.md#53-mark-all-as-read).
-3. Success hole: shob notifications `read: true` hoy ebong red dot disappear kore.
-4. Button itself disable / hide hoye jay (jotokkhon na new unread ashe).
+
+1. The user taps the **"Mark all as read"** button in the top-right.
+2. The client calls [PATCH /notifications/read-all](../modules/notification.md#53-mark-all-as-read).
+3. On success, all notifications in local state are set to `read: true` and the red dot disappears.
+4. The button is disabled / hidden until a new unread notification arrives.
 
 ### Swipe-to-Delete
 

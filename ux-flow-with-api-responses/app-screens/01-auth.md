@@ -4,27 +4,19 @@
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
 > **Related screens**: [Profile](./06-profile.md) (change password, logout)
-> **Doc version**: `v3` — last reviewed `2026-04-29` (Q1-Q5 resolved; see [Resolved Decisions](#resolved-decisions))
+> **Doc version**: `v4` — last reviewed `2026-04-30` (Q1-Q5 resolved; see [Resolved Decisions](#resolved-decisions))
 
 ---
 
 ## Common UI Rules
 
-These apply to every flow on this screen — don't repeat them in each section.
+> Common UI Rules + Status-Code Mapping: see [system-concepts.md](../system-concepts.md#common-ui-rules).
 
-- **Submit-button protection**: Every submit button (Login, Create Account, Verify OTP, Send OTP, Reset Password, Sign in with Google/Apple) is **disabled the moment it's tapped** and shows a spinner until the request settles. Re-enable on `200`, `4xx`, `5xx`, or network-failure. _Reason_: prevents double-submit on slow networks (a top-3 production-incident class for auth).
-- **Network offline**: Before any submit, check connectivity. If offline → show inline message: _"You're offline. Check your connection and try again."_ Don't fire the request.
-- **Generic 5xx**: For any unexpected `500`/`502`/`503` → show toast: _"Something went wrong. Please try again."_ Log to crash reporter with request context.
-- **Validation errors (`422`)**: Map server field errors to the corresponding form field inline. Never show a generic toast for validation failures.
-- **Rate-limit (`429`)**: If the server returns `429`, read the `Retry-After` header. Show inline: _"Too many attempts. Try again in {N}s."_ Disable submit until the timer expires.
-- **Status code mapping (auth-shaped)**:
-  - `400` → invalid request shape / OTP malformed → inline error
-  - `401` → bad credentials / OTP wrong / token rejected → inline error (see flow-specific copy)
-  - `403` → account state issue (RESTRICTED / INACTIVE / DELETED) → toast/modal
-  - `409` → conflict (email already exists, social-vs-password collision) → inline + CTA to log in
-  - `422` → validation → field-level inline
-  - `429` → rate-limit → inline countdown
-  - `5xx` → generic toast
+**Auth-specific status-code overrides** (apply on top of the canonical mapping):
+
+- `401` → bad credentials / OTP wrong / token rejected → **inline error** (not redirect-Login — that's only for expired-token mid-session, see [Token Refresh](#token-refresh-background)).
+- `403` → account state issue (RESTRICTED / INACTIVE / DELETED) → toast/modal with support copy.
+- `409` → email already exists OR social-vs-password collision → inline + CTA to log in.
 
 ---
 
@@ -42,7 +34,8 @@ These apply to every flow on this screen — don't repeat them in each section.
    - Tokens are persisted via [Storage & Session](#storage--session) rules — user is auto-logged-in (no separate login call).
    - Navigate to **Onboarding screen**.
 
-> **Banglish — WHY auto-login after OTP?** Verify-otp er moddhe `verified: true` set hoye token issue hoye jay jate user notun account banano-r por abar manually login na korte hoy — ek-step kom = drop-off rate kom.
+> **Why this design**
+> `verify-otp` sets `verified: true` and issues tokens in the same response so the user is auto-logged-in after registering. Removing the second manual login step measurably reduces drop-off at sign-up.
 
 **Edge — Re-registration before OTP verified**: If the user re-submits `POST /users` with the same email before verifying, the server returns `409` (see [Email Already Registered](#email-already-registered-registration)). To trigger a *new* OTP, use **Resend** on the OTP screen — re-creating the account is not the path.
 
@@ -68,7 +61,8 @@ _Rationale_: ~15-20% drop-off reduction at the OTP step (industry benchmark). Se
 7. On `429` → see [Common UI Rules → Rate-limit](#common-ui-rules).
 8. If user taps **"Forgot Password?"** → start [Forgot Password Flow](#forgot-password-flow).
 
-> **Banglish — WHY does login return tokens in body and the server also sets a cookie?** Backend ekta endpoint diye web + mobile dui jaiga support kore. Mobile body theke token nay (cookies mobile-e proper-vabe kaaj kore na), web cookie use kore. Eta intentional, na bug — see [Storage & Session](#storage--session).
+> **Why this design**
+> A single login endpoint serves both web and mobile. Mobile reads tokens from the response body (cookies don't work cleanly on mobile); web uses the httpOnly cookie. The dual delivery is intentional, not a bug — see [Storage & Session](#storage--session).
 
 ---
 
@@ -99,7 +93,8 @@ _Rationale_: ~15-20% drop-off reduction at the OTP step (industry benchmark). Se
 7. User enters and confirms new password → calls [POST /auth/reset-password](../modules/auth.md#14-reset-password) with `Authorization: Bearer {resetToken}`.
 8. On `200` → toast _"Password reset successfully"_ → clear all stored sessions (server-side `tokenVersion` was bumped, so any stale tokens are now dead anyway) → navigate to **Login screen**.
 
-> **Banglish — WHY tokenVersion bump in reset-password?** Password reset er por sob device theke logout korano-r jonno — chuirir paswword chinta korle attacker-er kache je access token chilo, oita auto-invalid hoye jay. Otherwise ekta phone harano-r por password reset koreo old phone-er attacker logged-in thakto.
+> **Why this design**
+> Bumping `tokenVersion` on password reset force-logs-out every device. If a phone is lost or stolen and the user resets their password, any access tokens the attacker still holds become invalid immediately. Without this step the attacker would stay logged-in on the old device.
 
 ---
 
@@ -118,7 +113,8 @@ _Rationale_: ~15-20% drop-off reduction at the OTP step (industry benchmark). Se
    - Best-effort fire-and-forget call to [POST /auth/logout](../modules/auth.md#16-logout) is **skipped** here — the access token is already invalid, so the call would `401` anyway. The orphaned `deviceToken` server-side is acceptable; it'll get cleaned on next login.
    - Navigate to **Login screen** with toast: _"Your session has expired. Please log in again."_
 
-> **Banglish — WHY single-flight?** Backend e refresh-token rotate hoy + reuse detection ase (`tokenVersion`). Concurrently 5 ta refresh fire korle 1st-tar baire baki 4-tay puran token reuse hobe → server force-logout fire korbe. Single-flight queue mast — eta ekta classic mobile bug, prothom production incident-er top-3 e thake.
+> **Why this design**
+> The backend rotates refresh tokens and detects reuse via `tokenVersion`. Firing 5 concurrent refresh calls means 4 of them reuse the now-stale token, which triggers a server-side force-logout. A single-flight queue is mandatory — this is a classic mobile auth bug and a top-3 cause of production incidents.
 
 ---
 
@@ -154,7 +150,8 @@ Mobile apps don't use browser cookies. The server's `httpOnly` cookie behaviour 
 
 **Never** store tokens in plain `SharedPreferences` / `UserDefaults` / Hive without encryption. **Never** log tokens.
 
-> **Banglish — WHY SecureStorage?** Plain shared prefs root-er kache exposed. Keychain / EncryptedSharedPreferences hardware-backed (mostly) — physical device chuir pelo o token bar korte parbe na. Eta non-negotiable.
+> **Why this design**
+> Plain SharedPreferences / UserDefaults are exposed to a rooted or jailbroken device. Keychain and EncryptedSharedPreferences are (mostly) hardware-backed — even with physical access an attacker can't extract the token. This is non-negotiable.
 
 ### Device & FCM token lifecycle
 
@@ -317,7 +314,8 @@ Cross-checked against `src/app/modules/user/user.validation.ts` (source of truth
 - **Message**: _"This email already has an account. Please log in with your email and password."_
 - **Action**: Do NOT auto-link accounts. User must log in manually with the password.
 
-> **Banglish — WHY no auto-link?** Attacker je email-er password account ase, sei email diye Google account-o banate pare. Auto-link korle attacker Google route diye victim-er account-e dhuke jabe — "Account Hijacking" attack. Manual password require kora ekmatra safe path.
+> **Why this design**
+> An attacker can create a Google account using the same email as an existing password account. Auto-linking would let the attacker enter the victim's account through the Google route — a classic account-hijacking attack. Requiring the original password is the only safe path.
 
 ### Apple Login — Email Not Shared
 

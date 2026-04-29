@@ -46,13 +46,14 @@ Shob API ei format follow kore:
 
 | # | Screen | Description |
 |---|--------|-------------|
-| 1 | [Auth](./app-screens/01-auth.md) | Register, login, OTP verify, password reset, refresh token |
-| 2 | [Home](./app-screens/02-home.md) | Search public cards, stats, favorite cards list |
-| 3 | [Preference Card Details](./app-screens/03-preference-card-details.md) | Card details, share, download actions |
-| 4 | [Library](./app-screens/04-library.md) | Public vs Private cards list with filtering and search |
-| 5 | [Calendar](./app-screens/05-calendar.md) | Calendar view, create event, and upcoming events |
-| 6 | [Profile](./app-screens/06-profile.md) | User data, edit profile, subscription, legal pages |
-| 7 | [Notifications](./app-screens/07-notifications.md) | User's notifications list, mark as read, delete |
+| 1 | [Auth](./app-screens/01-auth.md) | Register, login, OTP verify, password reset, refresh token, social login |
+| 2 | [Home](./app-screens/02-home.md) | Stats, favorite cards, "All Cards / My Cards" tabs, quick create |
+| 3 | [Preference Card Details](./app-screens/03-preference-card-details.md) | Card details, favorite toggle, share, download |
+| 4 | [Create Preference Card](./app-screens/04-create-preference-card.md) | Card creation form, supplies/sutures pickers, photo upload, draft/publish |
+| 5 | [Library](./app-screens/05-library.md) | Global search across public preference cards (filters + sort) |
+| 6 | [Calendar](./app-screens/06-calendar.md) | Calendar view, event CRUD, reminders |
+| 7 | [Profile](./app-screens/07-profile.md) | User data, edit profile, subscription (IAP), legal pages, logout |
+| 8 | [Notifications](./app-screens/08-notifications.md) | Notification list, bell indicator (red dot from `meta.unreadCount`), mark read, delete |
 
 ---
 
