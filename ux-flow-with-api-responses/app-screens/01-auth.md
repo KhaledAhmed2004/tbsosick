@@ -335,36 +335,6 @@ Cross-checked against `src/app/modules/user/user.validation.ts` (source of truth
 
 ---
 
-## Analytics & Accessibility
-
-### Analytics events to emit
-
-| Event | When | Properties |
-| --- | --- | --- |
-| `auth_register_started` | User taps "Create Account" | — |
-| `auth_register_submitted` | User submits registration form | `email_domain` (no PII) |
-| `auth_register_succeeded` | OTP verified for new user | `time_to_verify_seconds` |
-| `auth_register_failed` | Registration error | `error_code`, `status` |
-| `auth_login_submitted` | Login form submitted | — |
-| `auth_login_succeeded` | Tokens stored | `method` ∈ `email \| google \| apple` |
-| `auth_login_failed` | Login error | `error_code`, `status` |
-| `auth_otp_resend` | User taps Resend | `purpose` |
-| `auth_otp_failed` | OTP wrong/expired | `purpose`, `attempt_number` |
-| `auth_forgot_started` | User taps "Forgot Password?" | — |
-| `auth_forgot_succeeded` | Password reset complete | — |
-| `auth_session_expired` | Force-logout fired | `cause` ∈ `refresh_failed \| reuse_detected \| password_reset` |
-
-### Accessibility checklist
-
-- All form fields have `Semantics` labels matching the visible label.
-- OTP input is a single accessible group with label _"Enter the 6-digit code"_; individual digit boxes don't get focus-trapped — backspace moves to previous box; submit fires automatically when 6 digits filled.
-- Error messages use `liveRegion: assertive` so screen readers announce them immediately.
-- Loading states announce _"Submitting"_ when the spinner activates.
-- Focus moves to the first error field on validation failure.
-- Color contrast ≥ 4.5:1 for all text including error states.
-
----
-
 ## Endpoints Used
 
 | #   | Method | Endpoint                    | Module Spec                                                                | Used in flow |
