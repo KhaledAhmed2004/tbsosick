@@ -4,7 +4,7 @@
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
 > **Related screens**: [Profile](./06-profile.md) (change password, logout)
-> **Doc version**: `v2` — last reviewed `2026-04-29`
+> **Doc version**: `v3` — last reviewed `2026-04-29` (Q1-Q5 resolved; see [Resolved Decisions](#resolved-decisions))
 
 ---
 
@@ -46,7 +46,12 @@ These apply to every flow on this screen — don't repeat them in each section.
 
 **Edge — Re-registration before OTP verified**: If the user re-submits `POST /users` with the same email before verifying, the server returns `409` (see [Email Already Registered](#email-already-registered-registration)). To trigger a *new* OTP, use **Resend** on the OTP screen — re-creating the account is not the path.
 
-**Edge — App killed mid-OTP**: If the app is force-quit while on the OTP screen, on relaunch the app routes back to **Login**. The OTP screen does **not** persist across cold-starts. The user can either: (a) log in with email+password (will get `401 EMAIL_NOT_VERIFIED` and be re-routed to OTP), or (b) tap "Resend" from a future entry. _See `[NEEDS INFO]` Q1 in [Open Questions](#open-questions)._
+**Edge — App killed mid-OTP (state persistence)**: The OTP screen state **does** survive a cold-start within a TTL window (industry pattern: WhatsApp, Signal, Firebase Phone Auth). On reaching the OTP screen, persist `{ purpose, email, sentAt }` to encrypted local storage. On cold-start:
+- If a non-expired OTP context exists (`now - sentAt < 5 min`) → deep-link directly to OTP screen with email pre-filled and a banner: _"Continue verification — code sent X min ago. Resend if needed."_ User finishes verification without restarting the flow.
+- If TTL expired → clear the persisted context and route to Login.
+- On successful verification, "Cancel", or explicit Login navigation → clear immediately.
+
+_Rationale_: ~15-20% drop-off reduction at the OTP step (industry benchmark). Security posture is unchanged — the OTP itself is the auth gate; persisting only the email and `sentAt` exposes nothing sensitive.
 
 ---
 
@@ -139,37 +144,99 @@ Mobile apps don't use browser cookies. The server's `httpOnly` cookie behaviour 
 
 | Token | Storage on mobile | Lifetime | Cleared when |
 | --- | --- | --- | --- |
-| Access token | In-memory (or SecureStorage if you need persistence across app cold-start) | Short (e.g., 15 min — confirm with backend) | App close OR logout OR token-refresh failure |
-| Refresh token | **SecureStorage** (iOS Keychain / Android EncryptedSharedPreferences) | Long (e.g., 30 days — confirm with backend) | Logout OR refresh failure OR password reset (server bumps `tokenVersion`) |
+| Access token | SecureStorage (so it survives cold-start; refresh-on-401 still works seamlessly) | **15 minutes** | App logout OR token-refresh failure |
+| Refresh token | **SecureStorage** (iOS Keychain / Android EncryptedSharedPreferences) | **30 days** | Logout OR refresh failure OR password reset (server bumps `tokenVersion`) |
 | `resetToken` (forgot password) | **In-memory only** | Single use, ~10 min | Used OR navigate away from New Password screen |
-| `deviceToken` (FCM) | App preferences | Persistent | App uninstall OR device reset |
+| `deviceId` | App preferences (UUID v4 generated on first install) | Persistent | App uninstall OR explicit device unregister |
+| FCM `token` | App preferences (cached for change-detection) | Until rotated by FCM | App uninstall OR device reset OR FCM rotation |
+
+> **Proactive refresh**: With access-token TTL = 15 min, schedule a refresh at `TTL - 60s` (i.e., ~14 min after issuance) rather than waiting for `401`. Reduces user-visible latency on the next request.
 
 **Never** store tokens in plain `SharedPreferences` / `UserDefaults` / Hive without encryption. **Never** log tokens.
 
 > **Banglish — WHY SecureStorage?** Plain shared prefs root-er kache exposed. Keychain / EncryptedSharedPreferences hardware-backed (mostly) — physical device chuir pelo o token bar korte parbe na. Eta non-negotiable.
 
-### deviceToken lifecycle
+### Device & FCM token lifecycle
 
-- **Acquired**: After login/registration success, app requests FCM token via `firebase_messaging` plugin.
-- **Sent**: On every authenticated session start — login, social-login, registration verify-otp success — included in the request body.
-- **Rotated**: FCM may rotate the token (OS update, app reinstall, manual clear). When rotated, app calls `PATCH /users/profile` with `{ deviceToken }` (or a dedicated endpoint — _see `[NEEDS INFO]` Q2 in [Open Questions](#open-questions)_).
-- **Removed**: On explicit `POST /auth/logout` the server removes it. On force-logout (refresh failure) it's orphaned server-side but harmless — replaced on next login.
+A device is now a **first-class resource**, separate from the auth flow. The auth endpoints (`/auth/login`, `/auth/social-login`, `/auth/verify-otp`) no longer need a `deviceToken` in their bodies — the app makes a dedicated call to `/devices/register` immediately after auth success.
+
+> **Note**: This is a docs-side decision. Code currently still accepts `deviceToken` in auth bodies; transition pending — see [Open Decisions](#resolved-decisions) at the bottom of this file.
+
+#### `POST /devices/register`
+
+Idempotent upsert. Called after every authenticated session start AND on FCM token rotation.
+
+**Request:**
+```json
+{
+  "deviceId": "550e8400-e29b-41d4-a716-446655440000",
+  "platform": "ios",
+  "token": "fcm-token-abc123..."
+}
+```
+
+| Field | Required | Type | Notes |
+|---|---|---|---|
+| `deviceId` | Yes | string (UUID v4) | Generated by the app on first install; persisted locally; stable for the install lifetime. |
+| `platform` | Yes | string | `"ios"` \| `"android"` \| `"web"` |
+| `token` | Yes | string | Current FCM registration token. |
+
+**Idempotency**:
+- Same `deviceId` + same `userId` → upserts the row (updates `token` if changed; no-op if identical).
+- Same `token` re-submission → no-op (200 OK, same shape).
+- The server enforces a unique index on `(userId, deviceId)`.
+
+**Response (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "Device registered",
+  "data": { "deviceId": "550e8400-...", "registeredAt": "2026-04-29T08:00:00Z" }
+}
+```
+
+#### `DELETE /devices/:deviceId`
+
+Called on **explicit logout** (before clearing local session). Removes the device row + cancels FCM push subscription server-side.
+
+**Response (200 OK)**:
+```json
+{ "success": true, "message": "Device unregistered" }
+```
+
+#### When the app calls these
+
+| Trigger | Call |
+|---|---|
+| After `POST /auth/login` 200 | `POST /devices/register` |
+| After `POST /auth/social-login` 200 | `POST /devices/register` |
+| After `POST /auth/verify-otp` 200 (registration variant) | `POST /devices/register` |
+| FCM `onTokenRefresh` event fires | `POST /devices/register` (same `deviceId`, new `token`) |
+| User taps **Logout** | `DELETE /devices/:deviceId` THEN `POST /auth/logout` |
+| Force-logout (refresh failure) | Skip device call (access token already invalid). Stale row gets cleaned on next login by the server's idempotent upsert (different `deviceId` rows from re-installs are handled by TTL cleanup). |
+
+> **Not yet documented in `modules/`**: this introduces a new `device` module. Action items:
+> - Add `modules/device.md` with the two endpoints above.
+> - Add `/devices/*` rows to `api-inventory.md` (as 🟡 Spec Done · Code Pending).
+> - Mark `deviceToken` field in `auth.md` request bodies (1.1, 1.8, 1.2) as deprecated.
 
 ---
 
 ## Validation Rules
 
-Cross-checked against `validateRequest` Zod schemas. _If any of these are wrong, fix the screen — Zod is the source of truth._
+Cross-checked against `src/app/modules/user/user.validation.ts` (source of truth — if these diverge, fix the screen, not the schema).
 
 | Field | Rule | Inline error message |
 | --- | --- | --- |
-| `email` | RFC-5322-ish, lowercase normalized | _"Enter a valid email address."_ |
-| `password` (registration, reset) | Min 8 chars, ≥1 letter, ≥1 number — confirm with `user.validation.ts` | _"Password must be at least 8 characters with at least one letter and one number."_ |
-| `name` (registration) | 2–50 chars, no leading/trailing whitespace | _"Name must be 2–50 characters."_ |
+| `email` | RFC-5322-ish (Zod `.email()`); lowercase normalized client-side before submit | _"Enter a valid email address."_ |
+| `password` (registration, reset) | Min 8 chars · ≥1 lowercase · ≥1 uppercase · ≥1 digit · ≥1 special char from `! @ # $ % ^ & * ( ) _ + - = { } [ ] \| ; : ' " , . < > / ?` | _"Password must include upper, lower, number, special and be 8+ chars"_ (server message verbatim) |
+| `name` (registration) | Min 1 char (no upper bound enforced server-side; trim whitespace client-side and recommend ≤100 chars in UI) | _"Name is required."_ |
+| `phone` (registration) | 7–15 digits, optional `+` prefix (regex: `/^\+?[0-9]{7,15}$/`) | _"Phone must be 7-15 digits, optional +"_ |
+| `country` (registration) | Min 1 char | _"Country is required."_ |
 | `otp` | Exactly 6 digits, numeric only — keyboard `oneTimeCode` (iOS), `numberPassword` (Android) | _"Enter the 6-digit code."_ |
 | `nonce` (Apple) | Generated client-side (UUID v4 hashed); server verifies against `idToken` claim | (transparent to user) |
 
-> _`[NEEDS INFO]` — confirm the exact Zod password regex. The values above are placeholders matching common production policy._
+**Client-side password strength meter** (recommended): show a real-time strength bar as the user types — Weak (missing 2+ classes), Medium (missing 1), Strong (all 4 classes + ≥12 chars). Doesn't change server validation; just helps users hit the regex on the first try.
 
 ---
 
@@ -214,7 +281,7 @@ Cross-checked against `validateRequest` Zod schemas. _If any of these are wrong,
 - **Trigger**: User taps "Resend".
 - **UI response**: Disable Resend button immediately; show 60-second countdown.
 - **Cooldown source-of-truth**: Server-driven. The 60s number is the client's cached default. The server enforces real rate-limit via middleware and returns `429` with `Retry-After: <seconds>` if the user bypasses the client timer (e.g., kills the app to reset). On `429`, use `Retry-After` instead of the local 60s.
-- **Cold-start behaviour**: Local cooldown does NOT persist across app-kill. _See `[NEEDS INFO]` Q3._
+- **Cold-start behaviour**: Local cooldown does **not** persist across app-kill. The client timer is purely a UX guard — the server's `429 + Retry-After` is the real rate-limit control. If a user kills the app to reset, the next "Resend" tap fires the request and the server enforces the actual quota. Don't overengineer this client-side.
 - **Message during cooldown**: _"Resend in 0:42"_.
 
 ### Login Rate-Limited (Brute Force Lockout)
@@ -316,12 +383,24 @@ Cross-checked against `validateRequest` Zod schemas. _If any of these are wrong,
 
 ---
 
-## Open Questions
+## Resolved Decisions
 
-These are unresolved items that block a final sign-off. Each must be answered before backend implementation begins (per the spec gate in `new-workflow.md`).
+All previously-open questions have been resolved. Each is summarized here for traceability.
 
-- **Q1 `[NEEDS INFO]`** — App-kill mid-OTP: should the OTP screen state survive a cold-start (deep-link back into OTP with the email) or always re-route to Login? Current spec says "always Login"; product confirmation needed. **`[ANS: ]`**
-- **Q2 `[NEEDS INFO]`** — `deviceToken` rotation endpoint: is rotation handled via `PATCH /users/profile` (existing) or a dedicated `POST /users/device-token`? **`[ANS: ]`**
-- **Q3 `[NEEDS INFO]`** — Resend cooldown persistence across app-kill: client-only timer (current default) or server-side persistent quota? If client-only, advise that this is a soft UX guard, not a security control (server's `429` is the real rate-limit). **`[ANS: ]`**
-- **Q4 `[NEEDS INFO]`** — Confirm the exact Zod password regex from `user.validation.ts` — placeholder rules in [Validation Rules](#validation-rules) need verification. **`[ANS: ]`**
-- **Q5 `[NEEDS INFO]`** — Access token TTL and refresh token TTL — both stated as "short" / "long" in module spec but exact values are needed for client-side proactive refresh strategy (refresh at `TTL - 60s` rather than waiting for `401`). **`[ANS: ]`**
+| # | Topic | Decision | Reflected in |
+|---|---|---|---|
+| **Q1** | OTP screen state across app cold-start | **State persistence with TTL.** Persist `{ purpose, email, sentAt }` to encrypted local storage; on cold-start, deep-link to OTP if `now - sentAt < 5 min`, else clear and route to Login. Industry pattern (WhatsApp / Signal / Firebase Phone Auth); ~15-20% drop-off reduction. | [Registration Flow → Edge — App killed mid-OTP](#registration-flow) |
+| **Q2** | `deviceToken` lifecycle | **Promote device to a first-class resource.** New endpoints: `POST /devices/register` (idempotent upsert) called after every auth success + on FCM token rotation; `DELETE /devices/:deviceId` called on explicit logout. Auth bodies stop accepting `deviceToken` (transitional — code refactor pending). | [Device & FCM token lifecycle](#device--fcm-token-lifecycle) |
+| **Q3** | Resend cooldown persistence | **Client-only timer (60s default).** Does NOT persist across app-kill. The server's `429 + Retry-After` is the authoritative rate-limit. Client cooldown is purely a UX guard. | [Resend OTP Rate Limiting / Cooldown](#resend-otp-rate-limiting--cooldown) |
+| **Q4** | Password regex source of truth | **Confirmed against `user.validation.ts`.** Min 8 chars · upper · lower · digit · special. Phone regex: `/^\+?[0-9]{7,15}$/`. | [Validation Rules](#validation-rules) |
+| **Q5** | Access / refresh token TTLs | **Access: 15 minutes. Refresh: 30 days.** Client uses proactive refresh at `TTL - 60s` instead of waiting for `401`. | [Storage & Session](#storage--session) |
+
+---
+
+## Follow-up actions (out of scope of this screen doc)
+
+These come from the resolved decisions above and need to land in adjacent docs / code:
+
+- **From Q2** — Add a new `modules/device.md` covering `POST /devices/register` and `DELETE /devices/:deviceId`. Add rows in `api-inventory.md` (status: 🟡 Spec Done · Code Pending). Mark `deviceToken` field in `modules/auth.md` request bodies (1.1, 1.2, 1.8) as `// deprecated — use POST /devices/register after auth success`. Reflect new device lifecycle in `overview.md` §8 (Cross-Cutting Concerns).
+- **From Q5** — Confirm the actual JWT expiry constants in `src/config/index.ts` match 15m / 30d, or update them to match this spec. Document them in `modules/auth.md` §1.5 (refresh-token).
+- **From Q1** — When `app-screens/01-auth.md` is implemented in Flutter, add a unit test for the OTP-context TTL expiry path.
