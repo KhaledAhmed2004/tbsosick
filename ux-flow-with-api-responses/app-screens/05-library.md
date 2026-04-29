@@ -20,11 +20,14 @@
    - Card list.
 
 ### Search
-1. User search bar-e type kore.
-2. 350ms debounce → API call with `searchTerm`.
-3. Type korar somoy skeleton dekhay.
-4. Result ashle replace. Empty hole "No cards found" illustration.
-5. Search clear korle original list restore hoy.
+User search bar-e text type kore.
+350ms debounce pore calls GET /preference-cards with searchTerm and page=1.
+Typing phase-e skeleton overlay dekhay.
+On 404 or empty array → "No cards found" illustration dekhay.
+Search clear korle initial visibility=public list reload hoy.
+Banglish — WHY reset page on search? Industry standard holo search term change hole pagination logic zero theke start kora, nahole user result-er majhkhane land korbe (confusing UX).
+
+> **Banglish — WHY reset page on search?** Industry standard holo search term change hole pagination logic zero theke start kora, nahole user result-er majhkhane land korbe (confusing UX).
 
 ### Filtering
 1. User Filter button tap kore → Bottom sheet opens.
@@ -36,15 +39,16 @@
 4. Apply tap → Bottom sheet close → skeleton → results.
 5. Filter icon-e active count badge dekhay.
 6. Active filter pill(s) search bar-er niche dekhate paro (swipeable, X tap kore individual filter remove).
+here also is verifed filter o ase tokhon only verifd card e show kora hobe
+
+> **Banglish — WHY dynamic specialty fetch?** Hardcoded specialties maintenance cost barhay. Backend theke dynamic fetch korle new specialty add hole code change charai UI update hoye jay.
 
 ### Tab Switching
-1. Public → Private tap korle:
-   - Public tab-er filter+search state PRESERVE hoy.
-   - Private tab-er last state restore hoy (fresh load first time).
-   - Skeleton dekhay → [GET /preference-cards?visibility=private](../modules/preference-card.md#31-listsearch-preference-cards).
-   - Empty hole (no cards yet): "You haven't created any cards yet" + "Create Card" CTA.
-   - Empty search result: "No matching private cards".
-2. Private → Public: Public-er preserved state restore hoy.
+1. User "Private Cards" tab select kore.
+2. Current Public list-er scroll position ebong search state memory-te preserve kora hoy.
+3. Calls [GET /preference-cards](../modules/preference-card.md#31-listsearch-preference-cards) with `visibility=private`.
+4. If result empty → "You haven't created any cards yet" + "Create Card" CTA.
+5. User Public tab-e fire ashle preserved state restore hoy without refetch.
 
 ### Card Actions (List View)
 1. User kono card-er favorite icon toggle korle:
