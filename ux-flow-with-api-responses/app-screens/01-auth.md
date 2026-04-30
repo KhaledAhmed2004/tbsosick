@@ -1,9 +1,9 @@
 # Screen 1: Auth (Mobile)
 
-> **Section**: App APIs (Student-Facing)
+> **Section**: App APIs (User-Facing)
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **Related screens**: [Profile](./06-profile.md) (change password, logout)
+> **Related screens**: [Profile](./07-profile.md) (change password, logout)
 > **Doc version**: `v4` — last reviewed `2026-04-30` (Q1-Q5 resolved; see [Resolved Decisions](#resolved-decisions))
 
 ---
@@ -343,11 +343,11 @@ Cross-checked against `src/app/modules/user/user.validation.ts` (source of truth
 | 4   | POST   | `/auth/forgot-password`     | [Auth Module 1.3](../modules/auth.md#13-forgot-password)                   | Forgot Password step 2 |
 | 5   | POST   | `/auth/reset-password`      | [Auth Module 1.4](../modules/auth.md#14-reset-password)                    | Forgot Password step 7 |
 | 6   | POST   | `/auth/refresh-token`       | [Auth Module 1.5](../modules/auth.md#15-refresh-token)                     | Token Refresh background |
-| 7   | POST   | `/auth/logout`              | [Auth Module 1.6](../modules/auth.md#16-logout)                            | Force-logout (cross-link to [Profile](./06-profile.md#logout-flow) for explicit logout) |
+| 7   | POST   | `/auth/logout`              | [Auth Module 1.6](../modules/auth.md#16-logout)                            | Force-logout (cross-link to [Profile](./07-profile.md#logout-flow) for explicit logout) |
 | 8   | POST   | `/auth/resend-verify-email` | [Auth Module 1.7](../modules/auth.md#17-resend-otp-resend-verify-email)    | Registration step 5, Login step 4, Forgot Password (resend) |
 | 9   | POST   | `/auth/social-login`        | [Auth Module 1.8](../modules/auth.md#18-social-login-google--apple)        | Social Login step 4 |
 
-> Note: `POST /users` belongs to the user module; auth flow consumes it for registration. `POST /auth/change-password` is **not** on this screen — see [Profile](./06-profile.md).
+> Note: `POST /users` belongs to the user module; auth flow consumes it for registration. `POST /auth/change-password` is **not** on this screen — see [Profile](./07-profile.md).
 
 ---
 

@@ -1,6 +1,6 @@
 # Screen 4: Create Preference Card (Mobile)
 
-> **Section**: App APIs (Student-Facing)
+> **Section**: App APIs (User-Facing)
 > **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
 > **Response format**: see [Standard Response Envelope](../system-concepts.md#standard-response-envelope)
 > **Roles**: see [system-concepts.md → User Roles](../system-concepts.md#user-roles)
@@ -11,10 +11,7 @@
 
 ## Common UI Rules
 
-- **Submit protection**: button disabled on first tap + spinner shown; re-enable only on API settle (success or error).
-- **Offline**: pre-flight `navigator.onLine` check; show inline *"You're offline. Check your connection and try again."*
-- **5xx**: toast *"Something went wrong. Please try again."*
-- **Validation (`422`)**: server field errors → render inline under the relevant field.
+> Common UI Rules + Status-Code Mapping: see [system-concepts.md → Common UI Rules](../system-concepts.md#common-ui-rules).
 
 ---
 

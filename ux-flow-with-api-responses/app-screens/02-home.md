@@ -11,14 +11,7 @@
 
 ## Common UI Rules
 
-- **Submit protection**: disable interactive triggers during request + show spinner; prevent duplicate calls.
-- **Offline mode**: show inline banner *"You're offline. Check connection."* and block new fetches.
-- **5xx errors**: toast *"Something went wrong. Please try again."* + log to monitoring.
-- **Validation (422)**: show field-level inline errors only.
-- **Rate limit (429)**: respect `Retry-After` → show countdown *"Try again in {N}s"*.
-- **Empty states**: never blank UI; always show meaningful placeholder.
-- **Skeleton loading**: use for stats + favorite cards (avoid layout jump).
-- **Status mapping**: `400` shape → inline · `401` auth → redirect Login · `403` state/perm → toast/modal · `404` missing → empty state/inline · `409` conflict → inline + recovery CTA · `422` validation → field inline · `429` → inline countdown · `5xx` → toast.
+> Common UI Rules + Status-Code Mapping: see [system-concepts.md → Common UI Rules](../system-concepts.md#common-ui-rules).
 
 ---
 
