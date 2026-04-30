@@ -13,7 +13,7 @@
 > **Date**: 2026-04-30
 > **Scope**: SUPER_ADMIN-facing operational dashboard for the medical preference-card platform. Surfaces every admin action implied by the user UX: account moderation, card verification, catalog curation, legal CMS, subscription operations, audit trail, and platform health.
 > **Total pages**: 9 · **By category**: User Management 1 · Content Moderation 1 · Configuration 3 · Operational 3 · Analytics 1 · Support 0
-> **RBAC roles** (from app-screens/01-auth.md): `USER` (mobile app consumer), `SUPER_ADMIN` (dashboard). The user UX implies a single admin role; whether a sub-role like `MODERATOR` is desired is an open question — see §7 Q1.
+> **RBAC roles** (from app-screens/01-auth.md): `USER` (mobile app consumer), `SUPER_ADMIN` (dashboard). Single admin role — no `MODERATOR` sub-role in v1; every admin action is performed by `SUPER_ADMIN`.
 > **Stack assumed**: TypeScript + Express + MongoDB (per `system-concepts.md` referenced from app-screens — not directly read).
 
 ---
@@ -148,9 +148,11 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
     - `unregister-device` (per-device row action inside detail panel).
     - `impersonate` (a.k.a. *"View as user"* — opens the mobile app web wrapper as that user; **2FA gate + reason required**).
     - `soft-delete` (sets `status = DELETED`; data preserved 30 days then hard-deleted via background job).
+    - `notify-user` (sends an in-app + email notice using the built-in user-comms system; template picker — *"account suspended"*, *"account restored"*, *"data export ready"*, free-text fallback).
   - **Bulk**:
     - `export-csv` (audit-logged, rate-limited).
     - `bulk-suspend` (typing-to-confirm with the affected count).
+    - `bulk-notify` (template only; typing-to-confirm with affected count; free-text disallowed in bulk).
   - **Page-level**: `+ Invite admin` (sends invite email; creates user with `role = SUPER_ADMIN` on acceptance).
 - **Permissions** (RBAC matrix):
 
@@ -163,7 +165,9 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
   | unregister-device       | ✅ + audit    |
   | impersonate             | ✅ + 2FA + reason + audit |
   | soft-delete             | ✅ + typing-to-confirm + audit |
+  | notify-user             | ✅ + audit (logs template + body snapshot) |
   | bulk-suspend            | ✅ + typing-to-confirm + audit |
+  | bulk-notify             | ✅ + typing-to-confirm + audit (logs template + recipient count) |
   | export                  | ✅ + audit + rate-limited |
   | + Invite admin          | ✅ + audit    |
 
@@ -190,7 +194,7 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
   - **Admin delete**: [`03-preference-card-details.md § View Card Details`](./app-screens/03-preference-card-details.md#view-card-details) explicitly states *"Delete button (owner / `SUPER_ADMIN` hole)"* — so the admin surface is presumed to exist.
   - **Quality control**: catalog grows by users adding free-text supplies / sutures (`04-create-preference-card.md`), so card content quality drifts unless reviewed.
   Without this page, verified-only filtering on Library yields zero results forever, and bad-content cards stay public.
-- **Primary user(s)**: `SUPER_ADMIN`. (See §7 Q1 — a dedicated `MODERATOR` sub-role is plausible but not in source docs.)
+- **Primary user(s)**: `SUPER_ADMIN`. (Single admin role in v1; no `MODERATOR` sub-role.)
 - **Data displayed**:
   - **Table columns**: `cardId`, `cardTitle`, `surgeon.fullName`, `surgeon.specialty`, `verificationStatus`, `published`, `ownerId` (clickable → AD1 detail panel), `downloadCount`, `favoriteCount`, `createdAt`.
   - **Detail panel** (slide-over on row click):
@@ -210,20 +214,23 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
   - Filters: `verificationStatus` (`PENDING`/`VERIFIED`/`REJECTED`), `specialty`, `published`, `ownerId`, `createdAt` range, `downloadCount` threshold.
   - Search: full-text on `cardTitle` + `surgeon.fullName`.
 - **Actions**:
-  - **Per-row** (kebab): `view` (open panel), `verify` (sets `verificationStatus = VERIFIED`), `reject` (sets `verificationStatus = REJECTED`, requires reason), `delete` (typing-to-confirm), `view-owner` (deep-link to AD1).
+  - **Per-row** (kebab): `view` (open panel), `verify` (sets `verificationStatus = VERIFIED`), `reject` (sets `verificationStatus = REJECTED`, requires reason — **card stays public and published**, only the verified badge is removed), `delete` (typing-to-confirm; full snapshot logged), `view-owner` (deep-link to AD1), `notify-owner` (built-in user-comms; templates: *"card verified"*, *"card rejected — reason"*, free-text fallback).
   - **Bulk**: `bulk-verify` (typing-to-confirm), `bulk-reject` (requires reason; typing-to-confirm), `export-csv`.
   - **Page-level**: none (admin doesn't create cards).
+
+> **Why reject does NOT auto-unpublish or delete**: rejection is a quality signal (*"this card isn't accurate enough to badge VERIFIED"*), not a takedown action. The card stays available to the owner and to any reader who finds it via direct link or `My Cards` — only the verified badge and the `verifiedOnly` filter inclusion are stripped. For a true takedown, the admin uses `delete` (separate, typing-to-confirm). Conflating reject with takedown removes the middle-ground signal entirely.
 - **Permissions** (RBAC matrix):
 
   | Action      | `SUPER_ADMIN` |
   | ----------- | :-----------: |
-  | view        | ✅            |
-  | verify      | ✅ + audit    |
-  | reject      | ✅ + reason + audit |
-  | delete      | ✅ + typing-to-confirm + audit (record full snapshot in `before`) |
-  | bulk-verify | ✅ + typing-to-confirm + audit |
-  | bulk-reject | ✅ + reason + typing-to-confirm + audit |
-  | export      | ✅ + audit + rate-limited |
+  | view         | ✅            |
+  | verify       | ✅ + audit    |
+  | reject       | ✅ + reason + audit |
+  | delete       | ✅ + typing-to-confirm + audit (record full snapshot in `before`) |
+  | notify-owner | ✅ + audit (logs template + body snapshot + recipient userId) |
+  | bulk-verify  | ✅ + typing-to-confirm + audit |
+  | bulk-reject  | ✅ + reason + typing-to-confirm + audit |
+  | export       | ✅ + audit + rate-limited |
 
 - **Edge cases & states**:
   - **Empty (no cards yet)**: *"No cards have been created yet."*
@@ -362,10 +369,12 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
   - **Per-row** (kebab):
     - `view` (open panel + receipt history).
     - `retry-verification` (re-fires `POST /subscriptions/verify-receipt` server-side with cached receipt; useful when the failure was a transient store-side outage).
-    - `manual-grant` (override `plan` + `expiresAt`; reason + duration required).
-    - `revoke` (cancel manual grant; reason required).
+    - `manual-grant` (override `plan` + `expiresAt`; reason + duration required — used for comp-ed plans, partner deals, goodwill credit. Does **not** charge the user.).
+    - `revoke-entitlement` (revoke our DB-side entitlement state for a subscription; reason required. Does **not** route money — see refund-handling note below).
   - **Bulk**: `export-csv`.
   - **Page-level**: none.
+
+> **Refund handling is delegated entirely to Apple / Google.** This dashboard manages **subscription state and entitlement** only — it does NOT route money. If a user is owed a refund, they request it through the App Store / Google Play, the store processes it, and a webhook updates `Subscription.status` here. Admin-driven `revoke-entitlement` is for cases where the platform needs to remove access (policy violation, manual-grant rollback, fraud) without involving the store at all. Mixing entitlement and refund into one button hides where the money actually flows.
 - **Permissions** (RBAC matrix):
 
   | Action             | `SUPER_ADMIN` |
@@ -373,7 +382,7 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
   | view               | ✅            |
   | retry-verification | ✅ + audit    |
   | manual-grant       | ✅ + 2FA + reason + audit (logs duration + reason) |
-  | revoke             | ✅ + reason + audit |
+  | revoke-entitlement | ✅ + 2FA + reason + audit |
   | export             | ✅ + audit + rate-limited |
 
   > **Why 2FA gate on manual-grant**: it's a financial primitive. A compromised admin session could grant `ENTERPRISE` lifetime to an attacker's account. Re-auth gate forces explicit intent. *Citation: PCI-DSS-style separation of duties for billing operations.*
@@ -382,7 +391,8 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
   - **Empty (no subscriptions yet)**: *"No subscription activity yet."*
   - **Empty (Failed verification, none failed)**: *"No failed verifications. All payments are processing cleanly."*
   - **Manual grant with subsequent IAP**: detail panel shows merged history; the IAP record takes precedence (overrides manual `expiresAt`).
-  - **Revoke an IAP-backed plan**: blocked with tooltip *"This plan is IAP-backed. The user must cancel through the App Store / Play Store. Manual revoke would re-grant on next refresh from store webhook."* (Apple/Google source-of-truth wins.)
+  - **Revoke an active IAP-backed plan**: confirmation dialog warns *"This plan is IAP-backed and Apple/Google's store is the source of truth. Revoking entitlement here removes the user's access NOW, but if the underlying subscription is still active in the store, the next webhook refresh may reinstate it. To fully end the subscription, the user must cancel through the store. Continue?"* — admin can proceed if intent is to remove access immediately for cause (policy violation, fraud); audit-logged with the warning shown.
+  - **Refund request lands in support**: the dashboard has no refund button. When a user emails *"please refund me"*, the admin replies pointing them to the App Store / Play Store refund flow. After the store processes it, our webhook updates `Subscription.status` automatically.
 - **Cross-references**: [`07-profile.md → Receipt Verification Failed`](./app-screens/07-profile.md#receipt-verification-failed) (the user-side dead end this page resolves); AD1 user detail panel (subscription card links here).
 
 > **Why this page**: subscriptions are the only revenue surface in this product. A single failed receipt verification = a paying customer with no perks = a churn risk. Without this page, support has no triage tool and *"I paid but it didn't work"* tickets escalate to engineering — a dollar-per-ticket cost the page eliminates.
@@ -526,8 +536,9 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
 2. `SUPER_ADMIN` opens AD1 → searches `userId` or email.
 3. Detail panel → reviews recent activity + active devices.
 4. Action `change-status` → `RESTRICTED` with reason + (optional) `force-logout` to kill all device sessions immediately.
-5. User-side: next API call hits `403` → [`01-auth.md → Account Restricted`](./app-screens/01-auth.md#account-restricted-or-inactive-login) shows *"Your account is restricted. Contact support."*
-6. Audit log entries: one for `change-status`, one for `force-logout` (both with `before` / `after` snapshots).
+5. Action `notify-user` → built-in user-comms; pick template *"account suspended"*, fill in reason / appeal-link if applicable, send.
+6. User-side: next API call hits `403` → [`01-auth.md → Account Restricted`](./app-screens/01-auth.md#account-restricted-or-inactive-login) shows *"Your account is restricted. Contact support."* The notify-user message lands in the user's email + in-app inbox separately.
+7. Audit log entries: one for `change-status`, one for `force-logout`, one for `notify-user` (template + body snapshot logged).
 
 ### Failed-Receipt Triage Flow
 
@@ -536,9 +547,9 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
 3. Picks a row → detail panel → reads the raw store-side error.
 4. Decision:
    - **Transient (network / store outage)** → click `retry-verification`. Audit-logged.
-   - **Receipt actually invalid** → contact the user via support email (out-of-app); explain refund vs re-purchase; do NOT manually-grant unless verified.
+   - **Receipt actually invalid** → use `notify-user` to ask the user to retry the purchase or check their store account; do NOT manually-grant unless independently verified. Refunds, if needed, are routed through the App Store / Play Store — not this dashboard (see AD6 refund-handling note).
    - **Webhook missed** → reconcile via `retry-verification`; if still fails, escalate to engineering.
-5. Audit log entry on every retry / manual-grant / revoke.
+5. Audit log entry on every retry / manual-grant / revoke-entitlement / notify-user.
 
 ---
 
@@ -546,18 +557,18 @@ This dashboard's user-facing copy and rationale text MAY be in Banglish (the pro
 
 ### Card Moderation (admin-initiated only)
 
-> **Note**: User-to-user reporting is NOT documented in `app-screens/`. This flow is admin-initiated only — see §7 Q4 for whether user reporting is in scope.
+> **Confirmed**: v1 has **no user-to-user reporting**. AD2 has no *"reported by N users"* column and no Reports tab. All moderation triggers are admin-initiated or come in via support email / external complaint.
 
 1. **Trigger**: admin notices a problematic card via AD2 browse, OR a support email arrives, OR an external complaint (DMCA, compliance flag).
 2. **Review**: admin opens AD2 detail panel → reads card + checks owner's `User` history (link to AD1).
 3. **Action**:
    - `verify` (no issue, mark verified).
-   - `reject` (sets `verificationStatus = REJECTED` + reason; user-side: card stays public but loses verified badge — see §7 Q3 for whether rejection should also unpublish).
+   - `reject` (sets `verificationStatus = REJECTED` + reason; card **stays public and published**, only the verified badge is removed).
    - `delete` (typing-to-confirm; full snapshot logged in `before` for restoration).
-4. **Notifier**: optional follow-up email to owner *"Your card was removed because [reason]"* — out of scope for v1 unless user-comms infra exists.
-5. **Audit**: every action writes to AD7.
+4. **Notifier**: `notify-owner` action — built-in user-comms (in-app + email). Templates: *"card verified"*, *"card rejected — reason"*, *"card removed — reason"*, free-text fallback. Recommended after `reject` and `delete`; optional after `verify`.
+5. **Audit**: every action writes to AD7 (verify / reject / delete / notify-owner each get their own entry).
 
-> **Why admin-initiated only in v1**: the user app has no *"Report this card"* affordance documented in `app-screens/` (search returns no Report button across all 8 files). Adding a report queue without a corresponding user-side reporting flow creates a UX gap. Either both exist or neither does. *See §7 Q4.*
+> **Why admin-initiated only in v1**: the user app has no *"Report this card"* affordance, by design. If user-to-user reporting is added in v2, it requires both a user-side affordance (a Report button on `03-preference-card-details.md`) AND an admin-side queue (a Reports tab on AD2 with a reporter-history sidecar). Building one half breaks the loop.
 
 ---
 
@@ -588,42 +599,15 @@ Every widget on AD9 names the business question it answers. No widget exists wit
 
 ---
 
-## 7. Open Questions
+## 7. Suggested Next Steps
 
-These are gaps in the source UX (`app-screens/*.md`) that block a final admin spec. Each answer materially changes a page or permission matrix.
-
-- **Q1 `[NEEDS INFO]`** — *(RBAC roles)* Source docs only define `USER` and `SUPER_ADMIN` ([`01-auth.md`](./app-screens/01-auth.md), [`03-preference-card-details.md`](./app-screens/03-preference-card-details.md)). Should there be a `MODERATOR` sub-role with limited scope (verify cards + suspend users, but no role-elevation, no IAP grants, no legal CMS), or is a single `SUPER_ADMIN` role sufficient for v1? **Blocks**: every RBAC matrix in §2; affects whether `MODERATOR` columns are added. **`[ANS: ]`**
-
-- **Q2 `[NEEDS INFO]`** — *(Catalog auto-grow policy)* Per [`04-create-preference-card.md § step 9-10`](./app-screens/04-create-preference-card.md#create-card), users custom-add supplies / sutures via typeahead. Should:
-  - **(A)** auto-create on submit (current implication) → AD3/AD4 are pure cleanup tools; OR
-  - **(B)** queue submissions for admin approval first (`status = PENDING_APPROVAL` on the catalog row, hidden from other users' typeaheads until approved)?
-  **Blocks**: AD3/AD4 page — option (B) adds a `Pending` tab and changes the moderation surface. **`[ANS: ]`**
-
-- **Q3 `[NEEDS INFO]`** — *(Card rejection semantics)* When admin sets `verificationStatus = REJECTED` on AD2:
-  - **(A)** card stays public but unverified (current implication); OR
-  - **(B)** card is auto-unpublished (`published: false`) — admin-driven takedown; OR
-  - **(C)** soft-delete entirely (`status: DELETED`).
-  **Blocks**: AD2 reject action behaviour + audit-log payload + user-notification copy. **`[ANS: ]`**
-
-- **Q4 `[NEEDS INFO]`** — *(User-to-user content reporting)* The user app has no *"Report this card"* affordance in any of the 8 `app-screens/*.md` files. Does this feature exist (or is it planned) — i.e. should AD2 expose a *"reported by N users"* column + a Reports tab? Or is moderation strictly admin-initiated for v1?
-  **Blocks**: AD2 schema (Report collection presence), surface (Reports tab), and §4 Moderation Flows. **`[ANS: ]`**
-
-- **Q5 `[NEEDS INFO]`** — *(Refund flow)* IAP refunds happen in two places: (a) Apple/Google's stores (user-initiated) which webhook back to our subscription; (b) our admin manual-revoke + parallel store-side refund. Does the platform offer **in-app admin-initiated refund** (route money back via the store API), or is refund handling delegated to the store entirely (admin only adjusts our DB state to match)? **Blocks**: AD6 refund action presence + permission gate. **`[ANS: ]`**
-
-- **Q6 `[NEEDS INFO]`** — *(User-comms infrastructure)* Several admin actions imply outbound email to users: card-rejected notice, account-suspended notice, password-reset confirmation. Does an admin-side "send notice to user" template / infrastructure exist? If yes, AD2/AD1 grow a `Notify user` button; if no, that's a v2 feature and for v1 the admin sends email out-of-band. **Blocks**: AD1/AD2 action surface + audit-log scope (notify-user is itself audit-worthy). **`[ANS: ]`**
-
----
-
-## 8. Suggested Next Steps
-
-1. Resolve **§7 Q1–Q6** before downstream work — Q1 (RBAC sub-role) and Q4 (user-to-user reporting) materially change the page count and shape.
-2. Reconcile this spec against [`dashboard-screens/`](./dashboard-screens/) (the existing admin UX docs not read in this pass). Specifically: this spec was derived strictly from `app-screens/`; cross-check which pages here already exist as `dashboard-screens/*.md` — likely candidates: User Management (AD1), Preference Card Management (AD2), Legal Management (AD5), Supplies Management (AD3), Sutures Management (AD4). Merge or reconcile to avoid parallel doc layers.
-3. Run the **API Designer & Mentor — Brownfield** template scoped to admin endpoints — every page's data + actions need backing API endpoints. The existing `modules/*.md` should already cover the user-side; admin-only routes (verify card, manual-grant subscription, audit-log query, etc.) need their own module entries.
-4. Database design: this spec implies `AuditLog`, `LegalPageVersion` (for history), and possibly `Report` (Q4) collections; plus indexes on every filter/search column in §2.
-5. Hand the spec to UI/UX for high-fidelity mocks — §2 sections describe layout but not pixels.
+1. Reconcile this spec against [`dashboard-screens/`](./dashboard-screens/) (the existing admin UX docs not read in this pass). This spec was derived strictly from `app-screens/`; cross-check which pages here already exist as `dashboard-screens/*.md` — likely candidates: User Management (AD1), Preference Card Management (AD2), Legal Management (AD5), Supplies Management (AD3), Sutures Management (AD4). Merge or reconcile to avoid parallel doc layers.
+2. Run the **API Designer & Mentor — Brownfield** template scoped to admin endpoints — every page's data + actions need backing API endpoints. The existing `modules/*.md` should already cover the user-side; admin-only routes (verify card, manual-grant subscription, revoke-entitlement, notify-user, audit-log query, etc.) need their own module entries.
+3. Database design: this spec implies `AuditLog`, `LegalPageVersion` (for history), `NotificationTemplate` + outbound `UserNotice` collections (per built-in user-comms); plus indexes on every filter/search column in §2.
+4. Hand the spec to UI/UX for high-fidelity mocks — §2 sections describe layout but not pixels.
 
 ---
 
 ## Note on scope
 
-This spec was generated **strictly from `app-screens/`** at the user's instruction. The sibling folder [`dashboard-screens/`](./dashboard-screens/) contains 7 existing admin UX docs (admin auth, overview, user management, preference-card management, legal, supplies, sutures) that were intentionally NOT read in this pass. Expect overlap with this document; reconciling the two layers is step 2 of §8.
+This spec was generated **strictly from `app-screens/`** at the user's instruction. The sibling folder [`dashboard-screens/`](./dashboard-screens/) contains 7 existing admin UX docs (admin auth, overview, user management, preference-card management, legal, supplies, sutures) that were intentionally NOT read in this pass. Expect overlap with this document; reconciling the two layers is step 1 of §7.
