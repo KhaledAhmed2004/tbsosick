@@ -8,7 +8,8 @@
       "Bash(grep -n \"params.id\" src/app/modules/supplies/supplies.controller.ts src/app/modules/sutures/sutures.controller.ts src/app/modules/event/event.controller.ts src/app/modules/notification/notification.controller.ts)",
       "Bash(python3 -c ' *)",
       "Bash(npm run *)",
-      "Read(//d/web projects/office-sta/re-fector/**)"
+      "Read(//d/web projects/office-sta/re-fector/**)",
+      "Bash(grep -nE '^#{1,3} ' \"d:/web projects/office-sta/re-fector/tbsosick/ux-flow-with-api-responses/api-mentor.md\")"
     ]
   }
 }
