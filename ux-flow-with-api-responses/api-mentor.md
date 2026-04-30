@@ -197,7 +197,7 @@ Not REST, but in scope for the design:
 
 > **Why generic `invalid_credentials` for both bad password AND missing user**: prevents email enumeration. An attacker timing the response shouldn't get different copy. The one exception is `email_not_verified` — that's an in-product UX (the user just registered and forgot to verify), not an enumeration vector, because the same path is reachable via `POST /users` returning 201. Trade-off: legitimate users with typo'd emails get a slightly less helpful error. *Citation: OWASP ASVS § V2.1; Stripe API guideline.*
 
-> **Why credentials in body, not query**: query strings leak via access logs, browser history, referrer headers. POST body is the conventional credential channel and is not logged by default proxies. *Citation: RFC 9110 § Security Considerations.*
+> **Why credentials in body, not query**: query strings leak via access logs, browser history, and Referer headers. *Citation: RFC 9110 § Security Considerations.*
 
 #### 2.2 `POST /auth/refresh`
 - **Auth**: refresh token in body OR `httpOnly` cookie (web)
@@ -430,9 +430,9 @@ Not REST, but in scope for the design:
 - **Idempotent**: Yes
 - **Response 204**.
 
-> **Why `PUT` for favorite-add** instead of `POST`: favoriting is idempotent — calling it twice yields the same state (one row, the user has favorited the card). PUT signals this contract to clients and intermediaries. POST would imply each call creates a new resource (duplicate-favorite rows), which the server then has to dedupe. *Citation: RFC 7231 § 4.3.4 (PUT idempotent).*
+> **Why `PUT` for favorite-add** instead of `POST`: favoriting is idempotent — calling twice yields the same state. POST would imply each call creates a new resource and the server must dedupe duplicate-favorite rows on retry. *Citation: RFC 7231 § 4.3.4.*
 
-> **Why nest under `/users/me/favorites/`** instead of `/preference-cards/:cardId/favorite`: favorites are a relation owned by the user — "this user has favorited that card" is more naturally a sub-resource of the user. The card doesn't "have favorites" in any UX-meaningful way; the user has a favorites collection. *Citation: Spotify `PUT /me/tracks/:id`; Twitter `POST /favorites/create.json` (legacy, kept for shape comparison).*
+> **Why nest under `/users/me/favorites/`** instead of `/preference-cards/:cardId/favorite`: favorites are user-owned relations, not card-owned. Spotify's `PUT /me/tracks/:id` follows the same pattern.
 
 ---
 
@@ -625,96 +625,13 @@ Not REST, but in scope for the design:
 
 ## 3. RESTful Compliance Audit
 
-| # | Endpoint | Plural-noun path | Meaningful path param | Correct verb | Correct status code | No mirrored verbs | Idempotency contract | Notes |
-|---|---|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| 1.1 | `POST /users` | ✅ | N/A | ✅ | ✅ 201 | ✅ | ✅ `Idempotency-Key` | — |
-| 1.2 | `GET /users/me` | ✅ | ✅ (`me` alias) | ✅ | ✅ 200 | ✅ | ✅ idempotent | — |
-| 1.3 | `PATCH /users/me` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ partial set | — |
-| 2.1 | `POST /auth/login` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ session-create | Verb-in-path acceptable for non-CRUD action collection |
-| 2.2 | `POST /auth/refresh` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ rotation | Same as above |
-| 2.3 | `POST /auth/logout` | ✅ | N/A | ✅ | ✅ 204 | ✅ | ✅ | — |
-| 2.4 | `POST /auth/social-login` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 3.1 | `POST /auth/email/verify` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ token-consuming | — |
-| 3.2 | `POST /auth/email/resend` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ rate-limited | — |
-| 4.1 | `POST /auth/password/forgot` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ silent-success | — |
-| 4.2 | `POST /auth/password/reset-tokens` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ token-consuming | Plural-noun resource (reset-tokens issued) |
-| 4.3 | `POST /auth/password/reset` | ✅ | N/A | ✅ | ✅ 204 | ✅ | ✅ | — |
-| 4.4 | `POST /auth/password/change` | ✅ | N/A | ✅ | ✅ 204 | ✅ | ✅ | — |
-| 5.1 | `POST /users/me/devices` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ upsert idempotent | Returns 200 not 201 because upsert |
-| 5.2 | `DELETE /users/me/devices/:deviceId` | ✅ | ✅ | ✅ | ✅ 204 | ✅ | ✅ | — |
-| 5.3 | `GET /users/me/devices` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 6.1 | `GET /preference-cards` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 6.2 | `GET /preference-cards/:cardId` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 6.3 | `GET /preference-cards/specialties` | ✅ | N/A | ✅ | ✅ 200 / 304 | ✅ | ✅ ETag | — |
-| 6.4 | `POST /preference-cards/:cardId/download` | ✅ | ✅ | ✅ | ✅ 200 | ✅ (deliberate verb-in-path) | ⚠️ counter not idempotent | Documented as deliberate non-CRUD action |
-| 7.1 | `GET /users/me/preference-cards` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 7.2 | `POST /users/me/preference-cards` | ✅ | ✅ | ✅ | ✅ 201 | ✅ | ✅ `Idempotency-Key` | — |
-| 7.3 | `PATCH /users/me/preference-cards/:cardId` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ partial set | — |
-| 7.4 | `DELETE /users/me/preference-cards/:cardId` | ✅ | ✅ | ✅ | ✅ 204 | ✅ | ✅ | — |
-| 8.1 | `GET /users/me/favorites` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 8.2 | `PUT /users/me/favorites/:cardId` | ✅ | ✅ | ✅ | ✅ 204 | ✅ | ✅ idempotent set | — |
-| 8.3 | `DELETE /users/me/favorites/:cardId` | ✅ | ✅ | ✅ | ✅ 204 | ✅ | ✅ | — |
-| 9.1 | `GET /supplies` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 9.2 | `GET /sutures` | ✅ | N/A | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 10.1 | `GET /users/me/events` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 10.2 | `POST /users/me/events` | ✅ | ✅ | ✅ | ✅ 201 | ✅ | ✅ `Idempotency-Key` | — |
-| 10.3 | `GET /users/me/events/:eventId` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ | — |
-| 10.4 | `PATCH /users/me/events/:eventId` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ partial set | — |
-| 10.5 | `DELETE /users/me/events/:eventId` | ✅ | ✅ | ✅ | ✅ 204 | ✅ | ✅ | — |
-| 11.1 | `GET /users/me/notifications` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ `unreadCount` in meta | — |
-| 11.2 | `PATCH /users/me/notifications/:notificationId` | ✅ | ✅ | ✅ | ✅ 200 | ✅ | ✅ state in body | — |
-| 11.3 | `POST /users/me/notifications/mark-all-read` | ✅ | ✅ | ✅ | ✅ 200 | ✅ (deliberate verb-in-path) | ✅ idempotent (no-op replay) | Bulk action endpoint |
-| 11.4 | `DELETE /users/me/notifications/:notificationId` | ✅ | ✅ | ✅ | ✅ 204 | ✅ | ✅ | — |
-| 12.1 | `GET /users/me/subscription` | (singleton, no plural) | ✅ | ✅ | ✅ 200 | ✅ | ✅ | Documented exception per Google AIP-156 |
-| 12.2 | `POST /users/me/subscription/verify-receipt` | (singleton parent) | ✅ | ✅ | ✅ 200 | ✅ (deliberate verb-in-path) | ✅ server-idempotent + key | — |
-| 13.1 | `GET /legal-pages` | ✅ | N/A | ✅ | ✅ 200 / 304 | ✅ | ✅ ETag | — |
-| 13.2 | `GET /legal-pages/:slug` | ✅ | ✅ | ✅ | ✅ 200 / 304 | ✅ | ✅ ETag | — |
-
-All endpoints comply with REST commandments. Three deliberate verb-in-path actions are documented: `POST /preference-cards/:cardId/download` (counter), `POST /users/me/notifications/mark-all-read` (bulk action), `POST /users/me/subscription/verify-receipt` (external IDP action). Each has a "why this" rationale in §1.
+All endpoints comply with REST conventions. Three endpoints deliberately use verb-in-path because they're non-CRUD actions, each justified inline in §1: `POST /preference-cards/:cardId/download` (counter increment, 6.4), `POST /users/me/notifications/mark-all-read` (collection-bulk action, 11.3), `POST /users/me/subscription/verify-receipt` (external IDP token verification, 12.2). One documented singleton exception: `/users/me/subscription` (singular, per Google AIP-156).
 
 ---
 
-## 4. Mentor Notes — Top 10 Decisions Explained
+## 4. Decision rationale
 
-### 4.1 Why URI versioning (`/v1/`) over header versioning
-
-URI versioning is visible in every log line, every Postman tab, every error report. Header versioning hides the version in something proxies don't see and clients often forget to set, leading to silent v0 fallback. Trade-off: every breaking change forces a `/v2/` prefix and a parallel-deploy migration. Acceptable for a closed-loop app where you control all clients. Rejected alternative: `Accept: application/vnd.tbsosick.v1+json` — invisible in access logs. *Citation: Google AIP-180.*
-
-### 4.2 Why cursor pagination by default
-
-The notification list, preference-card discovery, and favorites all grow under inserts. Page-based pagination drifts: page 2 fetched 5 minutes after page 1 may show overlapping rows because new records arrived between fetches. Cursor pagination is stable under inserts and cheap on a `{ userId, createdAt }` covering index. Trade-off: opaque cursors aren't client-constructable, so "jump to page N" UX dies — fine here because mobile always paginates by infinite scroll. *Citation: Stripe API § List endpoints.*
-
-### 4.3 Why split read paths: `/preference-cards` (public) vs `/users/me/preference-cards` (owner)
-
-A single `/preference-cards?visibility=public|private` would return different data based on a query flag — dual semantics under one URL. Splitting makes ownership obvious from the path alone and lets each surface evolve independently (different rate limits, different caching strategy, different response shapes if needed). Trade-off: two list controllers instead of one. Cheap. *Citation: Spotify `/playlists` vs `/me/playlists`.*
-
-### 4.4 Why `PATCH /resource/:id { state: "..." }` instead of `POST /resource/:id/state-verb`
-
-State transitions on a resource compose: adding a third state (e.g. `archived` on notifications) is a Zod enum addition, not a new route. Mirrored verb routes (`/mark-read`, `/mark-unread`, `/archive`, `/unarchive`) duplicate validators, controllers, and audit entries for what is logically one operation — "change my state". The exception is bulk actions on collections (no specific resource to PATCH), where verb-in-path is unambiguous and idiomatic. *Citation: Google AIP-216.*
-
-### 4.5 Why short-lived access (15 min) + rotating refresh (30 days) + reuse detection
-
-Limits blast radius of an access-token leak (max 15-min exposure) without forcing the user to log in every session. Rotation + reuse detection turns refresh-token theft into a self-defeating attack: the legitimate client immediately sees a 401, the system force-logs-out, and the attacker's stolen token is dead too. Trade-off: more refresh traffic than long-lived tokens. Cheap. *Citation: OAuth 2.1 draft (BCP 195).*
-
-### 4.6 Why generic 401 on `/auth/login` (no email enumeration)
-
-An attacker who can distinguish "user exists" from "user doesn't exist" via timing or copy can build a list of valid emails to brute-force. The same principle drives silent-success on `/auth/password/forgot` and `/auth/email/resend` — response is identical regardless of whether the email is registered. Trade-off: legitimate users with typo'd emails get a slightly less helpful error. The single exception (`code: "email_not_verified"`) isn't an enumeration vector because the same path is reachable via signup. *Citation: OWASP ASVS § V2.1.*
-
-### 4.7 Why split OTP verification into two endpoints (`/auth/email/verify` vs `/auth/password/reset-tokens`)
-
-The current single-endpoint pattern returns two different response shapes (auto-login tokens vs reset-token) based on the user's `verified` flag — a soft REST violation because the response shape isn't predictable from the request alone. Splitting into two endpoints with two distinct contracts removes the ambiguity. Each endpoint does one thing; the URL signals which flow the client is in. Trade-off: two routes instead of one. Negligible cost. *Citation: in-house; cleaner contract per OpenAPI 3.1.*
-
-### 4.8 Why `Idempotency-Key` is mandatory on creates and verify-receipt
-
-Client retries on 5xx / network drops are inevitable on mobile. Without keys, retries cause duplicate cards, duplicate events, duplicate accounts, and (worst case) split-brain subscription state where the receipt was processed but the response was lost. The server keys on `(userId, key)` so different users with the same UUID don't collide. Trade-off: 24-h key retention adds a small cache footprint. *Citation: Stripe API § Idempotent requests.*
-
-### 4.9 Why `meta.unreadCount` lives on the existing list response (not a separate endpoint)
-
-The bell badge wants real-time accuracy. Bundling the count into the list response means one round-trip on app foreground returns both the latest list AND the badge count. A separate `GET /unread-count` endpoint would double the request count for the most common app-launch scenario, and the count would drift between fetches anyway. Trade-off: every list call computes the count, even when the client only wanted the rows. Cheap with a `{ userId, read }` covering index. *Citation: Slack Web API `conversations.list`.*
-
-### 4.10 Why client-side PDF generation for card download (counter-only endpoint)
-
-Server cost: zero (no PDF rendering). Server bandwidth: zero (no binary response). The client already has the JSON in memory from `GET /preference-cards/:cardId`. The `POST /:cardId/download` endpoint exists only as analytics — counter increment on a separate POST keeps the read endpoint cacheable (a hypothetical `GET /:cardId.pdf` returning a binary would defeat ETags on the JSON read). Trade-off: PDF formatting is duplicated per platform (iOS / Android — two renderers). Migrate to server-rendered PDF when "share PDF link" becomes a feature OR when card complexity makes per-platform parity a real test burden. *Citation: in-house; D5 in `overview.md`.*
+Every endpoint's "Why" callout in §1 explains the design rationale inline next to the spec. The cross-cutting decisions (URI versioning, cursor pagination, JWT TTLs, idempotency policy, rate limits, ETag caching) are explained in §0. Reading §0 + §1 covers all decision rationale; this section is intentionally brief to avoid restating either.
 
 ---
 
@@ -748,5 +665,5 @@ These are gaps in the source UX that block a final API freeze.
 2. Decide **Q3** (cursor vs page-based pagination) before client engineering starts — switching pagination style mid-project is expensive.
 3. Resolve **Q6** (catalog auto-create) before the create-card form ships — the affordance copy ("+ Add 'X' as custom") commits the UX to one behaviour or the other.
 4. Generate per-module API specs using the **API Module Generator** template in this prompt library — feed each module section from §1 as input.
-5. Cross-check the audit using the **RESTful API Inventory + Audit Generator** template to catch anything missed in §3.
+5. Audit coverage by re-reading §1 against `app-screens/` — every UX action should map to exactly one endpoint.
 6. Use the **API Spec → Coder Prompt** template to scaffold the actual backend code from these specs.
