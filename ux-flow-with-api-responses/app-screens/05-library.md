@@ -1,6 +1,6 @@
 # Screen 5: Library (Mobile)
 
-> **Section**: App APIs (Student-Facing)
+> **Section**: App APIs (User-Facing)
 > **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
 > **Response format**: see [Standard Response Envelope](../system-concepts.md#standard-response-envelope)
 > **Roles**: see [system-concepts.md → User Roles](../system-concepts.md#user-roles)
@@ -98,11 +98,11 @@ Library is a global search surface over **public preference cards only**. It is 
 
 ## Endpoints Used
 
-| # | Method | Endpoint | Module Spec |
-|---|---|---|---|
-| 1 | GET | `/preference-cards?visibility=public&searchTerm=…` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) |
-| 2 | GET | `/preference-cards/specialties` | [Module 3.3](../modules/preference-card.md#33-fetch-distinct-specialties) |
-| 3 | GET | `/preference-cards/:cardId` | [Module 3.5](../modules/preference-card.md#35-get-card-details) |
-| 4 | PUT | `/preference-cards/favorites/cards/:cardId` | [Module 3.8](../modules/preference-card.md#38-favorite-a-card) |
-| 5 | DELETE | `/preference-cards/favorites/cards/:cardId` | [Module 3.9](../modules/preference-card.md#39-unfavorite-a-card) |
-| 6 | POST | `/preference-cards/:cardId/download` | [Module 3.10](../modules/preference-card.md#310-increment-download-count) |
+| # | Method | Endpoint | Module Spec | Used in flow |
+|---|---|---|---|---|
+| 1 | GET | `/preference-cards?visibility=public&searchTerm=…` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) | Library Initial Load + Search |
+| 2 | GET | `/preference-cards/specialties` | [Module 3.3](../modules/preference-card.md#33-fetch-distinct-specialties) | Filtering step 2 |
+| 3 | GET | `/preference-cards/:cardId` | [Module 3.5](../modules/preference-card.md#35-get-card-details) | Card detail navigation (deep-link to `03-preference-card-details.md`) |
+| 4 | PUT | `/preference-cards/favorites/cards/:cardId` | [Module 3.8](../modules/preference-card.md#38-favorite-a-card) | Card Actions — favorite |
+| 5 | DELETE | `/preference-cards/favorites/cards/:cardId` | [Module 3.9](../modules/preference-card.md#39-unfavorite-a-card) | Card Actions — unfavorite |
+| 6 | POST | `/preference-cards/:cardId/download` | [Module 3.10](../modules/preference-card.md#310-increment-download-count) | Card Actions — download |

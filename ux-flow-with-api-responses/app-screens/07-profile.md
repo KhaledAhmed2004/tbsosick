@@ -1,6 +1,6 @@
-# Screen 6: Profile (Mobile)
+# Screen 7: Profile (Mobile)
 
-> **Section**: App APIs (Student-Facing)
+> **Section**: App APIs (User-Facing)
 > **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
 > **Response format**: see [Standard Response Envelope](../system-concepts.md#standard-response-envelope)
 > **Roles**: see [system-concepts.md → User Roles](../system-concepts.md#user-roles)
@@ -11,12 +11,7 @@
 
 ## Common UI Rules
 
-* **Submit protection**: disabled on tap + spinner; re-enable on settle. Prevents double-submit.
-* **Offline**: pre-flight check; inline *"You're offline. Check your connection and try again."*
-* **5xx**: toast *"Something went wrong. Please try again."* + crash-reporter log.
-* **Validation (`422`)**: server field errors → inline; never generic toast.
-* **Rate-limit (`429`)**: read `Retry-After`; inline countdown *"Try again in {N}s."*
-* **Status mapping**: `400` shape → inline · `401` auth → inline · `403` state/perm → toast/modal · `404` missing → empty/inline · `409` conflict → inline + recovery CTA · `422` validation → field inline · `429` → inline countdown · `5xx` → toast.
+> Common UI Rules + Status-Code Mapping: see [system-concepts.md → Common UI Rules](../system-concepts.md#common-ui-rules).
 
 ---
 
@@ -152,24 +147,18 @@
 
 ## Storage & Session
 
-| Token                 | Storage                                                   | Lifetime                                | Cleared when               |
-| --------------------- | --------------------------------------------------------- | --------------------------------------- | -------------------------- |
-| Access token          | In-memory (or SecureStorage if persisted)                 | Session lifetime (confirm in auth spec) | Logout / refresh fail      |
-| Refresh token         | **SecureStorage** (Keychain / EncryptedSharedPreferences) | Session lifetime (confirm in auth spec) | Logout / refresh fail      |
-| Cached IAP receipt    | Secure encrypted local storage                            | Until verification success              | Successful verify / logout |
-| Push token (FCM/APNS) | App preferences                                           | Persistent                              | Logout / uninstall         |
+See [01-auth.md → Storage & Session](./01-auth.md#storage--session) for the canonical token storage table (access token, refresh token, `resetToken`, `deviceId`, FCM `token`) and [01-auth.md → Device & FCM token lifecycle](./01-auth.md#device--fcm-token-lifecycle) for FCM rotation rules.
 
-**Never** plain `SharedPreferences` / `UserDefaults` / Hive. **Never** log tokens.
+**Profile-specific additions** (replay-sensitive data not covered by the canonical table):
+
+| Token / data        | Storage                        | Lifetime                        | Cleared when                |
+| ------------------- | ------------------------------ | ------------------------------- | --------------------------- |
+| Cached IAP receipt  | Secure encrypted local storage | Until verification success      | Successful verify / logout  |
+
+**Never** plain `SharedPreferences` / `UserDefaults` / Hive. **Never** log tokens or receipts.
 
 > **Why this design**
 > Purchase receipts are replay-sensitive. If they leak from plain local storage, an attacker can attempt fake restores against the verification endpoint.
-
-### Push token lifecycle
-
-* **Acquired**: app install/session init
-* **Sent**: authenticated session bootstrap flow
-* **Rotated**: OS token refresh callback-e
-* **Removed**: logout / uninstall
 
 ---
 

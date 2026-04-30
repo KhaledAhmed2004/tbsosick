@@ -104,9 +104,9 @@ Users can receive notifications through three channels: Push (FCM), Socket (real
 
 ## Endpoints Used
 
-| # | Method | Endpoint | Module Spec |
-|---|---|---|---|
-| 1 | GET | `/notifications` | [Module 5.1](../modules/notification.md#51-get-my-notifications) |
-| 2 | PATCH | `/notifications/:notificationId/read` | [Module 5.2](../modules/notification.md#52-mark-as-read) |
-| 3 | PATCH | `/notifications/read-all` | [Module 5.3](../modules/notification.md#53-mark-all-as-read) |
-| 4 | DELETE | `/notifications/:notificationId` | [Module 5.4](../modules/notification.md#54-delete-notification) |
+| # | Method | Endpoint | Module Spec | Used in flow |
+|---|---|---|---|---|
+| 1 | GET | `/notifications` | [Module 5.1](../modules/notification.md#51-get-my-notifications) | Bell Icon & Unread Indicator + Open Notification List + Pagination |
+| 2 | PATCH | `/notifications/:notificationId/read` | [Module 5.2](../modules/notification.md#52-mark-as-read) | Tap on Notification → Deep Link step 3 |
+| 3 | PATCH | `/notifications/read-all` | [Module 5.3](../modules/notification.md#53-mark-all-as-read) | Mark All as Read step 2 |
+| 4 | DELETE | `/notifications/:notificationId` | [Module 5.4](../modules/notification.md#54-delete-notification) | Swipe-to-Delete step 3 |

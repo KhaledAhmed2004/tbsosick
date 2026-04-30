@@ -1,6 +1,6 @@
 # Screen 6: Calendar (Mobile)
 
-> **Section**: App APIs (Student-Facing)
+> **Section**: App APIs (User-Facing)
 > **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
 > **Response format**: see [Standard Response Envelope](../system-concepts.md#standard-response-envelope)
 > **Roles**: see [system-concepts.md → User Roles](../system-concepts.md#user-roles)
@@ -88,11 +88,11 @@ See [system-concepts.md → Common UI Rules](../system-concepts.md#common-ui-rul
 
 ## Endpoints Used
 
-| # | Method | Endpoint | Module Spec |
-|---|---|---|---|
-| 1 | GET | `/events` | [Module 4.1](../modules/event.md#41-list-my-events) |
-| 2 | POST | `/events` | [Module 4.2](../modules/event.md#42-create-event) |
-| 3 | GET | `/events/:eventId` | [Module 4.3](../modules/event.md#43-get-event-details) |
-| 4 | PATCH | `/events/:eventId` | [Module 4.4](../modules/event.md#44-update-event) |
-| 5 | DELETE | `/events/:eventId` | [Module 4.5](../modules/event.md#45-delete-event) |
-| 6 | GET | `/preference-cards?visibility=private` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) (typeahead for `linkedPreferenceCard`) |
+| # | Method | Endpoint | Module Spec | Used in flow |
+|---|---|---|---|---|
+| 1 | GET | `/events` | [Module 4.1](../modules/event.md#41-list-my-events) | Calendar Initial Load step 2 |
+| 2 | POST | `/events` | [Module 4.2](../modules/event.md#42-create-event) | Create Event Flow step 3 |
+| 3 | GET | `/events/:eventId` | [Module 4.3](../modules/event.md#43-get-event-details) | Event Management — View step 2 |
+| 4 | PATCH | `/events/:eventId` | [Module 4.4](../modules/event.md#44-update-event) | Event Management — Update step 3 |
+| 5 | DELETE | `/events/:eventId` | [Module 4.5](../modules/event.md#45-delete-event) | Event Management — Delete step 4 |
+| 6 | GET | `/preference-cards?visibility=private` | [Module 3.1](../modules/preference-card.md#31-listsearch-preference-cards) | Create Event Flow — `linkedPreferenceCard` typeahead |

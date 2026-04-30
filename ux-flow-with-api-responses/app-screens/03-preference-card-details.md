@@ -1,6 +1,6 @@
 # Screen 3: Preference Card Details (Mobile)
 
-> **Section**: App APIs (Student-Facing)
+> **Section**: App APIs (User-Facing)
 > **Base URL**: `{{baseUrl}}` = see [system-concepts.md](../system-concepts.md#base-url--environment)
 > **Response format**: see [Standard Response Envelope](../system-concepts.md#standard-response-envelope)
 > **Roles**: see [system-concepts.md → User Roles](../system-concepts.md#user-roles)
@@ -11,12 +11,7 @@
 
 ## Common UI Rules
 
-- **Submit protection**: button disabled on first tap + spinner shown; re-enable only on API settle (success or error). Prevents double-submit on slow connections.
-- **Offline**: pre-flight `navigator.onLine` check; show inline *"You're offline. Check your connection and try again."* — no API call fired.
-- **5xx**: toast *"Something went wrong. Please try again."* + crash-reporter log.
-- **Validation (`422`)**: server field errors → render inline under the relevant field; never a generic toast.
-- **Rate-limit (`429`)**: read `Retry-After`; show inline countdown *"Try again in {N}s."*
-- **Status mapping**: `400` → inline · `401` auth → redirect to Login · `403` state/perm → toast or modal · `404` missing → empty state / inline · `409` conflict → inline + recovery CTA · `422` validation → field-level inline · `429` → inline countdown · `5xx` → toast.
+> Common UI Rules + Status-Code Mapping: see [system-concepts.md → Common UI Rules](../system-concepts.md#common-ui-rules).
 
 ---
 
