@@ -4,78 +4,118 @@ import { StatusCodes } from 'http-status-codes';
 import { sendNotifications } from './notificationsHelper';
 import { Types } from 'mongoose';
 
-/**
- * Fetches notifications + total count + unread count in a single
- * aggregation. Previously this used 3 separate queries (find + 2x
- * countDocuments). `$facet` runs all three pipelines over the same
- * `$match` result, so we go from 3 round trips → 1.
- *
- * The compound index `{ userId: 1, read: 1, createdAt: -1 }` covers
- * every facet.
- */
-const listForUser = async (
-  userId: string,
-  query: { page?: string; limit?: string } = {},
-) => {
-  const page = Number(query.page) || 1;
-  const limit = Number(query.limit) || 10;
-  const skip = (page - 1) * limit;
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 50;
 
-  const [result] = await NotificationModel.aggregate<{
-    notifications: any[];
-    totalCount: { n: number }[];
-    unreadCount: { n: number }[];
-  }>([
-    { $match: { userId: new Types.ObjectId(userId), isDeleted: false } },
-    {
-      $facet: {
-        notifications: [
-          { $sort: { createdAt: -1 } },
-          { $skip: skip },
-          { $limit: limit },
-        ],
-        totalCount: [{ $count: 'n' }],
-        unreadCount: [{ $match: { read: false } }, { $count: 'n' }],
+type Cursor = { createdAt: string; _id: string };
+
+const encodeCursor = (createdAt: Date, id: Types.ObjectId | string): string =>
+  Buffer.from(
+    JSON.stringify({ createdAt: createdAt.toISOString(), _id: id.toString() }),
+  ).toString('base64url');
+
+const decodeCursor = (raw: string): Cursor => {
+  try {
+    const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
+    if (!parsed?.createdAt || !parsed?._id) throw new Error('shape');
+    return parsed as Cursor;
+  } catch {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid cursor');
+  }
+};
+
+type ListQuery = { cursor?: string; limit?: string; unread?: string };
+
+const listForUser = async (userId: string, query: ListQuery = {}) => {
+  const limit = Math.min(
+    Math.max(Number(query.limit) || DEFAULT_LIMIT, 1),
+    MAX_LIMIT,
+  );
+
+  const baseMatch: Record<string, unknown> = {
+    userId: new Types.ObjectId(userId),
+    deletedAt: null,
+  };
+
+  const listMatch: Record<string, unknown> = { ...baseMatch };
+  if (query.unread === 'true') listMatch.isRead = false;
+
+  if (query.cursor) {
+    const c = decodeCursor(query.cursor);
+    const cursorDate = new Date(c.createdAt);
+    listMatch.$or = [
+      { createdAt: { $lt: cursorDate } },
+      {
+        createdAt: cursorDate,
+        _id: { $lt: new Types.ObjectId(c._id) },
       },
-    },
-  ]);
+    ];
+  }
+
+  // Fetch limit + 1 to detect hasMore without a count query.
+  const rows = await NotificationModel.find(listMatch)
+    .sort({ createdAt: -1, _id: -1 })
+    .limit(limit + 1)
+    .lean();
+
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+
+  const last = page[page.length - 1];
+  const nextCursor =
+    hasMore && last
+      ? encodeCursor(last.createdAt as Date, last._id as Types.ObjectId)
+      : null;
+
+  const unreadCount = await NotificationModel.countDocuments({
+    ...baseMatch,
+    isRead: false,
+  });
 
   return {
-    notifications: result?.notifications ?? [],
-    meta: {
-      page,
-      limit,
-      total: result?.totalCount?.[0]?.n ?? 0,
-      unreadCount: result?.unreadCount?.[0]?.n ?? 0,
-    },
+    data: page,
+    meta: { limit, nextCursor, hasMore, unreadCount },
   };
 };
 
 const markAllRead = async (userId: string) => {
-  await NotificationModel.updateMany({ userId, read: false }, { $set: { read: true } });
-  return { updated: true };
+  const result = await NotificationModel.updateMany(
+    { userId: new Types.ObjectId(userId), isRead: false, deletedAt: null },
+    { $set: { isRead: true, readAt: new Date() } },
+  );
+  return { updated: result.modifiedCount };
 };
 
 const markRead = async (id: string, userId: string, read = true) => {
   const doc = await NotificationModel.findById(id);
-  if (!doc) throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
-  if (doc.userId?.toString() !== userId) throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
-  doc.read = read;
+  if (!doc || doc.deletedAt) {
+    throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
+  }
+  if (doc.userId?.toString() !== userId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Not allowed');
+  }
+
+  doc.isRead = read;
+  doc.readAt = read ? new Date() : null;
   await doc.save();
-  return doc;
+  return { _id: doc._id, isRead: doc.isRead, readAt: doc.readAt };
 };
 
 const deleteById = async (id: string, userId: string) => {
-  const doc = await NotificationModel.findOne({ _id: id, isDeleted: false });
+  const doc = await NotificationModel.findById(id);
   if (!doc) throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
-  if (doc.userId?.toString() !== userId) throw new ApiError(StatusCodes.FORBIDDEN, 'Not authorized');
+  if (doc.userId?.toString() !== userId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Not allowed');
+  }
 
-  // Soft delete
-  await NotificationModel.findByIdAndUpdate(id, { $set: { isDeleted: true } });
-  return { deleted: true };
+  // Idempotent: re-deleting an already soft-deleted row is a no-op success.
+  if (!doc.deletedAt) {
+    doc.deletedAt = new Date();
+    await doc.save();
+  }
+  return null;
 };
 
-// Helper creators for triggers
 const createForPreferenceCard = async (params: {
   userId: string;
   cardId: string;
@@ -95,7 +135,7 @@ const createForPreferenceCard = async (params: {
     link: { label: 'View Card', url: `/cards/${params.cardId}` },
     resourceType: 'PreferenceCard',
     resourceId: params.cardId,
-    read: false,
+    isRead: false,
     icon: 'card',
   });
 };
@@ -114,7 +154,7 @@ const createForEventScheduled = async (params: {
     link: { label: 'View Event', url: `/events/${params.eventId}` },
     resourceType: 'Event',
     resourceId: params.eventId,
-    read: false,
+    isRead: false,
     icon: 'calendar',
   });
 };

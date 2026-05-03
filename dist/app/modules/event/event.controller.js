@@ -42,8 +42,8 @@ const getMyEvents = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
 }));
 const getEventById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const { id } = req.params;
-    const result = yield event_service_1.EventService.getEventByIdFromDB(id, {
+    const { eventId } = req.params;
+    const result = yield event_service_1.EventService.getEventByIdFromDB(eventId, {
         id: user.id,
         role: user.role,
     });
@@ -56,8 +56,8 @@ const getEventById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
 }));
 const updateEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const { id } = req.params;
-    const result = yield event_service_1.EventService.updateEventInDB(id, {
+    const { eventId } = req.params;
+    const result = yield event_service_1.EventService.updateEventInDB(eventId, {
         id: user.id,
         role: user.role,
     }, req.body);
@@ -70,8 +70,8 @@ const updateEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
 }));
 const deleteEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const { id } = req.params;
-    const result = yield event_service_1.EventService.deleteEventFromDB(id, {
+    const { eventId } = req.params;
+    const result = yield event_service_1.EventService.deleteEventFromDB(eventId, {
         id: user.id,
         role: user.role,
     });

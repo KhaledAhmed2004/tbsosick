@@ -26,16 +26,16 @@ export type INotification = {
   title: string;
   subtitle?: string;
 
-  // Polymorphic reference — use these two fields together to point at a
-  // resource. `resourceId` intentionally holds a string so non-ObjectId keys
-  // (e.g. slugs) are supported, while `resourceType` tags the owning model.
   resourceType?: NotificationResourceType;
   resourceId?: string;
 
   link?: NotificationLink;
   metadata?: Record<string, unknown>;
-  read?: boolean;
-  isDeleted?: boolean;
+
+  isRead?: boolean;
+  readAt?: Date | null;
+  deletedAt?: Date | null;
+
   icon?: string;
   expiresAt?: Date;
   createdAt?: Date;

@@ -25,6 +25,8 @@ router.get('/:userId/user', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, u
 // --- Self Management (User/Doctor) ---
 // Fetch own profile details
 router.get('/profile', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER), user_controller_1.UserController.getUserProfile);
+// Get current user's own preference cards (PUBLIC + PRIVATE, drafts + published)
+router.get('/me/preference-cards', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.getMyPreferenceCards);
 // Get current user's favorite cards
 router.get('/me/favorites', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), user_controller_1.UserController.getFavoriteCards);
 // Update own profile

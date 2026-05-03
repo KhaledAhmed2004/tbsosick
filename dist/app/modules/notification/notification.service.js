@@ -18,71 +18,90 @@ const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const http_status_codes_1 = require("http-status-codes");
 const notificationsHelper_1 = require("./notificationsHelper");
 const mongoose_1 = require("mongoose");
-/**
- * Fetches notifications + total count + unread count in a single
- * aggregation. Previously this used 3 separate queries (find + 2x
- * countDocuments). `$facet` runs all three pipelines over the same
- * `$match` result, so we go from 3 round trips → 1.
- *
- * The compound index `{ userId: 1, read: 1, createdAt: -1 }` covers
- * every facet.
- */
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 50;
+const encodeCursor = (createdAt, id) => Buffer.from(JSON.stringify({ createdAt: createdAt.toISOString(), _id: id.toString() })).toString('base64url');
+const decodeCursor = (raw) => {
+    try {
+        const parsed = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8'));
+        if (!(parsed === null || parsed === void 0 ? void 0 : parsed.createdAt) || !(parsed === null || parsed === void 0 ? void 0 : parsed._id))
+            throw new Error('shape');
+        return parsed;
+    }
+    catch (_a) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid cursor');
+    }
+};
 const listForUser = (userId_1, ...args_1) => __awaiter(void 0, [userId_1, ...args_1], void 0, function* (userId, query = {}) {
-    var _a, _b, _c, _d, _e, _f, _g;
-    const page = Number(query.page) || 1;
-    const limit = Number(query.limit) || 10;
-    const skip = (page - 1) * limit;
-    const [result] = yield notification_model_1.NotificationModel.aggregate([
-        { $match: { userId: new mongoose_1.Types.ObjectId(userId), isDeleted: false } },
-        {
-            $facet: {
-                notifications: [
-                    { $sort: { createdAt: -1 } },
-                    { $skip: skip },
-                    { $limit: limit },
-                ],
-                totalCount: [{ $count: 'n' }],
-                unreadCount: [{ $match: { read: false } }, { $count: 'n' }],
+    const limit = Math.min(Math.max(Number(query.limit) || DEFAULT_LIMIT, 1), MAX_LIMIT);
+    const baseMatch = {
+        userId: new mongoose_1.Types.ObjectId(userId),
+        deletedAt: null,
+    };
+    const listMatch = Object.assign({}, baseMatch);
+    if (query.unread === 'true')
+        listMatch.isRead = false;
+    if (query.cursor) {
+        const c = decodeCursor(query.cursor);
+        const cursorDate = new Date(c.createdAt);
+        listMatch.$or = [
+            { createdAt: { $lt: cursorDate } },
+            {
+                createdAt: cursorDate,
+                _id: { $lt: new mongoose_1.Types.ObjectId(c._id) },
             },
-        },
-    ]);
+        ];
+    }
+    // Fetch limit + 1 to detect hasMore without a count query.
+    const rows = yield notification_model_1.NotificationModel.find(listMatch)
+        .sort({ createdAt: -1, _id: -1 })
+        .limit(limit + 1)
+        .lean();
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    const last = page[page.length - 1];
+    const nextCursor = hasMore && last
+        ? encodeCursor(last.createdAt, last._id)
+        : null;
+    const unreadCount = yield notification_model_1.NotificationModel.countDocuments(Object.assign(Object.assign({}, baseMatch), { isRead: false }));
     return {
-        notifications: (_a = result === null || result === void 0 ? void 0 : result.notifications) !== null && _a !== void 0 ? _a : [],
-        meta: {
-            page,
-            limit,
-            total: (_d = (_c = (_b = result === null || result === void 0 ? void 0 : result.totalCount) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.n) !== null && _d !== void 0 ? _d : 0,
-            unreadCount: (_g = (_f = (_e = result === null || result === void 0 ? void 0 : result.unreadCount) === null || _e === void 0 ? void 0 : _e[0]) === null || _f === void 0 ? void 0 : _f.n) !== null && _g !== void 0 ? _g : 0,
-        },
+        data: page,
+        meta: { limit, nextCursor, hasMore, unreadCount },
     };
 });
 const markAllRead = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    yield notification_model_1.NotificationModel.updateMany({ userId, read: false }, { $set: { read: true } });
-    return { updated: true };
+    const result = yield notification_model_1.NotificationModel.updateMany({ userId: new mongoose_1.Types.ObjectId(userId), isRead: false, deletedAt: null }, { $set: { isRead: true, readAt: new Date() } });
+    return { updated: result.modifiedCount };
 });
 const markRead = (id_1, userId_1, ...args_1) => __awaiter(void 0, [id_1, userId_1, ...args_1], void 0, function* (id, userId, read = true) {
     var _a;
     const doc = yield notification_model_1.NotificationModel.findById(id);
-    if (!doc)
+    if (!doc || doc.deletedAt) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Notification not found');
-    if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId)
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized');
-    doc.read = read;
+    }
+    if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed');
+    }
+    doc.isRead = read;
+    doc.readAt = read ? new Date() : null;
     yield doc.save();
-    return doc;
+    return { _id: doc._id, isRead: doc.isRead, readAt: doc.readAt };
 });
 const deleteById = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    const doc = yield notification_model_1.NotificationModel.findOne({ _id: id, isDeleted: false });
+    const doc = yield notification_model_1.NotificationModel.findById(id);
     if (!doc)
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Notification not found');
-    if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId)
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized');
-    // Soft delete
-    yield notification_model_1.NotificationModel.findByIdAndUpdate(id, { $set: { isDeleted: true } });
-    return { deleted: true };
+    if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed');
+    }
+    // Idempotent: re-deleting an already soft-deleted row is a no-op success.
+    if (!doc.deletedAt) {
+        doc.deletedAt = new Date();
+        yield doc.save();
+    }
+    return null;
 });
-// Helper creators for triggers
 const createForPreferenceCard = (params) => __awaiter(void 0, void 0, void 0, function* () {
     const subtitle = params.surgeonName && params.procedure
         ? `${params.surgeonName} — ${params.procedure}`
@@ -95,7 +114,7 @@ const createForPreferenceCard = (params) => __awaiter(void 0, void 0, void 0, fu
         link: { label: 'View Card', url: `/cards/${params.cardId}` },
         resourceType: 'PreferenceCard',
         resourceId: params.cardId,
-        read: false,
+        isRead: false,
         icon: 'card',
     });
 });
@@ -108,7 +127,7 @@ const createForEventScheduled = (params) => __awaiter(void 0, void 0, void 0, fu
         link: { label: 'View Event', url: `/events/${params.eventId}` },
         resourceType: 'Event',
         resourceId: params.eventId,
-        read: false,
+        isRead: false,
         icon: 'calendar',
     });
 });

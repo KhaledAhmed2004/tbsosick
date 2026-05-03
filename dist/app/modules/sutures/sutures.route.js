@@ -16,9 +16,9 @@ router.post('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validat
 // List all Sutures
 router.get('/', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER), sutures_controller_1.SuturesController.listSutures);
 // Update Suture — by ID
-router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(sutures_validation_1.SuturesValidation.updateSutureSchema), sutures_controller_1.SuturesController.updateSuture);
+router.patch('/:sutureId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(sutures_validation_1.SuturesValidation.updateSutureSchema), sutures_controller_1.SuturesController.updateSuture);
 // Delete Suture — by ID
-router.delete('/:id', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(sutures_validation_1.SuturesValidation.paramIdSchema), sutures_controller_1.SuturesController.deleteSuture);
+router.delete('/:sutureId', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(sutures_validation_1.SuturesValidation.paramIdSchema), sutures_controller_1.SuturesController.deleteSuture);
 // Bulk Create — create multiple sutures
 router.post('/bulk', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(sutures_validation_1.SuturesValidation.bulkCreateSchema), sutures_controller_1.SuturesController.bulkCreate);
 exports.SuturesRoutes = router;

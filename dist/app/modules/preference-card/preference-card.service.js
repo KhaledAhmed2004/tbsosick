@@ -33,7 +33,9 @@ const builder_1 = require("../../builder");
 const supplies_model_1 = require("../supplies/supplies.model");
 const sutures_model_1 = require("../sutures/sutures.model");
 const favorite_model_1 = require("../favorite/favorite.model");
+const PDFBuilder_1 = __importDefault(require("../../builder/PDFBuilder"));
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
+const MAX_FAVORITES_PER_USER = 100;
 /**
  * Resolves an array of { supply/suture: idOrName, quantity } items.
  * ObjectId strings are kept as-is. Plain-text names are looked up
@@ -154,18 +156,177 @@ const getFavoriteCardIdsForUserFromDB = (userId) => __awaiter(void 0, void 0, vo
     const favorites = yield favorite_model_1.Favorite.find({ userId }).select('cardId -_id').lean();
     return favorites.map(f => f.cardId.toString());
 });
-const incrementDownloadCountInDB = (id, userId, role) => __awaiter(void 0, void 0, void 0, function* () {
-    const doc = yield preference_card_model_1.PreferenceCardModel.findById(id);
-    if (!doc)
+/**
+ * Flattens a card document to make it easy for PDF generation.
+ * Extracts names from populated supplies and sutures.
+ */
+const flattenCard = (doc) => {
+    return Object.assign(Object.assign({}, doc), { supplies: (doc.supplies || []).map((s) => {
+            var _a;
+            return ({
+                name: ((_a = s.supply) === null || _a === void 0 ? void 0 : _a.name) || 'N/A',
+                quantity: s.quantity,
+            });
+        }), sutures: (doc.sutures || []).map((s) => {
+            var _a;
+            return ({
+                name: ((_a = s.suture) === null || _a === void 0 ? void 0 : _a.name) || 'N/A',
+                quantity: s.quantity,
+            });
+        }) });
+};
+const downloadPreferenceCardInDB = (id, userId, role) => __awaiter(void 0, void 0, void 0, function* () {
+    // 1. Fetch Card Safely
+    const doc = yield preference_card_model_1.PreferenceCardModel.findById(id)
+        .populate('supplies.supply', 'name -_id')
+        .populate('sutures.suture', 'name -_id')
+        .lean();
+    if (!doc) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Preference card not found');
+    }
+    // 2. Check Card Status (isDeleted or inactive/unverified)
+    // Requirement: Reject if deleted or inactive.
+    // We'll use published: false as "inactive" for public users.
+    if (doc.isDeleted) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.GONE, 'This preference card has been deleted');
+    }
+    // 3. Authorization Rules
     const isOwner = doc.createdBy.toString() === userId;
     const isSuperAdmin = role === user_1.USER_ROLES.SUPER_ADMIN;
-    if (!isOwner && !isSuperAdmin && !doc.published) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to update download count');
+    if (!doc.published && !isOwner && !isSuperAdmin) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You do not have permission to download this private card');
     }
-    doc.downloadCount = (doc.downloadCount || 0) + 1;
-    yield doc.save();
-    return { downloadCount: doc.downloadCount };
+    // 4. Idempotency / Spam Control
+    // userId + cardId + date (YYYY-MM-DD)
+    const today = new Date().toISOString().split('T')[0];
+    try {
+        // Attempt to create a download log. Unique index handles idempotency.
+        yield preference_card_model_1.PreferenceCardDownloadModel.create({
+            userId: new mongoose_1.Types.ObjectId(userId),
+            cardId: new mongoose_1.Types.ObjectId(id),
+            downloadDate: today,
+        });
+        // 5. Atomic Increment (only if log creation succeeded)
+        yield preference_card_model_1.PreferenceCardModel.findByIdAndUpdate(id, {
+            $inc: { downloadCount: 1 },
+        });
+    }
+    catch (error) {
+        // If it's a duplicate key error (code 11000), it means user already downloaded today.
+        // We return success without incrementing.
+        if (error.code !== 11000) {
+            throw error;
+        }
+    }
+    // 6. Generate PDF
+    const flattenedDoc = flattenCard(doc);
+    const pdfBuffer = yield generatePreferenceCardPDF(flattenedDoc);
+    return {
+        buffer: pdfBuffer,
+        fileName: `${flattenedDoc.cardTitle.replace(/\s+/g, '_')}_Preference_Card.pdf`,
+    };
+});
+/**
+ * Generates a "beautiful" PDF for a preference card using PDFBuilder.
+ */
+const generatePreferenceCardPDF = (card) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
+    const builder = new PDFBuilder_1.default()
+        .setTheme('corporate') // Using corporate for a more professional/beautiful look
+        .setTitle(card.cardTitle)
+        .setHeader({
+        title: card.cardTitle,
+        subtitle: 'Official Preference Card',
+        showDate: true,
+        style: {
+            padding: 24,
+        },
+    })
+        .addText({
+        content: 'Surgeon Information',
+        style: 'heading',
+        margin: { top: 20, bottom: 10 },
+    })
+        .addTable({
+        headers: ['Field', 'Details'],
+        rows: [
+            ['Full Name', ((_a = card.surgeon) === null || _a === void 0 ? void 0 : _a.fullName) || 'N/A'],
+            ['Specialty', ((_b = card.surgeon) === null || _b === void 0 ? void 0 : _b.specialty) || 'N/A'],
+            ['Hand Preference', ((_c = card.surgeon) === null || _c === void 0 ? void 0 : _c.handPreference) || 'N/A'],
+            ['Contact', ((_d = card.surgeon) === null || _d === void 0 ? void 0 : _d.contactNumber) || 'N/A'],
+            ['Music Preference', ((_e = card.surgeon) === null || _e === void 0 ? void 0 : _e.musicPreference) || 'N/A'],
+        ],
+        striped: true,
+    })
+        .addSpacer(20);
+    if (card.medication) {
+        builder
+            .addText({ content: 'Medication', style: 'subheading' })
+            .addText({
+            content: card.medication,
+            style: 'body',
+            margin: { bottom: 15 },
+        })
+            .addDivider();
+    }
+    if (card.supplies && card.supplies.length > 0) {
+        builder.addText({ content: 'Supplies', style: 'subheading' }).addTable({
+            headers: ['Item Name', 'Quantity'],
+            rows: card.supplies.map((s) => [s.name, s.quantity]),
+            striped: true,
+        });
+        builder.addSpacer(20);
+    }
+    if (card.sutures && card.sutures.length > 0) {
+        builder.addText({ content: 'Sutures', style: 'subheading' }).addTable({
+            headers: ['Item Name', 'Quantity'],
+            rows: card.sutures.map((s) => [s.name, s.quantity]),
+            striped: true,
+        });
+        builder.addSpacer(20);
+    }
+    const sections = [
+        { label: 'Instruments', value: card.instruments },
+        { label: 'Positioning Equipment', value: card.positioningEquipment },
+        { label: 'Prepping', value: card.prepping },
+        { label: 'Workflow', value: card.workflow },
+        { label: 'Key Notes', value: card.keyNotes },
+    ];
+    for (const section of sections) {
+        if (section.value) {
+            builder
+                .addText({ content: section.label, style: 'subheading' })
+                .addText({
+                content: section.value,
+                style: 'body',
+                margin: { bottom: 15 },
+            })
+                .addDivider();
+        }
+    }
+    // Add Photo Library if exists
+    if (card.photoLibrary && card.photoLibrary.length > 0) {
+        builder.addText({
+            content: 'Photo Library',
+            style: 'heading',
+            margin: { top: 20, bottom: 10 },
+        });
+        for (const photo of card.photoLibrary) {
+            if (photo.url) {
+                builder
+                    .addImage({
+                    src: photo.url,
+                    width: 500, // Large enough to see details
+                })
+                    .addSpacer(10);
+            }
+        }
+    }
+    builder.setFooter({
+        showPageNumbers: true,
+        text: '© Preference Card System - Secure Document',
+    });
+    return builder.toBuffer();
 });
 /**
  * Accepts client payloads that still use `{ name, quantity }` (backwards
@@ -214,7 +375,6 @@ const listPreferenceCardsForUserFromDB = (userId) => __awaiter(void 0, void 0, v
 const listPrivatePreferenceCardsForUserFromDB = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const qb = new builder_1.QueryBuilder(preference_card_model_1.PreferenceCardModel.find({
         createdBy: userId,
-        published: false,
     }), query || {})
         // Text index on cardTitle + medication + surgeon.fullName + surgeon.specialty
         // handles the full search path — see `card_text_idx` in the model.
@@ -339,7 +499,7 @@ const listPublicPreferenceCardsFromDB = (query) => __awaiter(void 0, void 0, voi
     const page = Math.max(Number(rawQuery.page) || 1, 1);
     const limit = Math.min(Math.max(Number(rawQuery.limit) || 10, 1), 50);
     const skip = (page - 1) * limit;
-    const match = { published: true };
+    const match = { published: true, isDeleted: false };
     // Specialty facet filter. Uses exact match now that `surgeon.specialty`
     // is indexed — callers pass the canonical string from `/specialties`.
     const specialtyValue = rawQuery.specialty || rawQuery.surgeonSpecialty;
@@ -495,35 +655,78 @@ const listFavoritePreferenceCardsForUserFromDB = (userId, query) => __awaiter(vo
         data: flattenCards(docs),
     };
 });
-const favoritePreferenceCardInDB = (cardId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+const favoritePreferenceCardInDB = (cardId, userId, role) => __awaiter(void 0, void 0, void 0, function* () {
     const card = yield preference_card_model_1.PreferenceCardModel.findById(cardId);
     if (!card) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Preference card not found');
     }
-    if (!card.published && card.createdBy.toString() !== userId) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to favorite this card');
+    // Soft-delete check
+    if (card.isDeleted) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.GONE, 'This preference card has been deleted');
     }
-    // Upsert — idempotent, unique index on { userId, cardId } makes double
-    // favorite a no-op.
-    yield favorite_model_1.Favorite.updateOne({ userId: new mongoose_1.Types.ObjectId(userId), cardId: new mongoose_1.Types.ObjectId(cardId) }, { $setOnInsert: { userId, cardId } }, { upsert: true });
+    // Visibility check: Card must be published OR the user must be the creator OR SUPER_ADMIN
+    const isOwner = card.createdBy.toString() === userId;
+    const isSuperAdmin = role === user_1.USER_ROLES.SUPER_ADMIN;
+    if (!card.published && !isOwner && !isSuperAdmin) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to favorite this private card');
+    }
+    // Per-user favorites cap. Skip for re-adds (idempotent) — only enforce when
+    // this card is not already in the user's favorites.
+    const existing = yield favorite_model_1.Favorite.findOne({
+        userId: new mongoose_1.Types.ObjectId(userId),
+        cardId: new mongoose_1.Types.ObjectId(cardId),
+    }).lean();
+    if (!existing) {
+        const count = yield favorite_model_1.Favorite.countDocuments({
+            userId: new mongoose_1.Types.ObjectId(userId),
+        });
+        if (count >= MAX_FAVORITES_PER_USER) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, `Favorites limit reached (cap = ${MAX_FAVORITES_PER_USER} per user)`);
+        }
+    }
+    // Idempotent favorite using unique index constraint
+    try {
+        yield favorite_model_1.Favorite.create({
+            userId: new mongoose_1.Types.ObjectId(userId),
+            cardId: new mongoose_1.Types.ObjectId(cardId),
+        });
+    }
+    catch (error) {
+        // 11000 is MongoDB's duplicate key error code
+        if (error.code !== 11000) {
+            throw error;
+        }
+    }
     return { favorited: true };
 });
-const unfavoritePreferenceCardInDB = (cardId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+const unfavoritePreferenceCardInDB = (cardId, userId, role) => __awaiter(void 0, void 0, void 0, function* () {
+    // Check if card exists
     const card = yield preference_card_model_1.PreferenceCardModel.findById(cardId);
     if (!card) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Preference card not found');
     }
-    yield favorite_model_1.Favorite.deleteOne({
+    // Soft-delete check
+    if (card.isDeleted) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.GONE, 'This preference card has been deleted');
+    }
+    // Visibility check: Card must be published OR the user must be the creator OR SUPER_ADMIN
+    const isOwner = card.createdBy.toString() === userId;
+    const isSuperAdmin = role === user_1.USER_ROLES.SUPER_ADMIN;
+    if (!card.published && !isOwner && !isSuperAdmin) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to unfavorite this private card');
+    }
+    // Idempotent unfavorite
+    const result = yield favorite_model_1.Favorite.deleteOne({
         userId: new mongoose_1.Types.ObjectId(userId),
         cardId: new mongoose_1.Types.ObjectId(cardId),
     });
-    return { favorited: false };
+    return { favorited: false, deletedCount: result.deletedCount };
 });
 exports.PreferenceCardService = {
     getPreferenceCardCountsFromDB,
     getDistinctSpecialtiesFromDB,
     getFavoriteCardIdsForUserFromDB,
-    incrementDownloadCountInDB,
+    downloadPreferenceCardInDB,
     createPreferenceCardInDB,
     listPreferenceCardsForUserFromDB,
     listPrivatePreferenceCardsForUserFromDB,

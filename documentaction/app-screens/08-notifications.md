@@ -13,13 +13,16 @@
 | Item | Value |
 |---|---|
 | Pagination | Cursor-based, anchored on `(createdAt, _id)` |
-| Page size | 20 items per fetch |
-| Sort order | Strict newest-first by `createdAt` |
-| Real-time channel | Socket.IO room `user::<userId>` (legacy alias `get-notification::<userId>` also supported) |
+| Page size | Default 20, max 50 |
+| Sort order | Strict newest-first by `(createdAt, _id)` desc |
+| Real-time channel | Socket.IO room `user::<userId>` (legacy alias `get-notification::<userId>` also emitted) |
 | Server-as-truth | Real-time events are triggers — full state always re-fetched on app foreground |
 | Deduplication | By `_id` (in-memory + on insertion) |
-| Delete semantics | **Soft-delete** (`deletedAt` set; not removed from DB) |
-| Auth | All endpoints require `Authorization: Bearer {{accessToken}}` |
+| Ownership field | `userId` (Mongo ObjectId, ref `User`) |
+| Read state | `isRead` (boolean) + `readAt` (timestamp set when flipped to true; cleared when flipped back to false) |
+| Delete semantics | **Soft-delete** (`deletedAt` set; row stays in DB) |
+| Auto-expiry | TTL index on `expiresAt` (Mongo deletes expired rows automatically; default 30 days from creation in `notificationsHelper`) |
+| Auth | All endpoints require `Authorization: Bearer {{accessToken}}`, role `SUPER_ADMIN` or `USER` |
 
 ---
 
@@ -28,8 +31,10 @@
 **Trigger** — app foreground / pull-to-refresh on Notifications screen → [`GET /notifications`](#get-api-v1-notifications). The unread count comes back in `meta.unreadCount` of the same response (no separate endpoint).
 
 **Use case**
-- Server-computed `unreadCount` is total across the user's full notification set, not just the current page.
+- Server-computed `unreadCount` is total across the user's full undeleted notification set, not just the current page or filtered slice.
 - Single round-trip: list page + count in one call. The client doesn't need a second request just for the badge.
+
+**Behavior note** — `unreadCount` is computed against `{ userId, deletedAt: null, isRead: false }` regardless of whether the request used `?unread=true`. The badge stays accurate when the user is filtering.
 
 ---
 
@@ -39,23 +44,26 @@
 
 **Use case**
 - Real-time events are **triggers**, not authoritative state. After receiving an event the client refetches `GET /notifications` to reconcile.
-- Duplicate events are deduped by `_id`.
+- Duplicate events are deduped by `_id` (the legacy alias and the room emit are both fired for the same notification — clients must dedupe).
 - Background = push (FCM) for event reminders only; foreground = Socket.IO for everything.
 
-**Behavior note** — the event name is **not hardcoded** in the codebase. `NotificationBuilder` (in `src/app/builder/NotificationBuilder/`) accepts a `content.event` parameter and emits dynamically. Recommend standardizing on `notification:new` for the spec; backend must wire that name into the builder consistently.
+**Behavior note** — emitter sends two events for every notification:
+1. To room `user::<userId>` with event name `notification:new` (preferred channel for new clients).
+2. Globally on event `get-notification::<userId>` (legacy alias for older mobile builds).
+
+Both payloads carry the same notification document (see §[Real-time Reference](#real-time-reference)). The mobile client should subscribe to `notification:new` only on the `user::<userId>` room and ignore the legacy event once migrated.
 
 **Status — Socket.IO infrastructure** — `Implemented`
 
 **Implementation**
-- Server bootstrap: [`src/server.ts`](src/server.ts)
-- Connection handler: [`socketHelper`](src/helpers/socketHelper.ts)
-- Emit channel: [`sendSocket`](src/app/builder/NotificationBuilder/channels/socket.channel.ts) (emits to `user::<userId>` via global `io`)
-- Reads: — (no DB read on emit)
-- Writes: — (DB write happens elsewhere; this channel only emits)
+- Server bootstrap: [src/server.ts](src/server.ts)
+- Connection handler: [socketHelper](src/helpers/socketHelper.ts)
+- Emit (helper path): [notificationsHelper.ts](src/app/modules/notification/notificationsHelper.ts) — emits `notification:new` to `user::<userId>` and the legacy alias.
+- Emit (builder path): [sendSocket](src/app/builder/NotificationBuilder/channels/socket.channel.ts) — emits via `NotificationBuilder` with a dynamic event name (defaults to whatever the caller passes in `content.event`).
 
 ### Real-time Reference
 
-#### Socket.IO event — `notification:new` *(recommended event name)*
+#### Socket.IO event — `notification:new`
 
 **Auth handshake** — Socket.IO connect with `auth: { token: accessToken }`.
 
@@ -64,17 +72,22 @@
 ```json
 {
   "_id": "990z...",
-  "type": "EVENT_REMINDER",
+  "type": "EVENT_SCHEDULED",
   "title": "Surgery in 30 minutes",
   "subtitle": "Lap Chole - OR 3",
-  "iconUrl": "https://cdn.../bell.png",
-  "data": { "eventId": "888a..." },
+  "icon": "bell",
+  "link": { "label": "View Event", "url": "/events/888a..." },
+  "resourceType": "Event",
+  "resourceId": "888a...",
   "isRead": false,
   "createdAt": "2026-05-03T08:30:00.000Z"
 }
 ```
 
-> Notification types observed: `EVENT_REMINDER` · `EVENT_CONFIRMATION` · `PREFERENCE_CARD` · `SYSTEM`. Confirm the full enum with the team.
+> Notification types (`NOTIFICATION_TYPES` in [notification.interface.ts](src/app/modules/notification/notification.interface.ts)): `PREFERENCE_CARD_CREATED` · `EVENT_SCHEDULED` · `GENERAL` · `ADMIN` · `SYSTEM` · `MESSAGE` · `REMINDER`.
+
+**Business rules**
+- Recommended event name unification — `// TBD`: should the `NotificationBuilder` socket channel be locked to `notification:new` so every emission path uses the same event name? Today the helper path uses `notification:new` but the builder path takes whatever `content.event` the caller passes.
 
 ---
 
@@ -83,21 +96,25 @@
 **Trigger** — user opens the Notifications screen → [`GET /notifications`](#get-api-v1-notifications). Infinite scroll near the bottom → same endpoint with `?cursor=`.
 
 **Use case**
-- Cursor-based pagination anchored on `(createdAt, _id)` — server decodes the opaque cursor and runs `(createdAt, _id) < cursor` for index scan.
-- Strict newest-first sort by `createdAt`.
-- Soft-deleted rows (`deletedAt: { $ne: null }`) are filtered out at the service level.
-- `meta.unreadCount` always reflects the user's **total** unread, not just the page.
+- Cursor-based pagination anchored on `(createdAt, _id)` — server decodes the opaque cursor and runs `(createdAt < cursor.createdAt) OR (createdAt = cursor.createdAt AND _id < cursor._id)` for a stable, index-friendly scan that tolerates ties on `createdAt`.
+- Strict newest-first sort by `(createdAt, _id)` descending.
+- Soft-deleted rows (`deletedAt != null`) are filtered out at the service level.
+- `meta.unreadCount` always reflects the user's **total** unread (never the page or filter).
+- Optional `?unread=true` returns only unread notifications. The badge count is unaffected by this filter.
 
-**Behavior note** — cursor is opaque (server encodes / decodes). Client passes whatever it received in `meta.nextCursor`. When `meta.hasMore === false`, stop scrolling.
+**Behavior note** — cursor is opaque (server encodes / decodes as base64url-encoded JSON of `{createdAt, _id}`). Client passes whatever it received in `meta.nextCursor`. When `meta.hasMore === false`, `meta.nextCursor` is `null` and the client should stop scrolling.
+
+**Business rules**
+- Cursor staleness — `// TBD`: when the row a cursor points to is soft-deleted between requests, the next page silently skips it (the comparison still works on `createdAt/_id`). No error, no resync. Confirm this is acceptable UX.
 
 **Status** — `Implemented`
 
 **Implementation**
-- Route: [`notification.route.ts`](src/app/modules/notification/notification.route.ts)
-- Controller: [`NotificationController.listMyNotifications`](src/app/modules/notification/notification.controller.ts)
-- Service: [`NotificationService.listForUser`](src/app/modules/notification/notification.service.ts)
-- Validation: [`listNotificationsSchema`](src/app/modules/notification/notification.validation.ts)
-- Reads: `Notification` (via `$aggregate`)
+- Route: [notification.routes.ts](src/app/modules/notification/notification.routes.ts)
+- Controller: [NotificationController.listMyNotifications](src/app/modules/notification/notification.controller.ts)
+- Service: [NotificationService.listForUser](src/app/modules/notification/notification.service.ts)
+- Validation: [listNotificationsSchema](src/app/modules/notification/notification.validation.ts)
+- Reads: `Notification` (`find` + `countDocuments` for unread)
 - Writes: —
 
 ### API Reference
@@ -110,9 +127,9 @@ Lists the user's notifications. Cursor-based pagination anchored on `(createdAt,
 
 | Param | Type | Notes |
 |---|---|---|
-| `cursor` | string | Opaque cursor returned as `meta.nextCursor`. Omit on first page. |
-| `limit` | number | Default `20`, max `50` |
-| `unread` | boolean | When `true`, return only unread notifications |
+| `cursor` | string | Opaque cursor returned as `meta.nextCursor`. Omit on first page. Invalid cursor → `400 Invalid cursor`. |
+| `limit` | number (string) | Default `20`, max `50`. Values outside `[1, 50]` are clamped. |
+| `unread` | `"true"` \| `"false"` | When `"true"`, return only unread notifications. Does not affect `unreadCount`. |
 
 **Success — `200 OK`**
 
@@ -121,60 +138,84 @@ Lists the user's notifications. Cursor-based pagination anchored on `(createdAt,
   "success": true,
   "statusCode": 200,
   "message": "OK",
-  "data": [
-    {
-      "_id": "990z...",
-      "type": "EVENT_REMINDER",
-      "title": "Surgery in 30 minutes",
-      "subtitle": "Lap Chole - OR 3",
-      "iconUrl": "https://cdn.../bell.png",
-      "data": { "eventId": "888a..." },
-      "isRead": false,
-      "createdAt": "2026-05-03T08:30:00.000Z"
-    }
-  ],
   "meta": {
     "limit": 20,
     "nextCursor": "eyJjcmVhdGVkQXQiOiIyMDI2LTA1LTAzVDA4OjMwOjAwLjAwMFoiLCJfaWQiOiI5OTB6In0",
     "hasMore": true,
     "unreadCount": 7
-  }
+  },
+  "data": [
+    {
+      "id": "990z...",
+      "userId": "111u...",
+      "type": "EVENT_SCHEDULED",
+      "title": "Surgery in 30 minutes",
+      "subtitle": "Lap Chole - OR 3",
+      "icon": "bell",
+      "link": { "label": "View Event", "url": "/events/888a..." },
+      "resourceType": "Event",
+      "resourceId": "888a...",
+      "isRead": false,
+      "readAt": null,
+      "deletedAt": null,
+      "createdAt": "2026-05-03T08:30:00.000Z",
+      "updatedAt": "2026-05-03T08:30:00.000Z"
+    }
+  ]
 }
 ```
 
-> When `meta.hasMore === false`, stop scrolling.
+> When `meta.hasMore === false`, `meta.nextCursor` is `null` — stop scrolling.
+> `_id` is aliased to `id` by the response formatter ([sendResponse.ts](src/shared/sendResponse.ts)).
+
+**Errors**
+
+| Code | `message` |
+|---|---|
+| 400 | `Invalid cursor` |
+| 401 | (standard auth envelope) |
 
 ---
 
 ## 4. Tap Notification (Deep Link)
 
-**Trigger** — user taps a row → optimistic local mark-read → background [`PATCH /notifications/:notificationId/read`](#patch-api-v1-notifications-notificationid-read). Navigation is decided by `type` and `data` payload (handled in mobile router).
+**Trigger** — user taps a row → optimistic local mark-read → background [`PATCH /notifications/:notificationId/read`](#patch-api-v1-notifications-notificationid-read). Navigation is decided by `type` and `link`/`resourceType`+`resourceId` (handled in mobile router).
 
 **Use case**
-- Mark-read is idempotent — repeating the call returns `200` without re-incrementing anything.
-- Server validates ownership: `notification.recipientId === currentUser._id`. Mismatch → `403`.
+- Endpoint can also flip a notification back to **unread** by sending `{ "read": false }`. Default body / empty body is treated as `read = true`.
+- Mark-read is idempotent — repeating the call returns `200` and writes a fresh `readAt`. Repeating mark-as-read on an already-read row does not re-increment any counter (the badge derives from a `countDocuments`).
+- Server validates ownership: `notification.userId === currentUser.id`. Mismatch → `403 Not allowed`.
+- Soft-deleted notifications return `404 Notification not found` (cannot be re-read).
 
 **Behavior note** — optimistic update on the client; revert on `4xx/5xx`.
 
 **Status** — `Implemented`
 
 **Implementation**
-- Route: [`notification.route.ts`](src/app/modules/notification/notification.route.ts)
-- Controller: [`NotificationController.markRead`](src/app/modules/notification/notification.controller.ts)
-- Service: [`NotificationService.markRead`](src/app/modules/notification/notification.service.ts)
-- Validation: [`markReadSchema`](src/app/modules/notification/notification.validation.ts)
-- Reads: `Notification`
-- Writes: `Notification` (`isRead = true`, `readAt = now`)
+- Route: [notification.routes.ts](src/app/modules/notification/notification.routes.ts)
+- Controller: [NotificationController.markRead](src/app/modules/notification/notification.controller.ts)
+- Service: [NotificationService.markRead](src/app/modules/notification/notification.service.ts)
+- Validation: [markReadSchema](src/app/modules/notification/notification.validation.ts)
+- Reads: `Notification` (`findById`)
+- Writes: `Notification` (`isRead`, `readAt`)
 
 ### API Reference
 
 #### `PATCH /api/v1/notifications/:notificationId/read`
 
-Marks a single notification as read. Idempotent.
+Marks a single notification as read (or unread). Idempotent.
 
 **Path params** — `notificationId` (Mongo ObjectId)
 
-**Request body** — none.
+**Request body** — optional.
+
+```json
+{ "read": true }
+```
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `read` | boolean | `true` | When `false`, flips the row back to unread and clears `readAt`. |
 
 **Success — `200 OK`**
 
@@ -183,9 +224,11 @@ Marks a single notification as read. Idempotent.
   "success": true,
   "statusCode": 200,
   "message": "Notification marked as read",
-  "data": { "_id": "990z...", "isRead": true }
+  "data": { "id": "990z...", "isRead": true, "readAt": "2026-05-03T08:31:00.000Z" }
 }
 ```
+
+When `read=false`, `message` becomes `Notification marked as unread` and `readAt` is `null`.
 
 **Errors**
 
@@ -201,26 +244,26 @@ Marks a single notification as read. Idempotent.
 **Trigger** — user taps **"Mark all as read"** → [`PATCH /notifications/read-all`](#patch-api-v1-notifications-read-all).
 
 **Use case**
-- Server flips `isRead = true` for every unread notification owned by the caller in a single update.
-- Returns the count of rows updated so the client can verify.
+- Server flips `isRead = true` and stamps `readAt = now` for every unread, undeleted notification owned by the caller in one bulk update.
+- Returns the count of rows actually updated (`modifiedCount`) so the client can verify or display feedback.
 
-**Behavior note** — optimistic flip on the client; revert on error.
+**Behavior note** — optimistic flip on the client; revert on error. Re-calling when nothing is unread returns `{ updated: 0 }` — still `200`.
 
 **Status** — `Implemented`
 
 **Implementation**
-- Route: [`notification.route.ts`](src/app/modules/notification/notification.route.ts)
-- Controller: [`NotificationController.markAllRead`](src/app/modules/notification/notification.controller.ts)
-- Service: [`NotificationService.markAllRead`](src/app/modules/notification/notification.service.ts)
+- Route: [notification.routes.ts](src/app/modules/notification/notification.routes.ts)
+- Controller: [NotificationController.markAllRead](src/app/modules/notification/notification.controller.ts)
+- Service: [NotificationService.markAllRead](src/app/modules/notification/notification.service.ts)
 - Validation: —
-- Reads: — (uses `$set` directly)
+- Reads: — (single `updateMany`)
 - Writes: `Notification` (bulk update)
 
 ### API Reference
 
 #### `PATCH /api/v1/notifications/read-all`
 
-Marks every unread notification for the logged-in user as read.
+Marks every unread, undeleted notification for the logged-in user as read.
 
 **Request body** — none.
 
@@ -242,31 +285,31 @@ Marks every unread notification for the logged-in user as read.
 **Trigger** — user swipes a row → [`DELETE /notifications/:notificationId`](#delete-api-v1-notifications-notificationid).
 
 **Use case**
-- Delete is **soft** — server sets `deletedAt = now`; the row is filtered out of subsequent list queries.
-- Idempotent — deleting an already-deleted notification returns `200` without `404`.
+- Delete is **soft** — server sets `deletedAt = now`; the row is filtered out of subsequent list queries and from `unreadCount`.
+- Idempotent — deleting an already-soft-deleted notification returns `200` (no-op) instead of `404`. Hard-deleting (i.e. row missing entirely) still returns `404`.
 - Soft-delete leaves the row available for analytics / undo flows that don't yet exist on the client.
 
 **Business rules**
-- Soft-delete retention — `// TBD`: how long should soft-deleted rows be kept before hard-purge? Recommendation: 30 days, then a scheduled job hard-deletes.
-- Undo window on the client — `// TBD`: show a toast with "Undo" for ~5 s after swipe? Requires no API change (call the same DELETE again with `undo: true`, or skip the original call until the window expires).
+- Soft-delete retention — `// TBD`: how long should soft-deleted rows be kept before hard-purge? Current automatic purge is the existing `expiresAt` TTL (default 30 days from creation), which is independent of `deletedAt`. A scheduled job that hard-deletes rows where `deletedAt < now - 30d` is recommended.
+- Undo window on the client — `// TBD`: show a toast with "Undo" for ~5 s after swipe? No API change needed; the client can simply delay the DELETE call until the window expires.
 
 **Behavior note** — optimistic UI removal; restore the row on `4xx/5xx`.
 
 **Status** — `Implemented`
 
 **Implementation**
-- Route: [`notification.route.ts`](src/app/modules/notification/notification.route.ts)
-- Controller: [`NotificationController.deleteNotification`](src/app/modules/notification/notification.controller.ts)
-- Service: [`NotificationService.deleteById`](src/app/modules/notification/notification.service.ts)
-- Validation: [`paramIdSchema`](src/app/modules/notification/notification.validation.ts)
-- Reads: `Notification`
-- Writes: `Notification` (`deletedAt = now`)
+- Route: [notification.routes.ts](src/app/modules/notification/notification.routes.ts)
+- Controller: [NotificationController.deleteNotification](src/app/modules/notification/notification.controller.ts)
+- Service: [NotificationService.deleteById](src/app/modules/notification/notification.service.ts)
+- Validation: [paramIdSchema](src/app/modules/notification/notification.validation.ts)
+- Reads: `Notification` (`findById`)
+- Writes: `Notification` (`deletedAt = now`, only if not already deleted)
 
 ### API Reference
 
 #### `DELETE /api/v1/notifications/:notificationId`
 
-Soft-deletes a notification (sets `deletedAt`).
+Soft-deletes a notification (sets `deletedAt`). Idempotent.
 
 **Path params** — `notificationId` (Mongo ObjectId)
 
@@ -289,13 +332,14 @@ Soft-deletes a notification (sets `deletedAt`).
 
 | # | Method | Path | Status | Auth | Purpose |
 |---|---|---|---|---|---|
-| 1 | GET | `/api/v1/notifications` | `Implemented` | Bearer | List notifications + unread count in `meta` |
-| 2 | PATCH | `/api/v1/notifications/:notificationId/read` | `Implemented` | Bearer (owner) | Mark single as read |
-| 3 | PATCH | `/api/v1/notifications/read-all` | `Implemented` | Bearer | Mark every unread as read |
-| 4 | DELETE | `/api/v1/notifications/:notificationId` | `Implemented` | Bearer (owner) | Soft-delete a notification |
+| 1 | GET | `/api/v1/notifications` | `Implemented` | Bearer (`USER` / `SUPER_ADMIN`) | List notifications + unread count in `meta` |
+| 2 | PATCH | `/api/v1/notifications/:notificationId/read` | `Implemented` | Bearer (owner) | Mark single as read / unread |
+| 3 | PATCH | `/api/v1/notifications/read-all` | `Implemented` | Bearer (`USER` / `SUPER_ADMIN`) | Mark every unread as read; returns count |
+| 4 | DELETE | `/api/v1/notifications/:notificationId` | `Implemented` | Bearer (owner) | Soft-delete a notification (idempotent) |
 
 ### Real-time
 
 | Channel | Event | Status | Payload |
 |---|---|---|---|
-| Socket.IO room `user::<userId>` | `notification:new` *(recommended)* | `Partial` — infrastructure exists, event name is dynamic via `NotificationBuilder` | Full notification document (see §2) |
+| Socket.IO room `user::<userId>` | `notification:new` | `Implemented` (helper path) / `Partial` (builder path uses `content.event`) | Full notification document (see §2) |
+| Global emit `get-notification::<userId>` | (event name doubles as the address) | `Implemented` (legacy) | Same payload as above — kept for older mobile clients |

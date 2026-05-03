@@ -39,6 +39,8 @@ export const sendNotifications = async (data: Partial<INotification>): Promise<I
   //@ts-ignore
   const socketIo = global.io;
   if (socketIo) {
+    socketIo.to(`user::${data?.userId}`).emit('notification:new', result);
+    // Legacy alias — kept for older mobile clients
     socketIo.emit(`get-notification::${data?.userId}`, result);
   }
 

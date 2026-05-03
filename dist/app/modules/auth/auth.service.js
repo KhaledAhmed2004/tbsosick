@@ -260,7 +260,15 @@ const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
         if (!tokenPayload || !tokenPayload.email) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Invalid Google ID token');
         }
-        // Nonce replay protection: Google puts raw nonce in token
+        // Reject tokens where Google has not verified the email. Prevents an
+        // attacker from minting tokens for arbitrary unverified addresses.
+        if (!tokenPayload.email_verified) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Google account email is not verified');
+        }
+        // Nonce replay protection: Google echoes the raw nonce in the token
+        // when the client passes it to the SDK. Flutter's google_sign_in
+        // plugin doesn't expose nonce, so we only enforce the check if the
+        // client actually sent one.
         if (nonce && tokenPayload.nonce !== nonce) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
         }
@@ -269,7 +277,10 @@ const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
         providerId = tokenPayload.sub;
     }
     else {
-        // Apple
+        // Apple — nonce is mandatory (Apple best practice + plugin supports it)
+        if (!nonce) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Nonce is required for Apple sign-in');
+        }
         const applePayload = yield apple_signin_auth_1.default.verifyIdToken(idToken, {
             audience: config_1.default.apple_client_id,
             ignoreExpiration: false,
@@ -277,31 +288,24 @@ const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
         if (!applePayload.sub) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Invalid Apple ID token');
         }
-        // Nonce replay protection: Apple puts SHA256(nonce) in token.
-        // iOS SDK hashes the raw nonce before sending to Apple, so the
-        // token's `nonce` claim is the hash. We hash the client-provided
+        // Apple puts SHA256(nonce) in the token — hash the client-provided
         // raw nonce and compare.
-        if (nonce) {
-            const expectedHash = crypto_1.default
-                .createHash('sha256')
-                .update(nonce)
-                .digest('hex');
-            if (applePayload.nonce !== expectedHash) {
-                throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
-            }
+        const expectedHash = crypto_1.default
+            .createHash('sha256')
+            .update(nonce)
+            .digest('hex');
+        if (applePayload.nonce !== expectedHash) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
         }
         email = applePayload.email;
         providerId = applePayload.sub;
         name = email ? email.split('@')[0] : 'Apple User';
     }
-    // Find user by provider ID or email
+    // Find user strictly by provider ID. Matching on email here would let an
+    // attacker who controls a provider account with the same email address
+    // hijack a local/password account — see OWASP "Account Linking" guidance.
     const providerField = provider === 'google' ? 'googleId' : 'appleId';
-    let user = yield user_model_1.User.findOne({
-        $or: [
-            { [providerField]: providerId },
-            ...(email ? [{ email }] : []),
-        ],
-    }).select('+tokenVersion');
+    let user = yield user_model_1.User.findOne({ [providerField]: providerId }).select('+tokenVersion');
     if (user) {
         // Status checks
         if (user.status === user_1.USER_STATUS.DELETED) {
@@ -310,14 +314,18 @@ const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
         if (user.status === user_1.USER_STATUS.RESTRICTED) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Your account is restricted. Contact support.');
         }
-        // Link provider ID if not already linked
-        if (!user[providerField]) {
-            yield user_model_1.User.findByIdAndUpdate(user._id, {
-                [providerField]: providerId,
-            });
-        }
     }
     else {
+        // No user linked to this provider identity. If the email already
+        // belongs to another account, refuse to auto-link — the user must
+        // authenticate with that account first and link the provider
+        // explicitly from a settings flow.
+        if (email) {
+            const existingByEmail = yield user_model_1.User.findOne({ email });
+            if (existingByEmail) {
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.CONFLICT, 'An account with this email already exists. Please sign in with your password and link your social account from settings.');
+            }
+        }
         // Create new user
         if (!email) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Email is required to create an account. Please allow email sharing.');

@@ -54,14 +54,7 @@ type IData<T> = {
   success: boolean;
   statusCode: number;
   message?: string;
-  meta?: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
+  meta?: Record<string, unknown>;
   data?: T;
 };
 

@@ -53,7 +53,7 @@ export const saveToDatabase = async (
     type: content.type || 'SYSTEM',
     resourceType: content.resourceType,
     resourceId: resolvedResourceId,
-    read: false,
+    isRead: false,
   }));
 
   try {
