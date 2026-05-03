@@ -66,13 +66,6 @@ router.get(
   PreferenceCardController.getCards,
 );
 
-// List all private cards for the authenticated user
-router.get(
-  '/private',
-  auth(USER_ROLES.USER),
-  PreferenceCardController.listPrivateCards,
-);
-
 // Cards count (Stats): public cards and user's own cards
 router.get(
   '/stats',
@@ -126,7 +119,24 @@ router.post(
   PreferenceCardController.downloadCard,
 );
 
-// Favorite preference card
+// Favorite preference card (item-centric path)
+router.put(
+  '/:cardId/favorite',
+  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  validateRequest(PreferenceCardValidation.paramIdSchema),
+  PreferenceCardController.favoriteCard,
+);
+
+// Unfavorite preference card (item-centric path)
+router.delete(
+  '/:cardId/favorite',
+  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  validateRequest(PreferenceCardValidation.paramIdSchema),
+  PreferenceCardController.unfavoriteCard,
+);
+
+// DEPRECATED: legacy favorite path. Use `PUT /:cardId/favorite` (above).
+// Kept as an alias for backward compatibility — remove once mobile clients migrate.
 router.put(
   '/favorites/cards/:cardId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
@@ -134,7 +144,7 @@ router.put(
   PreferenceCardController.favoriteCard,
 );
 
-// Unfavorite preference card
+// DEPRECATED: legacy unfavorite path. Use `DELETE /:cardId/favorite` (above).
 router.delete(
   '/favorites/cards/:cardId',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),

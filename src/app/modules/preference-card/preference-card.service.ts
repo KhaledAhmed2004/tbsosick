@@ -13,6 +13,7 @@ import { Favorite } from '../favorite/favorite.model';
 import PDFBuilder from '../../builder/PDFBuilder';
 
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
+const MAX_FAVORITES_PER_USER = 100;
 
 /**
  * Resolves an array of { supply/suture: idOrName, quantity } items.
@@ -420,7 +421,6 @@ const listPrivatePreferenceCardsForUserFromDB = async (
   const qb = new QueryBuilder(
     PreferenceCardModel.find({
       createdBy: userId,
-      published: false,
     }),
     query || {},
   )
@@ -812,6 +812,25 @@ const favoritePreferenceCardInDB = async (
       StatusCodes.FORBIDDEN,
       'Not authorized to favorite this private card',
     );
+  }
+
+  // Per-user favorites cap. Skip for re-adds (idempotent) — only enforce when
+  // this card is not already in the user's favorites.
+  const existing = await Favorite.findOne({
+    userId: new Types.ObjectId(userId),
+    cardId: new Types.ObjectId(cardId),
+  }).lean();
+
+  if (!existing) {
+    const count = await Favorite.countDocuments({
+      userId: new Types.ObjectId(userId),
+    });
+    if (count >= MAX_FAVORITES_PER_USER) {
+      throw new ApiError(
+        StatusCodes.CONFLICT,
+        `Favorites limit reached (cap = ${MAX_FAVORITES_PER_USER} per user)`,
+      );
+    }
   }
 
   // Idempotent favorite using unique index constraint

@@ -39,6 +39,13 @@ router.get(
   UserController.getUserProfile,
 );
 
+// Get current user's own preference cards (PUBLIC + PRIVATE, drafts + published)
+router.get(
+  '/me/preference-cards',
+  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  UserController.getMyPreferenceCards,
+);
+
 // Get current user's favorite cards
 router.get(
   '/me/favorites',
