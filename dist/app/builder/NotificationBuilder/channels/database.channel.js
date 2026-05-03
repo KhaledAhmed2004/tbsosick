@@ -35,7 +35,7 @@ const saveToDatabase = (users, content) => __awaiter(void 0, void 0, void 0, fun
         type: content.type || 'SYSTEM',
         resourceType: content.resourceType,
         resourceId: resolvedResourceId,
-        read: false,
+        isRead: false,
     }));
     try {
         // Bulk insert for efficiency

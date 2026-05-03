@@ -27,7 +27,7 @@ const createSupply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
     });
 }));
 const updateSupply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield supplies_service_1.SuppliesService.updateSupplyInDB(req.params.id, req.body);
+    const result = yield supplies_service_1.SuppliesService.updateSupplyInDB(req.params.supplyId, req.body);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -36,7 +36,7 @@ const updateSupply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
     });
 }));
 const deleteSupply = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield supplies_service_1.SuppliesService.deleteSupplyFromDB(req.params.id);
+    const result = yield supplies_service_1.SuppliesService.deleteSupplyFromDB(req.params.supplyId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

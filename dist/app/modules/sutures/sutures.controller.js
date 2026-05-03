@@ -27,7 +27,7 @@ const createSuture = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
     });
 }));
 const updateSuture = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield sutures_service_1.SuturesService.updateSutureInDB(req.params.id, req.body);
+    const result = yield sutures_service_1.SuturesService.updateSutureInDB(req.params.sutureId, req.body);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -36,7 +36,7 @@ const updateSuture = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
     });
 }));
 const deleteSuture = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield sutures_service_1.SuturesService.deleteSutureFromDB(req.params.id);
+    const result = yield sutures_service_1.SuturesService.deleteSutureFromDB(req.params.sutureId);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

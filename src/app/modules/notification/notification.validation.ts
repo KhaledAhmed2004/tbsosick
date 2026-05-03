@@ -3,13 +3,15 @@ import { z } from 'zod';
 export const listNotificationsSchema = z.object({
   query: z
     .object({
-      limit: z.string().optional(),
-      page: z.string().optional(),
+      cursor: z.string().min(1).optional(),
+      limit: z
+        .string()
+        .regex(/^\d+$/)
+        .optional(),
+      unread: z.enum(['true', 'false']).optional(),
     })
     .optional(),
 });
-
-export const markAllReadSchema = z.object({});
 
 export const paramIdSchema = z.object({
   params: z.object({ notificationId: z.string().min(1) }),
@@ -17,5 +19,7 @@ export const paramIdSchema = z.object({
 
 export const markReadSchema = z.object({
   params: z.object({ notificationId: z.string().min(1) }),
-  body: z.object({ read: z.boolean().default(true) }).optional(),
+  body: z
+    .object({ read: z.boolean().default(true) })
+    .optional(),
 });

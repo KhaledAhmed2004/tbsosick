@@ -44,7 +44,7 @@ const createPreferenceCardSchema = zod_1.z.object({
 });
 // Update Preference Card (partial update)
 const updatePreferenceCardSchema = zod_1.z.object({
-    params: zod_1.z.object({ id: zod_1.z.string().min(1) }),
+    params: zod_1.z.object({ cardId: zod_1.z.string().min(1) }),
     body: zod_1.z.object({
         cardTitle: zod_1.z.string().min(3).optional(),
         surgeon: surgeonSchema.partial().optional(),
@@ -82,7 +82,9 @@ const summarizeEventSchema = zod_1.z.object({
 });
 // Param ID Schema
 const paramIdSchema = zod_1.z.object({
-    params: zod_1.z.object({ id: zod_1.z.string().min(1) }),
+    params: zod_1.z.object({
+        cardId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
+    }),
 });
 // Search Preference Cards Schema
 const searchCardsSchema = zod_1.z.object({
@@ -99,8 +101,22 @@ const searchCardsSchema = zod_1.z.object({
 });
 // Publish Preference Card Schema
 const publishPreferenceCardSchema = zod_1.z.object({
-    params: zod_1.z.object({ id: zod_1.z.string().min(1) }),
+    params: zod_1.z.object({ cardId: zod_1.z.string().min(1) }),
     body: zod_1.z.object({ published: zod_1.z.boolean() }),
+});
+const downloadPreferenceCardSchema = zod_1.z.object({
+    params: zod_1.z.object({
+        cardId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
+    }),
+});
+// Update Verification Status Schema (Admin)
+const updateVerificationStatusSchema = zod_1.z.object({
+    params: zod_1.z.object({
+        cardId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
+    }),
+    body: zod_1.z.object({
+        verificationStatus: zod_1.z.enum(['VERIFIED', 'UNVERIFIED']),
+    }),
 });
 exports.PreferenceCardValidation = {
     createPreferenceCardSchema,
@@ -108,4 +124,6 @@ exports.PreferenceCardValidation = {
     paramIdSchema,
     searchCardsSchema,
     publishPreferenceCardSchema,
+    downloadPreferenceCardSchema,
+    updateVerificationStatusSchema,
 };

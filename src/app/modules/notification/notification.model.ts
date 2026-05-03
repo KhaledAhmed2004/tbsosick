@@ -12,10 +12,6 @@ const NotificationSchema = new Schema<INotification>(
     title: { type: String, required: true },
     subtitle: { type: String },
 
-    // Polymorphic reference: `resourceType` + `resourceId` is the single way
-    // to link a notification back to its source entity. The legacy
-    // `referenceId` field has been removed — migrate any reads to
-    // `{ resourceType, resourceId }` instead.
     resourceType: { type: String },
     resourceId: { type: String },
 
@@ -25,18 +21,21 @@ const NotificationSchema = new Schema<INotification>(
     },
     metadata: { type: Schema.Types.Mixed },
 
-    read: { type: Boolean, default: false },
-    isDeleted: { type: Boolean, default: false },
+    isRead: { type: Boolean, default: false },
+    readAt: { type: Date, default: null },
+    deletedAt: { type: Date, default: null },
+
     icon: { type: String },
     expiresAt: { type: Date },
   },
   { timestamps: true },
 );
 
-NotificationSchema.index({ userId: 1, read: 1, createdAt: -1 });
+// Covers list (sort by createdAt desc, filter by deletedAt:null) and unread count
+NotificationSchema.index({ userId: 1, deletedAt: 1, createdAt: -1, _id: -1 });
+NotificationSchema.index({ userId: 1, isRead: 1, deletedAt: 1 });
 NotificationSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 NotificationSchema.index({ resourceType: 1, resourceId: 1 });
 
-// Keep both export names for compatibility with existing imports
 export const Notification = model<INotification>('Notification', NotificationSchema);
 export const NotificationModel = Notification;

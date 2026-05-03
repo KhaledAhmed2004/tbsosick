@@ -128,19 +128,18 @@ const deleteCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
         data: result,
     });
 }));
-const incrementDownloadCount = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const downloadCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const result = yield preference_card_service_1.PreferenceCardService.incrementDownloadCountInDB(req.params.cardId, user.id, user.role);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Download count incremented',
-        data: result,
-    });
+    const result = yield preference_card_service_1.PreferenceCardService.downloadPreferenceCardInDB(req.params.cardId, user.id, user.role);
+    // Set headers for PDF download
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
+    // Send the PDF buffer directly
+    res.status(http_status_codes_1.StatusCodes.OK).send(result.buffer);
 }));
 const favoriteCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const result = yield preference_card_service_1.PreferenceCardService.favoritePreferenceCardInDB(req.params.cardId, user.id);
+    const result = yield preference_card_service_1.PreferenceCardService.favoritePreferenceCardInDB(req.params.cardId, user.id, user.role);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -150,7 +149,7 @@ const favoriteCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
 }));
 const unfavoriteCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const result = yield preference_card_service_1.PreferenceCardService.unfavoritePreferenceCardInDB(req.params.cardId, user.id);
+    const result = yield preference_card_service_1.PreferenceCardService.unfavoritePreferenceCardInDB(req.params.cardId, user.id, user.role);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
@@ -181,23 +180,14 @@ const getSpecialties = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
         data: result,
     });
 }));
-const approveCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const updateVerificationStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const result = yield preference_card_service_1.PreferenceCardService.updateVerificationStatusInDB(req.params.cardId, user.role, 'VERIFIED');
+    const { verificationStatus } = req.body;
+    const result = yield preference_card_service_1.PreferenceCardService.updateVerificationStatusInDB(req.params.cardId, user.role, verificationStatus);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Preference card approved',
-        data: result,
-    });
-}));
-const rejectCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const user = req.user;
-    const result = yield preference_card_service_1.PreferenceCardService.updateVerificationStatusInDB(req.params.cardId, user.role, 'UNVERIFIED');
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Preference card rejected',
+        message: `Preference card status updated to ${verificationStatus}`,
         data: result,
     });
 }));
@@ -208,11 +198,10 @@ exports.PreferenceCardController = {
     getById,
     updateCard,
     deleteCard,
-    incrementDownloadCount,
+    downloadCard,
     favoriteCard,
     unfavoriteCard,
     getStats,
     getSpecialties,
-    approveCard,
-    rejectCard,
+    updateVerificationStatus,
 };

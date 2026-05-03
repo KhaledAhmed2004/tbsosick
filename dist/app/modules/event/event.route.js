@@ -16,9 +16,9 @@ router.post('/', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.S
 // List own events
 router.get('/', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), event_controller_1.EventController.getMyEvents);
 // Event details
-router.get('/:id', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), event_controller_1.EventController.getEventById);
+router.get('/:eventId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), event_controller_1.EventController.getEventById);
 // Update event
-router.patch('/:id', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(event_validation_1.EventValidation.updateEventZodSchema), event_controller_1.EventController.updateEvent);
+router.patch('/:eventId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(event_validation_1.EventValidation.updateEventZodSchema), event_controller_1.EventController.updateEvent);
 // Delete event
-router.delete('/:id', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), event_controller_1.EventController.deleteEvent);
+router.delete('/:eventId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), event_controller_1.EventController.deleteEvent);
 exports.EventRoutes = router;

@@ -67,7 +67,8 @@ const globalErrorHandler = (error, req, res, next) => {
                 },
             ];
         }
-        else if (error instanceof Error && error.message === 'Not allowed by CORS') {
+        else if (error instanceof Error &&
+            error.message === 'Not allowed by CORS') {
             statusCode = http_status_codes_1.StatusCodes.FORBIDDEN;
             const origin = String(req.headers.origin || 'undefined');
             message = 'CORS blocked: origin not allowed';
@@ -86,11 +87,15 @@ const globalErrorHandler = (error, req, res, next) => {
         else if (error instanceof ApiError_1.default) {
             statusCode = error.statusCode;
             message = error.message;
-            errorMessages = error.message ? [{ path: '', message: error.message }] : [];
+            errorMessages = error.message
+                ? [{ path: '', message: error.message }]
+                : [];
         }
         else if (error instanceof Error) {
             message = error.message;
-            errorMessages = error.message ? [{ path: '', message: error.message }] : [];
+            errorMessages = error.message
+                ? [{ path: '', message: error.message }]
+                : [];
         }
         res.locals.responsePayload = {
             success: false,
@@ -98,16 +103,6 @@ const globalErrorHandler = (error, req, res, next) => {
             message,
             errorMessages,
         };
-        if (statusCode === http_status_codes_1.StatusCodes.UNAUTHORIZED) {
-            return res.status(statusCode).json({
-                type: 'https://api.tbsosick.com/problems/unauthorized',
-                title: 'Unauthorized',
-                status: 401,
-                detail: message || 'Access token is missing or invalid',
-                code: 'UNAUTHORIZED',
-                request_id: req.headers['x-request-id'] || 'req-' + Math.random().toString(36).substr(2, 9),
-            });
-        }
         res.status(statusCode).json({
             success: false,
             message,

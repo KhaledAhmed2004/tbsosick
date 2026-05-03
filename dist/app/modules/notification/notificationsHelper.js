@@ -44,6 +44,8 @@ const sendNotifications = (data) => __awaiter(void 0, void 0, void 0, function* 
     //@ts-ignore
     const socketIo = global.io;
     if (socketIo) {
+        socketIo.to(`user::${data === null || data === void 0 ? void 0 : data.userId}`).emit('notification:new', result);
+        // Legacy alias — kept for older mobile clients
         socketIo.emit(`get-notification::${data === null || data === void 0 ? void 0 : data.userId}`, result);
     }
     return result;

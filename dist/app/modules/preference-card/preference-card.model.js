@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PreferenceCardModel = void 0;
+exports.PreferenceCardDownloadModel = exports.PreferenceCardModel = void 0;
 const mongoose_1 = require("mongoose");
 // Surgeon subdocument schema
 const SurgeonSchema = new mongoose_1.Schema({
@@ -61,6 +61,7 @@ const PreferenceCardSchema = new mongoose_1.Schema({
         enum: ['VERIFIED', 'UNVERIFIED'],
         default: 'UNVERIFIED',
     },
+    isDeleted: { type: Boolean, default: false },
 }, { timestamps: true });
 // ─── Indexes ─────────────────────────────────────────────────────────────
 // Owner dashboards: "list my cards sorted by most-recently updated."
@@ -89,3 +90,12 @@ PreferenceCardSchema.index({
 });
 // Export model
 exports.PreferenceCardModel = (0, mongoose_1.model)('PreferenceCard', PreferenceCardSchema);
+// ─── Download Tracking ───────────────────────────────────────────────────
+const PreferenceCardDownloadSchema = new mongoose_1.Schema({
+    userId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'User', required: true },
+    cardId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'PreferenceCard', required: true },
+    downloadDate: { type: String, required: true },
+}, { timestamps: true });
+// Unique constraint to prevent duplicate counts per user per card per day.
+PreferenceCardDownloadSchema.index({ userId: 1, cardId: 1, downloadDate: 1 }, { unique: true });
+exports.PreferenceCardDownloadModel = (0, mongoose_1.model)('PreferenceCardDownload', PreferenceCardDownloadSchema);

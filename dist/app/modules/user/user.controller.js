@@ -49,6 +49,31 @@ const getUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
         data: result,
     });
 }));
+const getMyPreferenceCards = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = req.user;
+    const result = yield preference_card_service_1.PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(user.id, req.query);
+    const favoriteCardIds = yield preference_card_service_1.PreferenceCardService.getFavoriteCardIdsForUserFromDB(user.id);
+    const favoriteSet = new Set(favoriteCardIds.map(id => id.toString()));
+    const summarized = result.data.map((doc) => ({
+        _id: doc._id || doc.id,
+        title: doc.cardTitle,
+        visibility: doc.published ? 'PUBLIC' : 'PRIVATE',
+        published: doc.published,
+        isFavorited: favoriteSet.has((doc._id || doc.id).toString()),
+        thumbnail: doc.photoLibrary && doc.photoLibrary.length > 0
+            ? doc.photoLibrary[0]
+            : null,
+        createdAt: doc.createdAt,
+        updatedAt: doc.updatedAt,
+    }));
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'My preference cards retrieved successfully',
+        meta: result.meta,
+        data: summarized,
+    });
+}));
 const getFavoriteCards = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
     const result = yield preference_card_service_1.PreferenceCardService.listFavoritePreferenceCardsForUserFromDB(user.id, req.query);
@@ -164,6 +189,7 @@ const getUsersStats = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
 exports.UserController = {
     createUser,
     getUserProfile,
+    getMyPreferenceCards,
     getFavoriteCards,
     updateProfile,
     getAllUserRoles,
