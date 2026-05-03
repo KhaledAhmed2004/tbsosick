@@ -31,6 +31,44 @@ const getUserProfile = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getMyPreferenceCards = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+
+  const result = await PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(
+    (user as any).id,
+    req.query,
+  );
+
+  const favoriteCardIds = await PreferenceCardService.getFavoriteCardIdsForUserFromDB(
+    (user as any).id,
+  );
+  const favoriteSet = new Set(
+    (favoriteCardIds as string[]).map(id => id.toString()),
+  );
+
+  const summarized = (result.data as any[]).map((doc: any) => ({
+    _id: doc._id || doc.id,
+    title: doc.cardTitle,
+    visibility: doc.published ? 'PUBLIC' : 'PRIVATE',
+    published: doc.published,
+    isFavorited: favoriteSet.has((doc._id || doc.id).toString()),
+    thumbnail:
+      doc.photoLibrary && doc.photoLibrary.length > 0
+        ? doc.photoLibrary[0]
+        : null,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+  }));
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'My preference cards retrieved successfully',
+    meta: result.meta,
+    data: summarized,
+  });
+});
+
 const getFavoriteCards = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
 
@@ -177,6 +215,7 @@ const getUsersStats = catchAsync(async (req: Request, res: Response) => {
 export const UserController = {
   createUser,
   getUserProfile,
+  getMyPreferenceCards,
   getFavoriteCards,
   updateProfile,
   getAllUserRoles,
