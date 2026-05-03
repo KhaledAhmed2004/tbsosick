@@ -31,10 +31,6 @@
 - Server-computed `unreadCount` is total across the user's full notification set, not just the current page.
 - Single round-trip: list page + count in one call. The client doesn't need a second request just for the badge.
 
-**Status — separate `GET /notifications/unread-count` endpoint** — `Not implemented`
-
-> The doc previously proposed a dedicated unread-count endpoint; in code, the count is returned in `meta.unreadCount` of `GET /notifications`. Keeping a separate endpoint is unnecessary. **Recommendation**: drop the separate endpoint from the spec.
-
 ---
 
 ## 2. Real-time Updates
@@ -44,7 +40,7 @@
 **Use case**
 - Real-time events are **triggers**, not authoritative state. After receiving an event the client refetches `GET /notifications` to reconcile.
 - Duplicate events are deduped by `_id`.
-- Background = push (FCM / APNs) for event reminders only; foreground = Socket.IO for everything.
+- Background = push (FCM) for event reminders only; foreground = Socket.IO for everything.
 
 **Behavior note** — the event name is **not hardcoded** in the codebase. `NotificationBuilder` (in `src/app/builder/NotificationBuilder/`) accepts a `content.event` parameter and emits dynamically. Recommend standardizing on `notification:new` for the spec; backend must wire that name into the builder consistently.
 
@@ -297,7 +293,6 @@ Soft-deletes a notification (sets `deletedAt`).
 | 2 | PATCH | `/api/v1/notifications/:notificationId/read` | `Implemented` | Bearer (owner) | Mark single as read |
 | 3 | PATCH | `/api/v1/notifications/read-all` | `Implemented` | Bearer | Mark every unread as read |
 | 4 | DELETE | `/api/v1/notifications/:notificationId` | `Implemented` | Bearer (owner) | Soft-delete a notification |
-| 5 | GET | `/api/v1/notifications/unread-count` | `Not implemented` | Bearer | *(redundant — count already in `GET /notifications` meta)* |
 
 ### Real-time
 
