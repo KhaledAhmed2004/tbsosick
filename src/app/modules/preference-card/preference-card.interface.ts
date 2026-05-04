@@ -32,7 +32,7 @@ export type PreferenceCard = {
   keyNotes: string;
   photoLibrary: string[];
   downloadCount: number;
-  published: boolean;
+  visibility: 'PUBLIC' | 'PRIVATE';
   verificationStatus: 'VERIFIED' | 'UNVERIFIED';
   isDeleted?: boolean;
 };

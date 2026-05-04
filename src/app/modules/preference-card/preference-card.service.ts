@@ -135,15 +135,19 @@ const assertCardIsPublishable = (card: any) => {
 
 const getPreferenceCardCountsFromDB = async (userId: string) => {
   const [AllCardsCount, myCardsCount] = await Promise.all([
-    PreferenceCardModel.countDocuments({ published: true }),
-    PreferenceCardModel.countDocuments({ createdBy: userId }),
+    PreferenceCardModel.countDocuments({
+      isDeleted: false,
+      $or: [{ visibility: 'PUBLIC' }, { createdBy: userId }],
+    }),
+    PreferenceCardModel.countDocuments({ createdBy: userId, isDeleted: false }),
   ]);
   return { AllCardsCount, myCardsCount };
 };
 
-const getDistinctSpecialtiesFromDB = async () => {
+const getDistinctSpecialtiesFromDB = async (userId: string) => {
   const specialties = await PreferenceCardModel.distinct('surgeon.specialty', {
-    published: true,
+    isDeleted: false,
+    $or: [{ visibility: 'PUBLIC' }, { createdBy: userId }],
   });
   return specialties.filter(Boolean).sort();
 };
@@ -390,9 +394,9 @@ const createPreferenceCardInDB = async (userId: string, data: any) => {
     createdBy: userId,
   };
 
-  // If the client is creating the card already marked as published,
+  // If the client is creating the card already marked as PUBLIC,
   // enforce the completeness invariant up front.
-  if (dataToSave.published === true) {
+  if (dataToSave.visibility === 'PUBLIC') {
     assertCardIsPublishable(dataToSave);
   }
 
@@ -403,6 +407,7 @@ const createPreferenceCardInDB = async (userId: string, data: any) => {
 const listPreferenceCardsForUserFromDB = async (userId: string) => {
   const docs = await PreferenceCardModel.find({
     createdBy: userId,
+    isDeleted: false,
   })
     .populate('supplies.supply', 'name -_id')
     .populate('sutures.suture', 'name -_id')
@@ -421,6 +426,7 @@ const listPrivatePreferenceCardsForUserFromDB = async (
   const qb = new QueryBuilder(
     PreferenceCardModel.find({
       createdBy: userId,
+      isDeleted: false,
     }),
     query || {},
   )
@@ -462,7 +468,7 @@ const getPreferenceCardByIdFromDB = async (
   const isOwner = doc.createdBy.toString() === userId;
   const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
 
-  if (!isOwner && !isSuperAdmin && !doc.published) {
+  if (!isOwner && !isSuperAdmin && doc.visibility !== 'PUBLIC') {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Not authorized to access this card',
@@ -515,9 +521,9 @@ const updatePreferenceCardInDB = async (
     );
   }
 
-  // If the update flips the card to `published: true`, pre-check the
+  // If the update flips the card to `visibility: 'PUBLIC'`, pre-check the
   // merged shape so half-filled drafts can never be published.
-  if (payload.published === true) {
+  if (payload.visibility === 'PUBLIC') {
     const full = await PreferenceCardModel.findById(id).lean();
     if (full) {
       assertCardIsPublishable({ ...full, ...payload });
@@ -568,12 +574,6 @@ const updateVerificationStatusInDB = async (
     );
   }
 
-  // Enforce completeness before moving to VERIFIED. Drafts and
-  // UNVERIFIED cards are allowed to be incomplete.
-  if (status === 'VERIFIED') {
-    assertCardIsPublishable(doc.toObject());
-  }
-
   doc.verificationStatus = status;
   await doc.save();
   return { verificationStatus: doc.verificationStatus };
@@ -603,13 +603,30 @@ const updateVerificationStatusInDB = async (
  * lower-traffic and this method is the reference pattern when they're
  * migrated.
  */
-const listPublicPreferenceCardsFromDB = async (query?: Record<string, any>) => {
+const listPublicPreferenceCardsFromDB = async (
+  userId: string,
+  query?: Record<string, any>,
+) => {
   const rawQuery = query || {};
   const page = Math.max(Number(rawQuery.page) || 1, 1);
   const limit = Math.min(Math.max(Number(rawQuery.limit) || 10, 1), 50);
   const skip = (page - 1) * limit;
 
-  const match: Record<string, any> = { published: true, isDeleted: false };
+  // Unified visibility match:
+   // 1. All PUBLIC cards
+   // 2. User's own PRIVATE cards (only visible to owner)
+   const match: Record<string, any> = {
+     isDeleted: false,
+     $or: [
+       { visibility: 'PUBLIC' },
+       { createdBy: new Types.ObjectId(userId) },
+     ],
+   };
+
+  // Optional verification status filter (Admin moderation or Library filter)
+  if (rawQuery.verificationStatus) {
+    match.verificationStatus = rawQuery.verificationStatus;
+  }
 
   // Specialty facet filter. Uses exact match now that `surgeon.specialty`
   // is indexed — callers pass the canonical string from `/specialties`.
@@ -803,11 +820,11 @@ const favoritePreferenceCardInDB = async (
     throw new ApiError(StatusCodes.GONE, 'This preference card has been deleted');
   }
 
-  // Visibility check: Card must be published OR the user must be the creator OR SUPER_ADMIN
+  // Visibility check: Card must be PUBLIC OR the user must be the creator OR SUPER_ADMIN
   const isOwner = card.createdBy.toString() === userId;
   const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
 
-  if (!card.published && !isOwner && !isSuperAdmin) {
+  if (card.visibility !== 'PUBLIC' && !isOwner && !isSuperAdmin) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Not authorized to favorite this private card',
@@ -865,11 +882,11 @@ const unfavoritePreferenceCardInDB = async (
     throw new ApiError(StatusCodes.GONE, 'This preference card has been deleted');
   }
 
-  // Visibility check: Card must be published OR the user must be the creator OR SUPER_ADMIN
+  // Visibility check: Card must be PUBLIC OR the user must be the creator OR SUPER_ADMIN
   const isOwner = card.createdBy.toString() === userId;
   const isSuperAdmin = role === USER_ROLES.SUPER_ADMIN;
 
-  if (!card.published && !isOwner && !isSuperAdmin) {
+  if (card.visibility !== 'PUBLIC' && !isOwner && !isSuperAdmin) {
     throw new ApiError(
       StatusCodes.FORBIDDEN,
       'Not authorized to unfavorite this private card',

@@ -74,7 +74,11 @@ const PreferenceCardSchema = new Schema<PreferenceCard>(
     },
 
     downloadCount: { type: Number, default: 0 },
-    published: { type: Boolean, default: false },
+    visibility: {
+      type: String,
+      enum: ['PUBLIC', 'PRIVATE'],
+      default: 'PRIVATE',
+    },
     verificationStatus: {
       type: String,
       enum: ['VERIFIED', 'UNVERIFIED'],
@@ -89,13 +93,13 @@ const PreferenceCardSchema = new Schema<PreferenceCard>(
 // Owner dashboards: "list my cards sorted by most-recently updated."
 PreferenceCardSchema.index({ createdBy: 1, updatedAt: -1 });
 
-// Home / public list: `{ published: true }` base filter + sort by createdAt.
-// ESR rule — equality on `published` + `verificationStatus`, then sort on
+// Home / public list: `{ visibility: 'PUBLIC' }` base filter + sort by createdAt.
+// ESR rule — equality on `visibility` + `verificationStatus`, then sort on
 // `createdAt` — so the index directly serves the home screen query plan.
-PreferenceCardSchema.index({ published: 1, verificationStatus: 1, createdAt: -1 });
+PreferenceCardSchema.index({ visibility: 1, verificationStatus: 1, createdAt: -1 });
 
 // Specialty facet filter (Library screen, public list).
-PreferenceCardSchema.index({ 'surgeon.specialty': 1, published: 1 });
+PreferenceCardSchema.index({ 'surgeon.specialty': 1, visibility: 1 });
 
 // Full-text search — replaces the old `$regex` scan in QueryBuilder.search().
 // Weighted so title matches rank above body/specialty matches.
