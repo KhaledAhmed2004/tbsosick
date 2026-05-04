@@ -40,7 +40,7 @@ const createPreferenceCardSchema = z.object({
     workflow: z.string().optional(),
     keyNotes: z.string().optional(),
     photoLibrary: z.array(z.string()).max(10).optional(),
-    published: z.boolean().optional(),
+    visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
   }),
 });
 
@@ -59,7 +59,7 @@ const updatePreferenceCardSchema = z.object({
     workflow: z.string().optional(),
     keyNotes: z.string().optional(),
     photoLibrary: z.array(z.string()).max(10).optional(),
-    published: z.boolean().optional(),
+    visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
   }),
 });
 

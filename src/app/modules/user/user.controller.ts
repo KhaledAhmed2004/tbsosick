@@ -49,8 +49,7 @@ const getMyPreferenceCards = catchAsync(async (req: Request, res: Response) => {
   const summarized = (result.data as any[]).map((doc: any) => ({
     _id: doc._id || doc.id,
     title: doc.cardTitle,
-    visibility: doc.published ? 'PUBLIC' : 'PRIVATE',
-    published: doc.published,
+    visibility: doc.visibility,
     isFavorited: favoriteSet.has((doc._id || doc.id).toString()),
     thumbnail:
       doc.photoLibrary && doc.photoLibrary.length > 0

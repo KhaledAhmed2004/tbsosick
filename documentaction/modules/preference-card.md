@@ -3,21 +3,6 @@
 > **Section**: Backend API specifications for the preference-card module.
 > **Base URL**: `{{baseUrl}}` = `http://localhost:5000/api/v1`
 > **Response format**: See [Standard Response Envelope](../README.md#standard-response-envelope)
-> **UX Flows referencing this module**:
-> - [App Home](../app-screens/02-home.md) — Stats, search, favorites, download
-> - [App Card Details](../app-screens/03-preference-card-details.md) — Get/Create/Update/Delete card
-> - [App Library](../app-screens/04-library.md) — Public/private listing, specialties filter
-> - [Dashboard Preference Card Management](../dashboard-screens/04-preference-card-management.md) — Admin moderation, verification
-
-> **Verification contract (per [D8](../overview.md#appendix-a--decisions-log-v1)):**
-> Card verification (Approve / Reject) uses the **unified** `PATCH /preference-cards/:cardId` endpoint with `{ verificationStatus }` in the body, role-gated to `SUPER_ADMIN`. Mirrored verb routes (`/approve`, `/reject`) and the transitional `/:cardId/status` route are **deprecated**.
->
-> **Code state**: Source still uses `PATCH /:cardId/status` (see `preference-card.route.ts`). Code refactor pending — clients should target the unified `PATCH /:cardId` contract documented here.
-
-> **Canonical user's-own-cards endpoint (Q1):**
-> User's own cards are fetched via `GET /preference-cards?visibility=private` — there is no separate `/my-cards` or `/private` endpoint in the canonical API surface. UX tab labels stay product-friendly (e.g. Home shows "All Cards / My Cards"); the underlying call is the same `?visibility=…` shape with different params.
->
-> **Code state**: Source still exposes a transitional `/preference-cards/private` route (see `preference-card.route.ts`). It is **being deprecated** — clients should target `GET /preference-cards?visibility=private` documented here.
 
 ---
 
@@ -42,19 +27,24 @@
 ### 3.1 List/Search Preference Cards
 
 ```
-GET /preference-cards?visibility=public&searchTerm=keyword&surgeonSpecialty=Orthopedics&verificationStatus=VERIFIED
+GET /preference-cards?searchTerm=keyword
 Auth: Bearer {{accessToken}}
 ```
 
-> Single endpoint for both public-tab and private-tab list views. Pass `visibility=public` for the public library/admin moderation list, or `visibility=private` for the user's own private cards.
+> **Primary Search Endpoint**: This is the main API used to search cards.
+> 
+By default, it returns:
+- All **public (published) cards**
+- Your **own private cards**
+- **Use `visibility=private`**  
+  → You get: Only your own private cards 
 
 **Query Parameters:**
-- `visibility`: `public` (default for public library / admin) or `private` (user's own private cards).
-- `searchTerm`: Search by card title, surgeon name, or medication.
-- `surgeonSpecialty` / `specialty`: Filter by surgeon's specialty (regex match).
+- `searchTerm`: (Optional) Search by card title, surgeon name, or medication.
+- `visibility`: `public` (Default) or `private` (Only your cards).
+- `surgeonSpecialty` / `specialty`: Filter by surgeon's specialty.
 - `verificationStatus`: Filter by `VERIFIED` or `UNVERIFIED`.
-- `page`: Pagination page (default `1`).
-- `limit`: Pagination limit (default `10`).
+- `page` / `limit`: Standard pagination.
 
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
@@ -62,16 +52,18 @@ Auth: Bearer {{accessToken}}
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `listPublicPreferenceCardsFromDB` / `listPrivatePreferenceCardsForUserFromDB`
 
 **Business Logic (`listPublicPreferenceCardsFromDB`):**
-- **Aggregation Pipeline**: Efficiency-er jonno MongoDB aggregation use kore search ebong filters apply kora hoy.
-- **Text Search**: `cardTitle`, `surgeon.fullName`, ebong `medication` field-er opor full-text index (`$text`) use kore search kora hoy.
-- **Specialty Filter**: `surgeon.specialty` field-er opor exact matching apply kora hoy.
-- **Data Flattening**: `supplies` ebong `sutures` populate kore name extract kora hoy jate client-side rendering shohoj hoy.
-- **Visibility Control**: Shudhu matro `published: true` ebong `isDeleted: false` cards return kora hoy.
+- **Unified Visibility**: Uses an `$or` query to fetch cards that are either `visibility: 'PUBLIC'` OR `createdBy: authenticatedUser`.
+- **Privacy Enforcement**: PRIVATE cards from other users are never returned, even to `SUPER_ADMIN`.
+- **Aggregation Pipeline**: MongoDB aggregation is used for efficiency to apply search and filters.
+- **Text Search**: Search is performed on `cardTitle`, `surgeon.fullName`, and `medication` fields using a full-text index (`$text`).
+- **Specialty Filter**: Exact matching is applied to the `surgeon.specialty` field.
+- **Data Flattening**: Supplies and sutures are populated to extract names for easier client-side rendering.
+- **Deleted Filter**: Only cards with `isDeleted: false` are returned.
 
 **Business Logic (`listPrivatePreferenceCardsForUserFromDB`):**
-- `QueryBuilder` use kore user-er nijer draft (unpublished) cards fetch kora hoy.
-- Shudhu `createdBy: userId` filter apply kora hoy privacy maintain korte.
-- When `visibility=private`, results are scoped to `creator === authenticatedUser` — the endpoint never returns another user's private cards, even to `SUPER_ADMIN`.
+- `QueryBuilder` is used to fetch the user's own cards (both PUBLIC and PRIVATE).
+- A `createdBy: userId` and `isDeleted: false` filter is applied to maintain privacy and exclude deleted items.
+- Results are strictly scoped to the authenticated user.
 
 #### Responses
 
@@ -185,7 +177,7 @@ GET /preference-cards/stats
 Auth: Bearer {{accessToken}}
 ```
 
-> Home screen-e stats dekhate use hoy. Total public cards ebong user-er nijer cards er count return kore.
+> Used to show stats on the Home screen. Returns counts for total public cards and the user's own cards.
 
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
@@ -193,9 +185,9 @@ Auth: Bearer {{accessToken}}
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `getCountsForCards`
 
 **Business Logic (`getCountsForCards`):**
-- `Promise.all` use kore parallel-vabe database query run kora hoy.
-- Total published cards-er count (`AllCardsCount`) ebong current user-er create kora cards-er count (`myCardsCount`) calculate kora hoy.
-- Accurate counts return kora hoy jate dashboard stats update thake.
+- Database queries are run in parallel using `Promise.all`.
+- The count of total published cards (`AllCardsCount`) and the count of cards created by the current user (`myCardsCount`) are calculated.
+- Accurate counts are returned to keep dashboard stats updated.
 
 #### Responses
 
@@ -221,12 +213,17 @@ GET /preference-cards/specialties
 Auth: Bearer {{accessToken}}
 ```
 
-> Filter dropdown-e dynamic specialty options dekhate backend theke shob published card-er unique specialties fetch korar jonno. Eta json format-e ekta array of strings return kore.
+> use case: its used to populate the filter dropdown dynamically.
 
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
 - **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `getSpecialties`
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `getDistinctSpecialtiesFromDB`
+
+**Business Logic (`getDistinctSpecialtiesFromDB`):**
+- **Unified Discovery**: Fetches unique specialties from all cards that are either `published: true` or created by the current user. This ensures the filter dropdown shows relevant options for both public content and the user's private drafts.
+- **Data Cleanup**: Filters out any null or empty values using `filter(Boolean)`.
+- **User Experience**: Sorts the list alphabetically to ensure a consistent and predictable dropdown order in the UI.
 
 #### Responses
 
@@ -256,7 +253,7 @@ Content-Type: multipart/form-data
 Auth: Bearer {{accessToken}} (USER)
 ```
 
-> Notun preference card create kore. `cardTitle` ar `surgeon` required — baki fields optional (draft save korar jonno). `published: true` set korle shob required fields thakte hobe. Supplies/Sutures e ObjectId ba plain name duita-i pathano jay — name dile backend auto-create kore catalog e.
+> use case: User Creates a new preference card.
 
 **Implementation:**
 - **Route**: `src/app/modules/preference-card/preference-card.route.ts`
@@ -264,10 +261,10 @@ Auth: Bearer {{accessToken}} (USER)
 - **Service**: `src/app/modules/preference-card/preference-card.service.ts` — `createPreferenceCardInDB`
 
 **Business Logic (`createPreferenceCardInDB`):**
-- **Draft Support**: Schema level-e long-form fields optional thakai incomplete card draft hisebe save kora jay.
-- **Publish Validation**: Jodi `published: true` pathano hoy, tobe `medication`, `instruments`, `workflow` ityadi required fields fill-up kora ache kina ta verify kora hoy.
-- **Auto-Cataloging**: Supplies ebong Sutures-er field-e jodi notun name pawa jay, tobe backend automatically segulo respective catalog-e insert kore.
-- **Ownership**: `createdBy` field-e current user-er ID set kora hoy.
+- **Draft Support**: Long-form fields are optional at the schema level, allowing incomplete cards to be saved as `PRIVATE` drafts.
+- **Publish Validation**: If `visibility: 'PUBLIC'` is sent, the system verifies whether required fields like `medication`, `instruments`, `workflow`, etc., are filled.
+- **Auto-Cataloging**: If new names are found in the Supplies and Sutures fields, the backend automatically inserts them into their respective catalogs.
+- **Ownership**: The current user's ID is set in the `createdBy` field.
 
 **Middleware chain**: `auth(USER) → fileHandler(photoLibrary max 5) → parseBody → validateRequest`
 
@@ -295,12 +292,12 @@ Auth: Bearer {{accessToken}} (USER)
   "prepping": "Betadine",
   "workflow": "Incision, portal placement, joint inspection...",
   "keyNotes": "Be careful with the ACL",
-  "published": false
+  "visibility": "PRIVATE"
 }
 ```
 
-> `photoLibrary` file upload e pathate hoy — form field name `photoLibrary`, max 5 files.
-> `supplies` ar `sutures` JSON string hisebe pathate hoy multipart e.
+> Upload `photoLibrary` files using the form field name `photoLibrary`, max 5 files.
+> Send `supplies` and `sutures` as JSON strings in the multipart form data.
 
 #### Responses
 
@@ -334,7 +331,7 @@ Auth: Bearer {{accessToken}} (USER)
       "workflow": "Incision, portal placement, joint inspection...",
       "keyNotes": "Be careful with the ACL",
       "photoLibrary": [],
-      "published": false,
+      "visibility": "PRIVATE",
       "verificationStatus": "UNVERIFIED",
       "downloadCount": 0,
       "createdBy": "664a1b2c3d4e5f6a7b8c0001",
@@ -362,7 +359,7 @@ GET /preference-cards/:cardId
 Auth: Bearer {{accessToken}} (USER)
 ```
 
-> Card-er shob details (surgeon, supplies, sutures, workflow, etc.) fetch korar jonno.
+> Fetches all card details (surgeon, supplies, sutures, workflow, etc.).
 
 **Implementation:**
 - **Route**: `src/app/modules/preference-card/preference-card.route.ts`
@@ -370,9 +367,9 @@ Auth: Bearer {{accessToken}} (USER)
 - **Service**: `src/app/modules/preference-card/preference-card.service.ts` — `getPreferenceCardByIdFromDB`
 
 **Business Logic (`getPreferenceCardByIdFromDB`):**
-- **Authorization**: Private (unpublished) card shudhu owner ba SUPER_ADMIN access korte pare.
-- **Data Enrichment**: Supplies ebong Sutures populate kore details return kora hoy.
-- **Flattening**: Data-ke flatten kora hoy jate UI-te map kora shohoj hoy.
+- **Authorization**: Private (unpublished) cards can only be accessed by the owner or SUPER_ADMIN.
+- **Data Enrichment**: Returns details by populating Supplies and Sutures.
+- **Flattening**: Data is flattened for easier mapping in the UI.
 
 #### Responses
 
@@ -443,7 +440,7 @@ Content-Type: multipart/form-data
 Auth: Bearer {{accessToken}} (USER)
 ```
 
-> Existing card update kore. Shudhu je fields change korte chay segula pathale hobe. Owner ba SUPER_ADMIN chara update possible na.
+> Updates an existing card. Only the fields that need changing should be sent. Updates are only possible for the owner or SUPER_ADMIN.
 
 **Implementation:**
 - **Route**: `src/app/modules/preference-card/preference-card.route.ts`
@@ -451,9 +448,9 @@ Auth: Bearer {{accessToken}} (USER)
 - **Service**: `src/app/modules/preference-card/preference-card.service.ts` — `updatePreferenceCardInDB`
 
 **Business Logic (`updatePreferenceCardInDB`):**
-- **Ownership Check**: Shudhu card owner ba SUPER_ADMIN update korte pare.
-- **Verification Reset**: Jodi card-er critical fields update kora hoy, tobe verification status automatically `UNVERIFIED` state-e back kore (moderation maintain korar jonno).
-- **Photo Management**: Notun photos upload hole `photoLibrary` array-te append kora hoy.
+- **Ownership Check**: Only the card owner or SUPER_ADMIN can update.
+- **Verification Reset**: If critical card fields are updated, the verification status automatically reverts to `UNVERIFIED` (to maintain moderation).
+- **Photo Management**: New photos are appended to the `photoLibrary` array upon upload.
 
 **Middleware chain**: `auth(USER) → fileHandler(photoLibrary max 5) → parseBody → validateRequest`
 
@@ -462,7 +459,7 @@ Auth: Bearer {{accessToken}} (USER)
 {
   "cardTitle": "Updated Knee Arthroscopy",
   "medication": "Updated medication info",
-  "published": true
+  "visibility": "PUBLIC"
 }
 ```
 
@@ -477,7 +474,7 @@ Auth: Bearer {{accessToken}} (USER)
     "data": {
       "_id": "664a1b2c3d4e5f6a7b8c9d0e",
       "cardTitle": "Updated Knee Arthroscopy",
-      "published": true,
+      "visibility": "PUBLIC",
       "verificationStatus": "UNVERIFIED",
       "updatedAt": "2026-03-16T08:00:00.000Z"
     }
@@ -511,7 +508,7 @@ DELETE /preference-cards/:cardId
 Auth: Bearer {{accessToken}} (USER or SUPER_ADMIN)
 ```
 
-> Card permanently delete kore. Owner ba SUPER_ADMIN chara delete possible na. Hard delete — restore possible na. Admin-o ei endpoint use kore manually card delete korte pare.
+> Permanently deletes a card. Deletion is only possible for the owner or SUPER_ADMIN. This is a hard delete; restoration is not possible. Admins can also use this endpoint to manually delete cards.
 
 **Implementation:**
 - **Route**: `src/app/modules/preference-card/preference-card.route.ts`
@@ -519,8 +516,8 @@ Auth: Bearer {{accessToken}} (USER or SUPER_ADMIN)
 - **Service**: `src/app/modules/preference-card/preference-card.service.ts` — `deletePreferenceCardFromDB`
 
 **Business Logic (`deletePreferenceCardFromDB`):**
-- **Authorization**: Record existence check kora hoy ebong owner ba SUPER_ADMIN check kora hoy.
-- **Hard Delete**: `findByIdAndDelete` use kore record permanent delete kora hoy.
+- **Authorization**: Checks for record existence and verifies the owner or SUPER_ADMIN.
+- **Hard Delete**: The record is permanently deleted using `findByIdAndDelete`.
 
 #### Responses
 
@@ -563,7 +560,7 @@ PUT /preference-cards/favorites/cards/:cardId
 Auth: Bearer {{accessToken}}
 ```
 
-> Card favorite list-e add korar jonno. Idempotent behaviour follow kore (already favorite thakle 200 OK return kore).
+> Adds a card to the favorites list. Follows idempotent behavior (returns 200 OK if already favorited).
 
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
@@ -571,10 +568,10 @@ Auth: Bearer {{accessToken}}
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `favoritePreferenceCardInDB`
 
 **Business Logic (`favoritePreferenceCardInDB`):**
-- Card existence check kora hoy; na thakle `NOT_FOUND` error throw kore.
-- Card-ti soft-deleted (`isDeleted: true`) hole `GONE` (410) ashe.
-- Visibility check: Private card hole shudhu creator favorite korte pare.
-- Unique index on `(userId, cardId)` use kore idempotency ensure kora hoy. Already favorited thakle silently success return kore.
+- Checks for card existence; throws a `NOT_FOUND` error if it doesn't exist.
+- If the card is soft-deleted (`isDeleted: true`), a `GONE` (410) error is returned.
+- Visibility check: If it's a private card, only the creator can favorite it.
+- Idempotency is ensured using a unique index on `(userId, cardId)`. Returns success silently if already favorited.
 
 #### Responses
 
@@ -597,7 +594,7 @@ DELETE /preference-cards/favorites/cards/:cardId
 Auth: Bearer {{accessToken}}
 ```
 
-> Favorite list theke remove korar jonno. Idempotent behaviour follow kore (already unfavorited thakle-o 200 OK return kore).
+> Removes from the favorites list. Follows idempotent behavior (returns 200 OK even if already unfavorited).
 
 **Implementation:**
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
@@ -605,8 +602,8 @@ Auth: Bearer {{accessToken}}
 - **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `unfavoritePreferenceCardInDB`
 
 **Business Logic (`unfavoritePreferenceCardInDB`):**
-- Card existence check kora hoy.
-- Specific `userId` ebong `cardId` matching record favorite collection theke remove kora hoy.
+- Checks for card existence.
+- Removes the matching record for the specific `userId` and `cardId` from the favorites collection.
 
 #### Responses
 
@@ -629,11 +626,11 @@ POST /preference-cards/:cardId/download
 Auth: Bearer {{accessToken}}
 ```
 
-> Card download count increment kore ebong download history log kore.
+> use case: User increments the card download count and logs the download history.
 
 **Business Logic (`downloadPreferenceCardInDB`):**
-- **Idempotency**: Same user same card ek-i dine bar bar download korle shudhu matro ekta download count increment kora hoy (Spam control).
-- **Atomic Increment**: Log success hole `$inc` operator use kore atomicity maintain kora hoy.
+- **Idempotency**: If the same user downloads the same card multiple times in a single day, the download count is only incremented once (Spam control).
+- **Atomic Increment**: The `$inc` operator is used to maintain atomicity upon successful logging.
 
 ---
 
@@ -645,9 +642,48 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 Body: { "verificationStatus": "VERIFIED" | "UNVERIFIED" }
 ```
 
+> use case: Admin verify or unverify preference cards. 
+
+**Implementation:**
+- **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
+- **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `updateVerificationStatus`
+- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `updateVerificationStatusInDB`
+
 **Business Logic (`updateVerificationStatusInDB`):**
-- Card publishable state-e thaklei shudhu verify kora jay.
-- Status change hole original owner notification pabe (implemented via Event/Notification logic).
+- **Authorization**: Role-gated strictly to `SUPER_ADMIN`.
+- **State Management**: Updating the status triggers any necessary background events (like notifying the card creator).
+
+#### Responses
+
+- **Scenario: Success (200)**
+  ```json
+  {
+    "success": true,
+    "statusCode": 200,
+    "message": "Preference card status updated to VERIFIED",
+    "data": {
+      "verificationStatus": "VERIFIED"
+    }
+  }
+  ```
+
+- **Scenario: Unauthorized (403)**
+  ```json
+  {
+    "success": false,
+    "statusCode": 403,
+    "message": "Not authorized to verify/reject this card"
+  }
+  ```
+
+- **Scenario: Not Found (404)**
+  ```json
+  {
+    "success": false,
+    "statusCode": 404,
+    "message": "Preference card not found"
+  }
+  ```
 
 ---
 

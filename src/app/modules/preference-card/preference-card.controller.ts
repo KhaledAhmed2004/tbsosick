@@ -33,8 +33,11 @@ const getCards = catchAsync(async (req: Request, res: Response) => {
       req.query,
     );
   } else {
-    // Default to public
-    result = await PreferenceCardService.listPublicPreferenceCardsFromDB(req.query);
+    // Default to public - now handles unified visibility (Public + My Private)
+    result = await PreferenceCardService.listPublicPreferenceCardsFromDB(
+      (user as any).id,
+      req.query,
+    );
   }
 
   const [favoriteCardIds] = await Promise.all([
@@ -229,7 +232,8 @@ const getStats = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getSpecialties = catchAsync(async (req: Request, res: Response) => {
-  const result = await PreferenceCardService.getDistinctSpecialtiesFromDB();
+  const user = req.user as JwtPayload;
+  const result = await PreferenceCardService.getDistinctSpecialtiesFromDB((user as any).id);
 
   sendResponse(res, {
     success: true,
