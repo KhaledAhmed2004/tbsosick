@@ -13,9 +13,9 @@
 
 | # | Method | Endpoint | Auth | Used By |
 |---|---|---|---|---|
-| 10.1 | GET | `/admin/growth-metrics` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — summary cards (doctors, cards, verified cards, active subs) with month-over-month change |
-| 10.2 | GET | `/admin/preference-cards/monthly` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — plain monthly trend chart for preference cards (no YoY) |
-| 10.3 | GET | `/admin/subscriptions/active/monthly` | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — monthly trend chart for active subscriptions with YoY + peak/slowest precomputed |
+| [10.1](#101-growth-metrics-stats) | GET | [`/admin/growth-metrics`](#101-growth-metrics-stats) | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — summary cards (doctors, cards, verified cards, active subs) with month-over-month change |
+| [10.2](#102-monthly-preference-cards-trend) | GET | [`/admin/preference-cards/monthly`](#102-monthly-preference-cards-trend) | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — plain monthly trend chart for preference cards (no YoY) |
+| [10.3](#103-monthly-active-subscriptions-trend) | GET | [`/admin/subscriptions/active/monthly`](#103-monthly-active-subscriptions-trend) | SUPER_ADMIN | [Dashboard Overview](../dashboard-screens/02-overview.md) — monthly trend chart for active subscriptions with YoY + peak/slowest precomputed |
 
 ---
 
@@ -23,10 +23,18 @@
 
 ```
 GET /admin/growth-metrics
+Example: {{baseUrl}}/admin/growth-metrics
 Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
 > Dashboard-er summary cards-er jonno ei endpoint use hoy. Monthly growth calculate kore: current month vs last month.
+
+**Query Parameters:**
+
+| Parameter | Description | Default | Example |
+| :--- | :--- | :--- | :--- |
+| — | None | — | — |
+
 
 **Implementation:**
 - **Route**: `src/app/modules/admin/admin.route.ts`
@@ -58,6 +66,9 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 #### Responses
 
 - **Scenario: Success (200)**
+  <details>
+  <summary><strong>View Response JSON</strong></summary>
+
   ```json
   {
     "success": true,
@@ -90,6 +101,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     }
   }
   ```
+  </details>
 
 > **Note:** `activeSubscriptions.direction: "down"` with `changePct: 37.5` means active subscriptions **decreased by 37.5%** compared to last month. `changePct` is always a positive number; `direction` tells you whether it went up or down.
 
@@ -99,12 +111,18 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ```
 GET /admin/preference-cards/monthly
+Example: {{baseUrl}}/admin/preference-cards/monthly
 Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
 > Preference cards-er monthly trend chart render korar jonno data return kore. **Plain shape** — flat array of `{ label, count }` per month. No YoY, no peak/slowest, no params. Server `getTimeTrends({ timeUnit: 'month' })` use kore — chart x-axis e direct `label` use kora jay.
 
-**Query Parameters:** None
+**Query Parameters:**
+
+| Parameter | Description | Default | Example |
+| :--- | :--- | :--- | :--- |
+| — | None | — | — |
+
 
 **Implementation:**
 - **Route**: `src/app/modules/admin/admin.route.ts`
@@ -121,6 +139,9 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 #### Responses
 
 - **Scenario: Success (200)**
+  <details>
+  <summary><strong>View Response JSON</strong></summary>
+
   ```json
   {
     "success": true,
@@ -133,6 +154,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     ]
   }
   ```
+  </details>
 
 > Banglish: 10.2 ar 10.3 same shape **noy** — 10.2 plain `[{ label, count }]`, 10.3 e elaborate summary + YoY + peak/slowest ache. Frontend e duito ke ek shape vebe code kora jabe na.
 
@@ -142,12 +164,22 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 
 ```
 GET /admin/subscriptions/active/monthly
+Example: {{baseUrl}}/admin/subscriptions/active/monthly?year=2026&compareYear=2025&timezone=UTC
 Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
 > Active subscriptions-er monthly analytics return kore — current year vs last year er YoY comparison inline series e embedded, ar `peak` / `slowest` month server-side e pre-computed. Frontend ke max/min find korte hobe na.
 
-**Query Parameters:** None — controller currently `currentYear` hardcode kore (`new Date().getFullYear()`), `compareYear` automatic `currentYear - 1`, `timezone` always `"UTC"`. Year override karte hole controller signature update lagbe.
+**Query Parameters:**
+
+| Parameter | Description | Default | Example |
+| :--- | :--- | :--- | :--- |
+| `year` | *Optional (Future)* — Currently hardcoded to `currentYear`. | `2026` | `2025` |
+| `compareYear` | *Optional (Future)* — Currently hardcoded to `year - 1`. | `2025` | `2024` |
+| `timezone` | *Optional (Future)* — Currently hardcoded to `"UTC"`. | `"UTC"` | `"Asia/Dhaka"` |
+
+> **Note:** Controller currently hardcodes these values. To override, update the controller signature to pass `req.query` to the service.
+
 
 **Implementation:**
 - **Route**: `src/app/modules/admin/admin.route.ts`
@@ -180,6 +212,9 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
 #### Responses
 
 - **Scenario: Success (200)**
+  <details>
+  <summary><strong>View Response JSON</strong></summary>
+
   ```json
   {
     "success": true,
@@ -231,6 +266,7 @@ Auth: Bearer {{accessToken}} (SUPER_ADMIN)
     }
   }
   ```
+  </details>
 
 > Banglish: backend message string ta generic — `` `Monthly analytics for ${currentYear} retrieved successfully.` `` — eta active-subs trend er response, kintu message e "active subscription" mention nei. Controller message ta tighten korle frontend e log/debug e clearer hobe.
 
