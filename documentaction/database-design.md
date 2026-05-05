@@ -676,7 +676,7 @@ Ei doc theke duita check hoy:
 1. **Status check** — `dbUser.status === 'DELETE' | 'RESTRICTED'` → 403 Forbidden.
 2. **tokenVersion compare** — JWT-e baked `tokenVersion` value current DB value er sathe mismatch hole → 401 "Session invalidated".
 
-`.lean()` use kora hoyeche so every request ekta ~1ms indexed `_id` lookup matro add kore. Redis cache layer future optimization hishebe rakha jay but eta optional.
+`.lean()` use kora hoyeche so every request ekta ~1ms indexed `_id` lookup matro add kore. **Note**: Lean object-e missing `tokenVersion` (legacy users) ke `0` হিসেবে ট্রিট করা হয় যাতে ফলস পজিটিভ ইনভ্যালিডেশন না হয়।
 
 **Google OAuth fix o lagche** — `googleLoginToDB` age `tokenVersion` JWT payload-e include korto na, mane Google users tokenVersion check bypass kore jeto. Ei fix-er part hishebe `User.findById(user._id).select('+tokenVersion')` diye DB theke current value fetch kore JWT payload-e add kora hoyeche.
 

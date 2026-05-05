@@ -1,4 +1,4 @@
-# 10. Update Own Profile
+# 04. Update Own Profile
 
 ```http
 PATCH /users/profile

@@ -1,7 +1,7 @@
-# 07. Resend OTP (Resend Verify Email)
+# 07. Resend OTP
 
 ```http
-POST /auth/resend-verify-email
+POST /auth/resend-otp
 Content-Type: application/json
 Auth: None
 ```

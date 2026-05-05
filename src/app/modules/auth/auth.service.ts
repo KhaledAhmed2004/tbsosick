@@ -84,10 +84,10 @@ const loginUserFromDB = async (
   // JWT: access token
   const accessToken = jwtHelper.createToken(
     {
-      id: isExistUser._id,
+      id: isExistUser._id.toString(),
       role: isExistUser.role,
       email: isExistUser.email,
-      tokenVersion: isExistUser.tokenVersion,
+      tokenVersion: isExistUser.tokenVersion ?? 0,
     },
     config.jwt.jwt_secret as Secret,
     config.jwt.jwt_expire_in as string
@@ -96,10 +96,10 @@ const loginUserFromDB = async (
   // JWT: refresh token
   const refreshToken = jwtHelper.createToken(
     {
-      id: isExistUser._id,
+      id: isExistUser._id.toString(),
       role: isExistUser.role,
       email: isExistUser.email,
-      tokenVersion: isExistUser.tokenVersion,
+      tokenVersion: isExistUser.tokenVersion ?? 0,
     },
     config.jwt.jwt_refresh_secret as Secret,
     config.jwt.jwt_refresh_expire_in as string
@@ -205,10 +205,10 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
     // Auto-login for new users after verification
     const accessToken = jwtHelper.createToken(
       {
-        id: isExistUser._id,
+        id: isExistUser._id.toString(),
         role: isExistUser.role,
         email: isExistUser.email,
-        tokenVersion: isExistUser.tokenVersion,
+        tokenVersion: isExistUser.tokenVersion ?? 0,
       },
       config.jwt.jwt_secret as Secret,
       config.jwt.jwt_expire_in as string
@@ -216,10 +216,10 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
 
     const refreshToken = jwtHelper.createToken(
       {
-        id: isExistUser._id,
+        id: isExistUser._id.toString(),
         role: isExistUser.role,
         email: isExistUser.email,
-        tokenVersion: isExistUser.tokenVersion,
+        tokenVersion: isExistUser.tokenVersion ?? 0,
       },
       config.jwt.jwt_refresh_secret as Secret,
       config.jwt.jwt_refresh_expire_in as string
@@ -514,10 +514,10 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
   // Issue tokens
   const accessToken = jwtHelper.createToken(
     {
-      id: user._id,
+      id: user._id.toString(),
       role: user.role,
       email: user.email,
-      tokenVersion: user.tokenVersion,
+      tokenVersion: user.tokenVersion ?? 0,
     },
     config.jwt.jwt_secret as Secret,
     config.jwt.jwt_expire_in as string
@@ -525,10 +525,10 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
 
   const refreshToken = jwtHelper.createToken(
     {
-      id: user._id,
+      id: user._id.toString(),
       role: user.role,
       email: user.email,
-      tokenVersion: user.tokenVersion,
+      tokenVersion: user.tokenVersion ?? 0,
     },
     config.jwt.jwt_refresh_secret as Secret,
     config.jwt.jwt_refresh_expire_in as string
@@ -587,10 +587,10 @@ const refreshTokenToDB = async (token: string) => {
   // Issue new tokens with the NEW tokenVersion
   const accessToken = jwtHelper.createToken(
     {
-      id: updatedUser._id,
+      id: updatedUser._id.toString(),
       role: updatedUser.role,
       email: updatedUser.email,
-      tokenVersion: updatedUser.tokenVersion,
+      tokenVersion: updatedUser.tokenVersion ?? 0,
     },
     config.jwt.jwt_secret as Secret,
     config.jwt.jwt_expire_in as string
@@ -598,10 +598,10 @@ const refreshTokenToDB = async (token: string) => {
 
   const newRefreshToken = jwtHelper.createToken(
     {
-      id: updatedUser._id,
+      id: updatedUser._id.toString(),
       role: updatedUser.role,
       email: updatedUser.email,
-      tokenVersion: updatedUser.tokenVersion,
+      tokenVersion: updatedUser.tokenVersion ?? 0,
     },
     config.jwt.jwt_refresh_secret as Secret,
     config.jwt.jwt_refresh_expire_in as string

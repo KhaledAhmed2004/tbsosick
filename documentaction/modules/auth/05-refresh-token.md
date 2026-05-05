@@ -30,6 +30,7 @@ Auth: None (Uses refreshToken from cookie or body)
 1. **Extraction**: Reads `refreshToken` from `httpOnly` cookie or request body.
 2. **Verification**: Verifies JWT signature and expiration.
 3. **Reuse Detection**: Compares `tokenVersion` in JWT with database. Mismatch forces logout.
+   - **Note**: If `tokenVersion` is missing in the database (lean object), it defaults to `0` for comparison.
 4. **Token Rotation**: Increments `tokenVersion`, issues new Access/Refresh tokens, and updates cookie.
 5. If someone tries to use an old refresh token again (for example, a stolen token), the backend will detect that it is no longer valid because the tokenVersion does not match. As a result, the user will be forced to log out for security.
 

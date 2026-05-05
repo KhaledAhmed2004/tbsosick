@@ -73,9 +73,14 @@ const auth =
       const jwtTokenVersion = (verifiedUser as any).tokenVersion as
         | number
         | undefined;
+
+      // Handle the case where tokenVersion might be missing in DB (legacy users)
+      // or missing in the lean object. Treat missing as 0 to match schema default.
+      const dbTokenVersion = dbUser.tokenVersion ?? 0;
+
       if (
         typeof jwtTokenVersion === 'number' &&
-        dbUser.tokenVersion !== jwtTokenVersion
+        dbTokenVersion !== jwtTokenVersion
       ) {
         throw new ApiError(
           StatusCodes.UNAUTHORIZED,

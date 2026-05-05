@@ -12,6 +12,14 @@ interface PostmanRequest {
   request: {
     method: string;
     header: any[];
+    auth?: {
+      type: string;
+      bearer?: {
+        key: string;
+        value: string;
+        type: string;
+      }[];
+    };
     body?: {
       mode: string;
       raw: string;
@@ -46,6 +54,14 @@ interface PostmanCollection {
     description?: string;
   };
   item: (PostmanRequest | PostmanFolder)[];
+  auth?: {
+    type: string;
+    bearer?: {
+      key: string;
+      value: string;
+      type: string;
+    }[];
+  };
   variable: any[];
 }
 
@@ -99,6 +115,37 @@ function parseSpecFile(filePath: string, id: string): PostmanRequest | null {
     });
   }
 
+  // Extract Query Parameters from Markdown Table
+  const queryParamsTableRegex = /## Query Parameters[\s\S]*?\| Parameter \| Description \| Default \| Example \|[\s\S]*?\| (.*?) \|/g;
+  const tableContentRegex = /## Query Parameters[\s\S]*?\n\| :--- \| :--- \| :--- \| :--- \|([\s\S]*?)(?:\n\n|\n#|$)/;
+  const tableMatch = content.match(tableContentRegex);
+  
+  if (tableMatch) {
+    const rows = tableMatch[1].trim().split('\n');
+    rows.forEach(row => {
+      const columns = row.split('|').map(c => c.trim()).filter(c => c !== '');
+      if (columns.length >= 4) {
+        let [param, description, defaultValue, example] = columns;
+        
+        // Clean backticks from parameter names and values
+        param = param.replace(/`/g, '');
+        example = example.replace(/`/g, '');
+        defaultValue = defaultValue.replace(/`/g, '');
+
+        if (param !== '—' && param !== 'None') {
+          // Check if already added from URL query part to avoid duplicates
+          if (!queryParams.find(q => q.key === param)) {
+            queryParams.push({
+              key: param,
+              value: example !== '—' ? example : (defaultValue !== '—' ? defaultValue : ''),
+              description: description !== '—' ? description : undefined
+            });
+          }
+        }
+      }
+    });
+  }
+
   const request: PostmanRequest = {
     name: `${id} ${apiName}`,
     request: {
@@ -122,13 +169,25 @@ function parseSpecFile(filePath: string, id: string): PostmanRequest | null {
     response: []
   };
 
-  // Handle Auth header
-  if (headersAndAuth.toLowerCase().includes('auth: bearer')) {
-    request.request.header.push({
-      key: 'Authorization',
-      value: 'Bearer {{accessToken}}',
-      type: 'text'
-    });
+  // Handle Auth (Authorization Tab)
+  // Check both "Auth: Bearer" and "Authorization: Bearer"
+  const authLower = headersAndAuth.toLowerCase();
+  if (authLower.includes('auth: bearer') || authLower.includes('authorization: bearer')) {
+    request.request.auth = {
+      type: 'bearer',
+      bearer: [
+        {
+          key: 'token',
+          value: '{{accessToken}}',
+          type: 'string'
+        }
+      ]
+    };
+  } else {
+    // For public endpoints, explicitly set auth to 'noauth'
+    request.request.auth = {
+      type: 'noauth'
+    };
   }
 
   // Add Postman Script for Login and Token Refresh to store accessToken
@@ -225,6 +284,17 @@ function generateCollection() {
     return;
   }
 
+  // Parse .env for PORT
+  let port = '5000';
+  const envPath = path.join(process.cwd(), '.env');
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf-8');
+    const portMatch = envContent.match(/^PORT=(\d+)/m);
+    if (portMatch) {
+      port = portMatch[1];
+    }
+  }
+
   const collection: PostmanCollection = {
     info: {
       name: 'tbsosick',
@@ -232,10 +302,20 @@ function generateCollection() {
       description: 'Automatically generated from API Inventory & Module Specs.'
     },
     item: [],
+    auth: {
+      type: 'bearer',
+      bearer: [
+        {
+          key: 'token',
+          value: '{{accessToken}}',
+          type: 'string'
+        }
+      ]
+    },
     variable: [
       {
         key: "baseUrl",
-        value: "http://localhost:5000/api/v1",
+        value: `http://localhost:${port}/api/v1`,
         type: "string"
       },
       {
@@ -274,7 +354,7 @@ Postman theke Socket test korar jonno nicher visual guide-ti follow koren:
 
 #### A. Connection Setup
 - Click **New** > **Socket.IO**.
-- **URL**: \`http://localhost:5000\` (Not \`/api/v1\`).
+- **URL**: \`http://localhost:${port}\` (Not \`/api/v1\`).
 - **Auth (Handshake)**:
     - **Handshake** tab-e jan.
     - **Auth** section-e **Auth Object** select koren.

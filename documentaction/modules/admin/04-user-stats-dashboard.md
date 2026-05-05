@@ -1,11 +1,16 @@
-# 03. User Stats (Dashboard)
+# 04. User Stats (Dashboard)
 
 ```http
-GET /users/stats
+GET /admin/users/stats
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
 > Aggregated growth metrics for the admin dashboard.
+
+## Implementation
+- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
+- **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getUsersStats`
+- **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getUsersStatsFromDB`
 
 ### Business Logic (`getUsersStatsFromDB`)
 1. **Metric Calculation**: Calculates current month's totals for:

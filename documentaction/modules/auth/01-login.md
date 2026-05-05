@@ -39,7 +39,7 @@ Auth: None
    - Throws `403 Forbidden` if status is `DELETED`, `RESTRICTED`, or `INACTIVE`.
    - Throws `401 Unauthorized` if email is not `verified`.
 3. **Password Validation**: Compares input password with hashed password using `bcrypt`.
-4. **Token Generation**: Issues **Access Token** (short-lived) and **Refresh Token** (long-lived) Both tokens (includes `id`, `role`, `email`, `tokenVersion`).
+4. **Token Generation**: Issues **Access Token** (short-lived) and **Refresh Token** (long-lived). Both tokens include `id`, `role`, `email`, and `tokenVersion`. `tokenVersion` defaults to `0` if not present in DB.
 5. **Session Management**:
    - Updates `isFirstLogin` to `false` on successful first login.
    - Registers/updates `deviceToken` for push notifications if provided.

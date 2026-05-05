@@ -1,4 +1,4 @@
-# 08. Get User Details (Public/User)
+# 02. Get User Details (Public/User)
 
 ```http
 GET /users/:userId/user
