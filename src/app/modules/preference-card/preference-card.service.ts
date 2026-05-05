@@ -161,7 +161,7 @@ const getFavoriteCardIdsForUserFromDB = async (userId: string) => {
  * Flattens a card document to make it easy for PDF generation.
  * Extracts names from populated supplies and sutures.
  */
-const flattenCard = (doc: any) => {
+const flattenCardForPDF = (doc: any) => {
   return {
     ...doc,
     supplies: (doc.supplies || []).map((s: any) => ({
@@ -233,7 +233,7 @@ const downloadPreferenceCardInDB = async (
   }
 
   // 6. Generate PDF
-  const flattenedDoc = flattenCard(doc);
+  const flattenedDoc = flattenCardForPDF(doc);
   const pdfBuffer = await generatePreferenceCardPDF(flattenedDoc);
 
   return {
@@ -392,6 +392,7 @@ const createPreferenceCardInDB = async (userId: string, data: any) => {
   const dataToSave = {
     ...data,
     createdBy: userId,
+    published: data.visibility === 'PUBLIC',
   };
 
   // If the client is creating the card already marked as PUBLIC,
@@ -528,6 +529,9 @@ const updatePreferenceCardInDB = async (
     if (full) {
       assertCardIsPublishable({ ...full, ...payload });
     }
+    payload.published = true;
+  } else if (payload.visibility === 'PRIVATE') {
+    payload.published = false;
   }
 
   // Update the document in one step

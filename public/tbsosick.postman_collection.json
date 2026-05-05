@@ -2,2139 +2,2250 @@
   "info": {
     "name": "tbsosick",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Automatically generated from UX flow documentation with testing guides."
+    "description": "Automatically generated from API Inventory & Module Specs."
   },
   "item": [
     {
       "name": "🚀 Testing Guide & Docs",
-      "description": "\n## Welcome to tbsosick API Testing Guide\n\nFollow these detailed steps to test APIs and Socket events:\n\n### 1. Setup & Auth (First Step)\n1.  **Login**: First, go to **App Screens > Auth > 1.2 Login**.\n2.  **Auto-Token**: Successful login korle `accessToken` automatic collection variable-e save hoye jabe.\n3.  **Check**: Apni Collection-er **Variables** tab-e giye check korte paren token-ti set hoyeche kina.\n\n### 2. Standard API Testing\n- Protiti folder screen-er nam onujayi organized.\n- Path variables (যেমন `:id`) thakle Postman-er **Params** tab-e value boshate hobe.\n\n### 3. Socket.IO Testing (Detailed Guide)\nPostman theke Socket test korar jonno nicher visual guide-ti follow koren:\n\n#### A. Connection Setup\n- Click **New** > **Socket.IO**.\n- **URL**: `http://localhost:5000` (Not `/api/v1`).\n- **Auth (Handshake)**:\n    - **Handshake** tab-e jan.\n    - **Auth** section-e **Auth Object** select koren.\n    - `token` key-te value `{{accessToken}}` boshie **Connect** koren.\n\n#### B. How to \"Listen\" (Receive events from server)\nServer theke real-time data receive korar jonno nicher steps follow koren:\n\n1.  **Events Tab**: Connection tab-er pashe thaka **Events** tab-e jan.\n2.  **Add Event**: `Add event` button-e click koren.\n3.  **Event Name**: `Event name` field-e nicher common event-gulo add koren (ekekti event-er jonno alada row):\n    - `USER_ONLINE`: Jokhon keu online ashe.\n    - `MESSAGE_RECEIVED`: Jokhon keu apnake message pathay.\n    - `TYPING_START`: Keu type kora shuru korle.\n    - `get-notification::{{userId}}`: Personal notifications-er jonno.\n4.  **Messages Pane**: Ekhon server theke oi event-ti asle niche **Messages** pane-e real-time JSON data dekhabe. \n    > **Note**: Ekhane kono JSON pathano lagbe na, shudhu event-er nam-ti add korlei Postman server theke asha data capture korbe.\n\n#### C. How to \"Emit\" (Send events to server)\n- Server-e data pathanor jonno **Message** tab-e jan.\n- **Event Name**: Jekhane event-er nam likhte hoy (যেমন: `JOIN_CHAT`).\n- **Payload**: Niche JSON format-e data-ti likhun:\n    ```json\n    { \"chatId\": \"664a1b2c3d4e5f6a7b8c9d0e\" }\n    ```\n- Click **Send**.\n\n### 🔌 Socket.IO Events Inventory & Guide\n\nJokhon apni Socket test korben, nicher table-ti follow koren bujhar jonno je konta apnake pathate hobe (Emit) ar konta server pathabe (Listen).\n\n| Event Name | Action Type | Direction | Payload Example | Step-by-Step Testing |\n|------------|-------------|-----------|-----------------|----------------------|\n| `JOIN_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab-e event name `JOIN_CHAT` likhun ebong payload JSON format-e diye **Send** koren. |\n| `LEAVE_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `LEAVE_CHAT` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab theke emit koren typing shuru bujhate. |\n| `TYPING_STOP` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `TYPING_STOP` likhe JSON payload shoho **Send** koren. |\n| `DELIVERED_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `DELIVERED_ACK` likhe JSON payload shoho **Send** koren. |\n| `READ_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `READ_ACK` likhe JSON payload shoho **Send** koren. |\n| `disconnect` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `disconnect` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **LISTENING** (Receive) | 📤 Server -> Client | `{ \"chatId\": \"66...\" }` | **Events** tab-e `TYPING_START` add koren listening-er jonno. |\n| `TYPING_STOP` | **LISTENING** (Receive) | 📤 Server -> Client | N/A | **Events** tab-e `TYPING_STOP` nam-er ekta event add koren jate server theke response ashole apni **Messages** pane-e dekhte paren. |\n\n\n### 4. Common Testing Scenarios\n- **Chatting**:\n    1. Login koren.\n    2. Socket connect koren.\n    3. `JOIN_CHAT` emit koren chatId diye.\n    4. Onno user theke message pathale apni listener events-e sheta paben.\n    ",
+      "description": "\n## Welcome to tbsosick API Testing Guide\n\nFollow these detailed steps to test APIs and Socket events:\n\n### 1. Setup & Auth (First Step)\n1.  **Login**: First, go to **Auth Module > 1.1 Login**.\n2.  **Auto-Token**: Successful login korle `accessToken` automatic collection variable-e save hoye jabe.\n3.  **Check**: Apni Collection-er **Variables** tab-e giye check korte paren token-ti set hoyeche kina.\n\n### 2. Standard API Testing\n- Protiti folder module onujayi organized.\n- Path variables (যেমন `:id`) thakle Postman-er **Params** tab-e value boshate hobe.\n\n### 3. Socket.IO Testing (Detailed Guide)\nPostman theke Socket test korar jonno nicher visual guide-ti follow koren:\n\n#### A. Connection Setup\n- Click **New** > **Socket.IO**.\n- **URL**: `http://localhost:5000` (Not `/api/v1`).\n- **Auth (Handshake)**:\n    - **Handshake** tab-e jan.\n    - **Auth** section-e **Auth Object** select koren.\n    - `token` key-te value `{{accessToken}}` boshie **Connect** koren.\n\n#### B. How to \"Listen\" (Receive events from server)\nServer theke real-time data receive korar jonno nicher steps follow koren:\n\n1.  **Events Tab**: Connection tab-er pashe thaka **Events** tab-e jan.\n2.  **Add Event**: `Add event` button-e click koren.\n3.  **Event Name**: `Event name` field-e nicher common event-gulo add koren (ekekti event-er jonno alada row):\n    - `USER_ONLINE`: Jokhon keu online ashe.\n    - `MESSAGE_RECEIVED`: Jokhon keu apnake message pathay.\n    - `TYPING_START`: Keu type kora shuru korle.\n    - `get-notification::{{userId}}`: Personal notifications-er jonno.\n4.  **Messages Pane**: Ekhon server theke oi event-ti asle niche **Messages** pane-e real-time JSON data dekhabe. \n    > **Note**: Ekhane kono JSON pathano lagbe na, shudhu event-er nam-ti add korlei Postman server theke asha data capture korbe.\n\n#### C. How to \"Emit\" (Send events to server)\n- Server-e data pathanor jonno **Message** tab-e jan.\n- **Event Name**: Jekhare event-er nam likhte hoy (যেমন: `JOIN_CHAT`).\n- **Payload**: Niche JSON format-e data-ti likhun:\n    ```json\n    { \"chatId\": \"664a1b2c3d4e5f6a7b8c9d0e\" }\n    ```\n- Click **Send**.\n\n### 🔌 Socket.IO Events Inventory & Guide\n\nJokhon apni Socket test korben, nicher table-ti follow koren bujhar jonno je konta apnake pathate hobe (Emit) ar konta server pathabe (Listen).\n\n| Event Name | Action Type | Direction | Payload Example | Step-by-Step Testing |\n|------------|-------------|-----------|-----------------|----------------------|\n| `JOIN_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab-e event name `JOIN_CHAT` likhun ebong payload JSON format-e diye **Send** koren. |\n| `LEAVE_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `LEAVE_CHAT` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab theke emit koren typing shuru bujhate. |\n| `TYPING_STOP` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `TYPING_STOP` likhe JSON payload shoho **Send** koren. |\n| `DELIVERED_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `DELIVERED_ACK` likhe JSON payload shoho **Send** koren. |\n| `READ_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `READ_ACK` likhe JSON payload shoho **Send** koren. |\n| `disconnect` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `disconnect` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **LISTENING** (Receive) | 📤 Server -> Client | `{ \"chatId\": \"66...\" }` | **Events** tab-e `TYPING_START` add koren listening-er jonno. |\n| `TYPING_STOP` | **LISTENING** (Receive) | 📤 Server -> Client | N/A | **Events** tab-e `TYPING_STOP` nam-er ekta event add koren jate server theke response ashole apni **Messages** pane-e dekhte paren. |\n\n\n### 4. Common Testing Scenarios\n- **Chatting**:\n    1. Login koren.\n    2. Socket connect koren.\n    3. `JOIN_CHAT` emit koren chatId diye.\n    4. Onno user theke message pathale apni listener events-e sheta paben.\n    ",
       "item": []
     },
     {
-      "name": "App Screens",
+      "name": "Auth Module",
       "item": [
         {
-          "name": "Auth",
-          "item": [
-            {
-              "name": "1.1 Register",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/users",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"phone\": \"+123456789\",\n  \"country\": \"USA\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1995-05-15\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "1.2 Login",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/login",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "login"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"deviceToken\": \"fcm-token-xyz\" // optional\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const response = pm.response.json();",
-                      "if (response.success && response.data && response.data.accessToken) {",
-                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
-                      "    console.log(\"accessToken has been set in collection variables\");",
-                      "}",
-                      "if (response.success && response.data && response.data.refreshToken) {",
-                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
+          "name": "1.1 Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
               ]
             },
+            "description": "Authenticates user and issues access/refresh tokens. Supports push notification registration.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"StrongPassword123!\",\n  \"deviceToken\": \"fcm-token-xyz\"  // optional\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
             {
-              "name": "1.3 Verify OTP",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.success && response.data && response.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                  "    console.log(\"accessToken has been set in collection variables\");",
+                  "}",
+                  "if (response.success && response.data && response.data.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                  "}"
                 ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/verify-otp",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "verify-otp"
-                  ]
-                },
-                "description": "Registration ba Forgot Password flow e OTP verify korar jonno use hoy.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const response = pm.response.json();",
-                      "if (response.success && response.data && response.data.accessToken) {",
-                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
-                      "    console.log(\"accessToken has been set in collection variables\");",
-                      "}",
-                      "if (response.success && response.data && response.data.refreshToken) {",
-                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "verify-otp"
               ]
             },
+            "description": "Registration or Forgot Password flow OTP verification.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
             {
-              "name": "1.4 Forgot Password",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.success && response.data && response.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                  "    console.log(\"accessToken has been set in collection variables\");",
+                  "}",
+                  "if (response.success && response.data && response.data.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                  "}"
                 ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/forgot-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "forgot-password"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"john@example.com\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "1.5 Reset Password",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/reset-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "reset-password"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"newPassword\": \"NewStrongPassword123!\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "1.6 Refresh Token",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/refresh-token",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "refresh-token"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"john@example.com\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const response = pm.response.json();",
-                      "if (response.success && response.data && response.data.accessToken) {",
-                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
-                      "    console.log(\"accessToken has been set in collection variables\");",
-                      "}",
-                      "if (response.success && response.data && response.data.refreshToken) {",
-                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
-                }
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
               ]
             },
-            {
-              "name": "1.7 Logout",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/logout",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "logout"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"john@example.com\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+            "description": "Triggers password reset flow by sending an OTP to the user's email.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
               },
-              "response": []
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
             },
-            {
-              "name": "1.8 Resend OTP",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/resend-verify-email",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "resend-verify-email"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"john@example.com\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+            "description": "Resets user password using a valid reset token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"newPassword\": \"NewStrongPassword123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-              },
-              "response": []
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh-token"
+              ]
             },
+            "description": "Rotates refresh token and issues a new access token. Implements reuse detection.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"eyJhbGciOi...\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
             {
-              "name": "1.9 Social Login (Google / Apple)",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.success && response.data && response.data.accessToken) {",
+                  "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+                  "    console.log(\"accessToken has been set in collection variables\");",
+                  "}",
+                  "if (response.success && response.data && response.data.refreshToken) {",
+                  "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+                  "}"
                 ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"provider\": \"google\",\n  \"idToken\": \"eyJhbGciOiJSUzI1NiIs...\",\n  \"nonce\": \"random-nonce-string\",\n  \"deviceToken\": \"fcm-token-xyz\",\n  \"platform\": \"ios\",\n  \"appVersion\": \"1.0.0\"\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/auth/social-login",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "social-login"
-                  ]
-                },
-                "description": "Google / Apple social login via ID token verification. Provider: 'google' or 'apple'. Nonce recommended for Apple, optional for Google (Flutter plugin limitation)."
-              },
-              "response": []
+                "type": "text/javascript"
+              }
             }
           ]
         },
         {
-          "name": "Home",
-          "item": [
-            {
-              "name": "2.1 Search Preference Cards",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards?visibility=public&searchTerm=keyword",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards"
-                  ],
-                  "query": [
-                    {
-                      "key": "visibility",
-                      "value": "public"
-                    },
-                    {
-                      "key": "searchTerm",
-                      "value": "keyword"
-                    }
-                  ]
-                },
-                "description": "Top search field theke public cards search korar jonno."
+          "name": "1.6 Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
               },
-              "response": []
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
             },
-            {
-              "name": "2.2 Get Cards Stats",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/stats",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    "stats"
-                  ]
-                },
-                "description": "Home screen-e stats dekhate use hoy. Total public cards ebong user-er nijer cards er count return kore."
-              },
-              "response": []
-            },
-            {
-              "name": "2.3 List Favorite Cards",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/users/me/favorites",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "users",
-                    "me",
-                    "favorites"
-                  ]
-                },
-                "description": "Home screen-er niche favorite list dekhate use hoy."
-              },
-              "response": []
-            },
-            {
-              "name": "2.4 Favorite a Card",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId/favorite",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId",
-                    "favorite"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Card favorite list-e add korar jonno."
-              },
-              "response": []
-            },
-            {
-              "name": "2.5 Unfavorite a Card",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId/favorite",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId",
-                    "favorite"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Favorite list theke remove korar jonno."
-              },
-              "response": []
-            },
-            {
-              "name": "2.6 Download a Card",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId/download",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId",
-                    "download"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Card download-er sonkhya (Download Count) 1 baranor jonno."
-              },
-              "response": []
+            "description": "Logs out user by clearing cookies and removing device tokens.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceToken\": \"fcm-token-xyz\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          ]
+          },
+          "response": []
         },
         {
-          "name": "Preference Card Details",
-          "item": [
-            {
-              "name": "3.1 Get Card Details",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Card-er shob details (surgeon, supplies, sutures, workflow, etc.) fetch korar jonno.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"published\": false\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+          "name": "1.7 Resend OTP (Resend Verify Email)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/resend-verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "resend-verify-email"
+              ]
+            },
+            "description": "Resends a new 6-digit verification code to the user's email.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-              },
-              "response": []
-            },
-            {
-              "name": "3.2 Increment Download Count",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId/download",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId",
-                    "download"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "User card download korle download count baranor jonno call kora hoy.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"published\": false\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "3.3 Create Preference Card",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards"
-                  ]
-                },
-                "description": "Notun preference card create kore. `cardTitle` ar `surgeon` required — baki fields optional (draft save korar jonno). `published: true` set korle shob required fields thakte hobe. Supplies/Sutures e ObjectId ba plain name duita-i pathano jay — name dile backend auto-create kore catalog e.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"published\": false\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "3.4 Update Preference Card",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Existing card update kore. Shudhu je fields change korte chay segula pathale hobe. Owner ba SUPER_ADMIN chara update possible na."
-              },
-              "response": []
-            },
-            {
-              "name": "3.5 List Supplies (Catalog)",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/supplies",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "supplies"
-                  ]
-                },
-                "description": "Card create/edit form e supplies dropdown populate korar jonno. Full catalog fetch kore jate user select korte pare."
-              },
-              "response": []
-            },
-            {
-              "name": "3.6 List Sutures (Catalog)",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/sutures",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "sutures"
-                  ]
-                },
-                "description": "Card create/edit form e sutures dropdown populate korar jonno. Full catalog fetch kore jate user select korte pare."
-              },
-              "response": []
-            },
-            {
-              "name": "3.7 Delete Preference Card",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Card permanently delete kore. Owner ba SUPER_ADMIN chara delete possible na. Hard delete — restore possible na."
-              },
-              "response": []
+              }
             }
-          ]
+          },
+          "response": []
         },
         {
-          "name": "Library",
-          "item": [
-            {
-              "name": "4.1 List Public Preference Cards",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards?visibility=public&searchTerm=keyword&surgeonSpecialty=Orthopedics&verificationStatus=VERIFIED",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards"
-                  ],
-                  "query": [
-                    {
-                      "key": "visibility",
-                      "value": "public"
-                    },
-                    {
-                      "key": "searchTerm",
-                      "value": "keyword"
-                    },
-                    {
-                      "key": "surgeonSpecialty",
-                      "value": "Orthopedics"
-                    },
-                    {
-                      "key": "verificationStatus",
-                      "value": "VERIFIED"
-                    }
-                  ]
-                },
-                "description": "Library-r \"Preference Cards\" tab-e shob public cards search ebong filter korar jonno."
-              },
-              "response": []
+          "name": "1.8 Social Login (Google / Apple)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/social-login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "social-login"
+              ]
             },
-            {
-              "name": "4.2 List Private Preference Cards",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards?visibility=private&searchTerm=keyword&surgeonSpecialty=General",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards"
-                  ],
-                  "query": [
-                    {
-                      "key": "visibility",
-                      "value": "private"
-                    },
-                    {
-                      "key": "searchTerm",
-                      "value": "keyword"
-                    },
-                    {
-                      "key": "surgeonSpecialty",
-                      "value": "General"
-                    }
-                  ]
-                },
-                "description": "Library-r \"Private Cards\" tab-e user-er nijer create kora private cards search ebong filter korar jonno."
-              },
-              "response": []
-            },
-            {
-              "name": "4.3 Favorite a Card",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId/favorite",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId",
-                    "favorite"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Card favorite list-e add korar jonno."
-              },
-              "response": []
-            },
-            {
-              "name": "4.4 Unfavorite a Card",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId/favorite",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId",
-                    "favorite"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Favorite list theke remove korar jonno."
-              },
-              "response": []
-            },
-            {
-              "name": "4.5 Download a Card",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/preference-cards/:cardId/download",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "preference-cards",
-                    ":cardId",
-                    "download"
-                  ],
-                  "variable": [
-                    {
-                      "key": "cardId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Card download-er sonkhya (Download Count) 1 baranor jonno."
-              },
-              "response": []
+            "description": "Authenticates user via Google or Apple ID tokens. Handles both signup and login.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"google\",\n  \"idToken\": \"eyJhbGciOi...\",\n  \"nonce\": \"aB3xK9mP2qR7...\",\n  \"deviceToken\": \"fcm-token-xyz\",\n  \"platform\": \"ios\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          ]
+          },
+          "response": []
         },
         {
-          "name": "Calendar",
-          "item": [
-            {
-              "name": "5.1 List My Events",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/events?from=2026-04-01&to=2026-04-30",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "events"
-                  ],
-                  "query": [
-                    {
-                      "key": "from",
-                      "value": "2026-04-01"
-                    },
-                    {
-                      "key": "to",
-                      "value": "2026-04-30"
-                    }
-                  ]
-                },
-                "description": "User-er shob events fetch korar jonno. Calendar view-er jonno date range pathano jay.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"title\": \"Surgery with Dr. Smith\",\n  \"date\": \"2026-04-15\",\n  \"time\": \"09:30\",\n  \"durationHours\": 3,\n  \"eventType\": \"SURGERY\",\n  \"location\": \"Main Hospital - OR 2\",\n  \"preferenceCard\": \"664a1b2c3d4e5f6a7b8c9d0x\",\n  \"notes\": \"Hip Replacement case\",\n  \"personnel\": {\n    \"leadSurgeon\": \"Dr. Smith\",\n    \"surgicalTeam\": [\"Nurse Joy\", \"Anesthesiologist Bob\"]\n  }\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+          "name": "1.9 Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Allows authenticated users to change their password.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewStrongPassword123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-              },
-              "response": []
-            },
-            {
-              "name": "5.2 Create Event",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/events",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "events"
-                  ]
-                },
-                "description": "Naya event toiri korar jonno. Auto reminder set hoy (24h ebong 1h age).",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"title\": \"Surgery with Dr. Smith\",\n  \"date\": \"2026-04-15\",\n  \"time\": \"09:30\",\n  \"durationHours\": 3,\n  \"eventType\": \"SURGERY\",\n  \"location\": \"Main Hospital - OR 2\",\n  \"preferenceCard\": \"664a1b2c3d4e5f6a7b8c9d0x\",\n  \"notes\": \"Hip Replacement case\",\n  \"personnel\": {\n    \"leadSurgeon\": \"Dr. Smith\",\n    \"surgicalTeam\": [\"Nurse Joy\", \"Anesthesiologist Bob\"]\n  }\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "5.3 Get Event Details",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/events/:eventId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "events",
-                    ":eventId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "eventId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Specific event-er full details fetch korar jonno (jekhane `:eventId` holo Event-er unique ID). Modal ba Details screen render korar age call kora hoy."
-              },
-              "response": []
-            },
-            {
-              "name": "5.4 Update Event",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/events/:eventId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "events",
-                    ":eventId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "eventId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Existing event-er (`:eventId`) title, date, time, location, notes, ba personnel update korar jonno. Reminders automatically reschedule hoy."
-              },
-              "response": []
-            },
-            {
-              "name": "5.5 Delete Event",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/events/:eventId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "events",
-                    ":eventId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "eventId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Kono event permanent-ly remove korার jonno."
-              },
-              "response": []
+              }
             }
-          ]
+          },
+          "response": []
         }
       ]
     },
     {
-      "name": "Dashboard Screens",
+      "name": "User Module",
       "item": [
         {
-          "name": "Auth",
-          "item": [
-            {
-              "name": "1.1 Login",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/login",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "login"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"StrongPassword123!\",\n  \"deviceToken\": \"fcm-token-xyz\"  // optional\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+          "name": "2.1 Create User (Registration / Admin Create)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Used both for public mobile registration and for admin-driven account creation from the dashboard. Admin-created accounts are auto-verified and assigned role `USER`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"phone\": \"+123456789\",\n  \"country\": \"USA\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1995-05-15\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
                 }
-              },
-              "response": [],
-              "event": [
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 List Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Comprehensive user list with card counts, specialties, and subscription status."
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 User Stats (Dashboard)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "stats"
+              ]
+            },
+            "description": "Aggregated growth metrics for the admin dashboard."
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Update User (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":userId"
+              ],
+              "variable": [
                 {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const response = pm.response.json();",
-                      "if (response.success && response.data && response.data.accessToken) {",
-                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
-                      "    console.log(\"accessToken has been set in collection variables\");",
-                      "}",
-                      "if (response.success && response.data && response.data.refreshToken) {",
-                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
+                  "key": "userId",
+                  "value": ""
                 }
               ]
             },
-            {
-              "name": "1.2 Forget Password",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/forgot-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "forgot-password"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@example.com\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "1.3 Verify OTP",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/verify-otp",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "verify-otp"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@example.com\",\n  \"otp\": \"123456\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
+            "description": "Update any user field (whitelist approach)."
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Update User Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:userId/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":userId",
+                "status"
+              ],
+              "variable": [
                 {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const response = pm.response.json();",
-                      "if (response.success && response.data && response.data.accessToken) {",
-                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
-                      "    console.log(\"accessToken has been set in collection variables\");",
-                      "}",
-                      "if (response.success && response.data && response.data.refreshToken) {",
-                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
+                  "key": "userId",
+                  "value": ""
                 }
               ]
             },
-            {
-              "name": "1.4 Reset Password",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/reset-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "reset-password"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"newPassword\": \"StrongPassword123!\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "1.5 Refresh Token",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/refresh-token",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "refresh-token"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"deviceToken\": \"fcm-token-xyz\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": [],
-              "event": [
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "2.6 Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":userId"
+              ],
+              "variable": [
                 {
-                  "listen": "test",
-                  "script": {
-                    "exec": [
-                      "const response = pm.response.json();",
-                      "if (response.success && response.data && response.data.accessToken) {",
-                      "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
-                      "    console.log(\"accessToken has been set in collection variables\");",
-                      "}",
-                      "if (response.success && response.data && response.data.refreshToken) {",
-                      "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
-                      "}"
-                    ],
-                    "type": "text/javascript"
-                  }
+                  "key": "userId",
+                  "value": ""
                 }
               ]
             },
-            {
-              "name": "1.6 Logout",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/logout",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "logout"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"deviceToken\": \"fcm-token-xyz\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "1.7 Change Password",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/change-password",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "change-password"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewStrongPassword123!\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "1.8 Resend OTP",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/auth/resend-verify-email",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "auth",
-                    "resend-verify-email"
-                  ]
-                },
-                "description": "",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"email\": \"admin@example.com\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            }
-          ]
+            "description": "Permanently removes a user from the database."
+          },
+          "response": []
         },
         {
-          "name": "Overview",
-          "item": [
-            {
-              "name": "2.1 Growth Metrics (Stats)",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/admin/growth-metrics",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "growth-metrics"
-                  ]
-                },
-                "description": "Dashboard-er summary cards-er jonno ei endpoint use hoy. Monthly growth calculate kore: current month vs last month."
-              },
-              "response": []
+          "name": "2.7 Get User by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": ""
+                }
+              ]
             },
-            {
-              "name": "2.2 Monthly Preference Cards Trend",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/admin/preference-cards/monthly",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "preference-cards",
-                    "monthly"
-                  ]
-                },
-                "description": "Preference cards-er monthly trend chart render korar jonno data return kore. YoY comparison inline series e embedded — frontend ke আলাদা calculate korte hobe na."
-              },
-              "response": []
-            },
-            {
-              "name": "2.3 Monthly Active Subscriptions Trend",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/admin/subscriptions/active/monthly",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "admin",
-                    "subscriptions",
-                    "active",
-                    "monthly"
-                  ]
-                },
-                "description": "Active subscriptions-er monthly analytics return kore — same shape as 2.2. YoY data inline series e embedded."
-              },
-              "response": []
-            }
-          ]
+            "description": "Admin specific view of a user's basic info. Returns user data wrapped in a `user` object."
+          },
+          "response": []
         },
         {
-          "name": "Supplies Management",
-          "item": [
-            {
-              "name": "6.1 List Supplies",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/supplies",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "supplies"
-                  ]
-                },
-                "description": "Shob supplies paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Sterile Gauze\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+          "name": "2.8 Get User Details (Public/User)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/:userId/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                ":userId",
+                "user"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": ""
                 }
-              },
-              "response": []
+              ]
             },
-            {
-              "name": "6.2 Create Supply",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/supplies",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "supplies"
-                  ]
-                },
-                "description": "Single supply create kore. Shudhu `name` field required.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Sterile Gauze\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "6.3 Update Supply",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/supplies/:supplyId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "supplies",
-                    ":supplyId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "supplyId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Supply er name update kore. Shudhu `name` field changeable.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"Updated Gauze Name\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "6.4 Delete Supply",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/supplies/:supplyId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "supplies",
-                    ":supplyId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "supplyId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Supply permanently delete kore. Hard delete — restore possible na.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"items\": [\n    { \"name\": \"Sterile Gauze\" },\n    { \"name\": \"Surgical Drape\" },\n    { \"name\": \"Suction Tip\" }\n  ]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            },
-            {
-              "name": "6.5 Bulk Create Supplies",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/supplies/bulk",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "supplies",
-                    "bulk"
-                  ]
-                },
-                "description": "Multiple supplies ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"items\": [\n    { \"name\": \"Sterile Gauze\" },\n    { \"name\": \"Surgical Drape\" },\n    { \"name\": \"Suction Tip\" }\n  ]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "response": []
-            }
-          ]
+            "description": ""
+          },
+          "response": []
         },
         {
-          "name": "Sutures Management",
-          "item": [
-            {
-              "name": "7.1 List Sutures",
-              "request": {
-                "method": "GET",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/sutures",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "sutures"
-                  ]
-                },
-                "description": "Shob sutures paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"3-0 Vicryl\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+          "name": "2.9 Get Own Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
               },
-              "response": []
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "profile"
+              ]
             },
-            {
-              "name": "7.2 Create Suture",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/sutures",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "sutures"
-                  ]
-                },
-                "description": "Single suture create kore. Shudhu `name` field required.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"3-0 Vicryl\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "2.10 Update Own Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
               },
-              "response": []
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "profile"
+              ]
             },
-            {
-              "name": "7.3 Update Suture",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/sutures/:sutureId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "sutures",
-                    ":sutureId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "sutureId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Suture er name update kore. Shudhu `name` field changeable.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"name\": \"4-0 Monocryl\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+            "description": "Supports text fields and a `profilePicture` file upload."
+          },
+          "response": []
+        },
+        {
+          "name": "2.11 List Favorite Cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
               },
-              "response": []
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/favorites",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "favorites"
+              ]
             },
-            {
-              "name": "7.4 Delete Suture",
-              "request": {
-                "method": "DELETE",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/sutures/:sutureId",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "sutures",
-                    ":sutureId"
-                  ],
-                  "variable": [
-                    {
-                      "key": "sutureId",
-                      "value": ""
-                    }
-                  ]
-                },
-                "description": "Suture permanently delete kore. Hard delete — restore possible na.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"items\": [\n    { \"name\": \"3-0 Vicryl\" },\n    { \"name\": \"4-0 Monocryl\" },\n    { \"name\": \"2-0 Silk\" }\n  ]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Preference Card Module",
+      "item": [
+        {
+          "name": "3.1 List/Search Preference Cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
               },
-              "response": []
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards?searchTerm=keyword",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards"
+              ],
+              "query": [
+                {
+                  "key": "searchTerm",
+                  "value": "keyword"
+                }
+              ]
             },
-            {
-              "name": "7.5 Bulk Create Sutures",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json",
-                    "type": "text"
-                  },
-                  {
-                    "key": "Authorization",
-                    "value": "Bearer {{accessToken}}",
-                    "type": "text"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/sutures/bulk",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "sutures",
-                    "bulk"
-                  ]
-                },
-                "description": "Multiple sutures ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"items\": [\n    { \"name\": \"3-0 Vicryl\" },\n    { \"name\": \"4-0 Monocryl\" },\n    { \"name\": \"2-0 Silk\" }\n  ]\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
+            "description": "**Primary Search Endpoint**: This is the main API used to search cards."
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Get Cards Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
               },
-              "response": []
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                "stats"
+              ]
+            },
+            "description": "Used to show stats on the Home screen. Returns counts for total public cards and the user's own cards."
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Fetch Distinct Specialties",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                "specialties"
+              ]
+            },
+            "description": "use case: its used to populate the filter dropdown dynamically."
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 Create Preference Card",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards"
+              ]
+            },
+            "description": "use case: User Creates a new preference card.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"visibility\": \"PRIVATE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             }
-          ]
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 Get Card Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/:cardId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                ":cardId"
+              ],
+              "variable": [
+                {
+                  "key": "cardId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Fetches all card details (surgeon, supplies, sutures, workflow, etc.)."
+          },
+          "response": []
+        },
+        {
+          "name": "3.6 Update Preference Card",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/:cardId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                ":cardId"
+              ],
+              "variable": [
+                {
+                  "key": "cardId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Updates an existing card. Only the fields that need changing should be sent. Updates are only possible for the owner or SUPER_ADMIN.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cardTitle\": \"Updated Knee Arthroscopy\",\n  \"medication\": \"Updated medication info\",\n  \"visibility\": \"PUBLIC\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.7 Delete Preference Card",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/:cardId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                ":cardId"
+              ],
+              "variable": [
+                {
+                  "key": "cardId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Permanently deletes a card. Deletion is only possible for the owner or SUPER_ADMIN. This is a hard delete; restoration is not possible. Admins can also use this endpoint to manually delete cards."
+          },
+          "response": []
+        },
+        {
+          "name": "3.8 Favorite a Card",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/favorites/cards/:cardId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                "favorites",
+                "cards",
+                ":cardId"
+              ],
+              "variable": [
+                {
+                  "key": "cardId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Adds a card to the favorites list. Follows idempotent behavior (returns 200 OK if already favorited)."
+          },
+          "response": []
+        },
+        {
+          "name": "3.9 Unfavorite a Card",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/favorites/cards/:cardId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                "favorites",
+                "cards",
+                ":cardId"
+              ],
+              "variable": [
+                {
+                  "key": "cardId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Removes from the favorites list. Follows idempotent behavior (returns 200 OK even if already unfavorited)."
+          },
+          "response": []
+        },
+        {
+          "name": "3.10 Download Preference Card",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/:cardId/download",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                ":cardId",
+                "download"
+              ],
+              "variable": [
+                {
+                  "key": "cardId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "use case: User increments the card download count and logs the download history."
+          },
+          "response": []
+        },
+        {
+          "name": "3.11 Admin Verification",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/preference-cards/:cardId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "preference-cards",
+                ":cardId"
+              ],
+              "variable": [
+                {
+                  "key": "cardId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "use case: Admin verify or unverify preference cards."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Event Module",
+      "item": [
+        {
+          "name": "4.1 List My Events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events?from=2026-04-01&to=2026-04-30",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-04-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-04-30"
+                }
+              ]
+            },
+            "description": "Fetches user-specific events. Date range filtering is supported for calendar views."
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Create Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events"
+              ]
+            },
+            "description": "Creates a new event and automatically schedules reminders (24h and 1h before).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Knee Replacement Surgery\",\n  \"date\": \"2026-05-10\",\n  \"time\": \"10:30 AM\",\n  \"location\": \"City Hospital, Operating Room 2\",\n  \"preferenceCard\": \"6817f8b92e4a8c1d44a91f20\",\n  \"durationInHours\": 3,\n  \"eventType\": \"SURGERY\",\n  \"personnel\": {\n    \"leadSurgeon\": \"Dr. John Doe\",\n    \"surgicalTeamMembers\": [\n      \"Dr. Sarah Smith\",\n      \"Nurse Alex\",\n      \"Technician Robert\"\n    ]\n  },\n  \"keyNotes\": \"Patient requires special orthopedic instruments.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Get Single Event Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/:eventId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events",
+                ":eventId"
+              ],
+              "variable": [
+                {
+                  "key": "eventId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Fetches full details for a specific event."
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Update Event",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/:eventId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events",
+                ":eventId"
+              ],
+              "variable": [
+                {
+                  "key": "eventId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Updates an existing event. Reminders are automatically rescheduled if time-related fields are changed.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Surgery Title\",\n  \"time\": \"10:00\",\n  \"durationHours\": 4,\n  \"location\": \"Operating Room 1 - Main Wing\",\n  \"eventType\": \"SURGERY\",\n  \"notes\": \"Updated case notes for the surgical team.\",\n  \"personnel\": {\n    \"leadSurgeon\": \"Dr. House\",\n    \"surgicalTeam\": [\"Dr. Wilson\", \"Dr. Chase\"]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 Delete Event",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/:eventId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events",
+                ":eventId"
+              ],
+              "variable": [
+                {
+                  "key": "eventId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Permanently removes an event from the system."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notification Module",
+      "item": [
+        {
+          "name": "5.1 Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            },
+            "description": "0`)."
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 Mark as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/:notificationId/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                ":notificationId",
+                "read"
+              ],
+              "variable": [
+                {
+                  "key": "notificationId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Single notification ke read mark kore. Tap-er shathe shathe (optimistic) call hoy background e."
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": "User top-right \"Mark all as read\" button e tap korle shob notifications `read: true` hoy ebong red dot disappear kore."
+          },
+          "response": []
+        },
+        {
+          "name": "5.4 Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/:notificationId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                ":notificationId"
+              ],
+              "variable": [
+                {
+                  "key": "notificationId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Swipe-to-delete ba long-press menu theke notification delete korar jonno. Optimistic UI: row immediately list theke remove hoy. Failure hole row restore hoy + error toast dekhay."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Legal Module",
+      "item": [
+        {
+          "name": "6.1 List Legal Pages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/legal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "legal"
+              ]
+            },
+            "description": "Shob available legal pages (Terms, Privacy, etc.) er title ebong slug list fetch korar jonno. Admin-side e same endpoint use kora hoy CMS list view-er jonno."
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 Get Legal Page by Slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/legal/:slug",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "legal",
+                ":slug"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Slug diye specific legal page-er full HTML/Markdown content fetch korar jonno."
+          },
+          "response": []
+        },
+        {
+          "name": "6.3 Create Legal Page",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/legal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "legal"
+              ]
+            },
+            "description": "Notun legal page create kore.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Terms and Conditions\",\n  \"content\": \"<h1>Terms</h1><p>Welcome to...</p>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.4 Update Legal Page",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/legal/:slug",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "legal",
+                ":slug"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Existing legal page update kore."
+          },
+          "response": []
+        },
+        {
+          "name": "6.5 Delete Legal Page",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/legal/:slug",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "legal",
+                ":slug"
+              ],
+              "variable": [
+                {
+                  "key": "slug",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Legal page delete kore."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Supply Module",
+      "item": [
+        {
+          "name": "7.1 List Supplies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/supplies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplies"
+              ]
+            },
+            "description": "Shob supplies paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno."
+          },
+          "response": []
+        },
+        {
+          "name": "7.2 Create Supply",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/supplies",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplies"
+              ]
+            },
+            "description": "Single supply create kore. Shudhu `name` field required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sterile Gauze\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.3 Bulk Create Supplies",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/supplies/bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplies",
+                "bulk"
+              ]
+            },
+            "description": "Multiple supplies ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"name\": \"Sterile Gauze\" },\n    { \"name\": \"Surgical Drape\" },\n    { \"name\": \"Suction Tip\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.4 Update Supply",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/supplies/:supplyId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplies",
+                ":supplyId"
+              ],
+              "variable": [
+                {
+                  "key": "supplyId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Supply er name update kore. Shudhu `name` field changeable.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Gauze Name\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.5 Delete Supply",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/supplies/:supplyId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "supplies",
+                ":supplyId"
+              ],
+              "variable": [
+                {
+                  "key": "supplyId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Supply permanently delete kore. Hard delete — restore possible na."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Suture Module",
+      "item": [
+        {
+          "name": "8.1 List Sutures",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sutures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sutures"
+              ]
+            },
+            "description": "Shob sutures paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno."
+          },
+          "response": []
+        },
+        {
+          "name": "8.2 Create Suture",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sutures",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sutures"
+              ]
+            },
+            "description": "Single suture create kore. Shudhu `name` field required.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"3-0 Vicryl\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.3 Bulk Create Sutures",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sutures/bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sutures",
+                "bulk"
+              ]
+            },
+            "description": "Multiple sutures ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    { \"name\": \"3-0 Vicryl\" },\n    { \"name\": \"4-0 Monocryl\" },\n    { \"name\": \"2-0 Silk\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.4 Update Suture",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sutures/:sutureId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sutures",
+                ":sutureId"
+              ],
+              "variable": [
+                {
+                  "key": "sutureId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Suture er name update kore. Shudhu `name` field changeable.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"4-0 Monocryl\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.5 Delete Suture",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sutures/:sutureId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sutures",
+                ":sutureId"
+              ],
+              "variable": [
+                {
+                  "key": "sutureId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Suture permanently delete kore. Hard delete — restore possible na."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Subscription Module",
+      "item": [
+        {
+          "name": "9.1 Get My Subscription",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscriptions/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "subscriptions",
+                "me"
+              ]
+            },
+            "description": "Current user-er active subscription plan ebong status fetch kore. Free user-er jonno o sobshomoy ekta plan object return hoy — 404 return hoy na."
+          },
+          "response": []
+        },
+        {
+          "name": "9.2 Verify Apple Purchase (iOS)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscriptions/apple/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "subscriptions",
+                "apple",
+                "verify"
+              ]
+            },
+            "description": "iOS StoreKit 2 theke pawa `signedTransactionInfo` verify kore. Apple server-er shathe cryptographic verification hoy ebong user-er plan update kore.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"signedTransactionInfo\": \"<JWS-token-from-storekit2>\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.3 Verify Google Purchase (Android)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscriptions/google/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "subscriptions",
+                "google",
+                "verify"
+              ]
+            },
+            "description": "Android BillingClient theke pawa `purchaseToken` verify kore. Google Play Developer API use kore state fetch kora hoy.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"purchaseToken\": \"<token-from-google-play>\",\n  \"productId\": \"com.tbsosick.premium.yearly\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.4 Set Free Plan (Internal/Manual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/subscriptions/choose/free",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "subscriptions",
+                "choose",
+                "free"
+              ]
+            },
+            "description": "User-ke manually free plan-e downgrade ba switch korte allow kore."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin Module",
+      "item": [
+        {
+          "name": "10.1 Growth Metrics (Stats)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/growth-metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "growth-metrics"
+              ]
+            },
+            "description": "This endpoint is used for dashboard summary cards. It calculates monthly growth: current month vs last month."
+          },
+          "response": []
+        },
+        {
+          "name": "10.2 Monthly Preference Cards Trend",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/preference-cards/trends/monthly",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "preference-cards",
+                "trends",
+                "monthly"
+              ]
+            },
+            "description": "Returns monthly analytics for preference cards — includes an inline YoY comparison (current year vs. last year), with `peak` and `slowest` months pre-computed server-side."
+          },
+          "response": []
+        },
+        {
+          "name": "10.3 Monthly Active Subscriptions Trend",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/subscriptions/trends/monthly",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "subscriptions",
+                "trends",
+                "monthly"
+              ]
+            },
+            "description": "Returns monthly analytics for active subscriptions — includes an inline YoY comparison (current year vs. last year), with `peak` and `slowest` months pre-computed server-side."
+          },
+          "response": []
         }
       ]
     }

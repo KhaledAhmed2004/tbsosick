@@ -39,7 +39,7 @@ const deleteSupplyFromDB = (id) => __awaiter(void 0, void 0, void 0, function* (
 const bulkCreateSuppliesToDB = (items) => __awaiter(void 0, void 0, void 0, function* () {
     // Normalize names and remove empty
     const normalized = items
-        .map(i => ({ name: i.name.trim() }))
+        .map(i => ({ name: i.name.trim(), isActive: true }))
         .filter(i => i.name.length > 0);
     const names = normalized.map(i => i.name);
     // Find existing to avoid duplicates

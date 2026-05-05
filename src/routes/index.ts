@@ -26,7 +26,7 @@ const apiRoutes = [
     route: NotificationRoutes,
   },
   {
-    path: '/subscription',
+    path: '/subscriptions',
     route: SubscriptionRoutes,
   },
   {
@@ -38,7 +38,7 @@ const apiRoutes = [
     route: PreferenceCardRoutes,
   },
   {
-    path: '/dashboard',
+    path: '/admin',
     route: AdminRoutes,
   },
   {

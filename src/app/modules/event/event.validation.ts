@@ -11,9 +11,9 @@ const legacyDateTimeFields = {
     .optional(),
   time: z
     .string()
-    .regex(/^\d{2}:\d{2}$/)
+    .regex(/^\d{2}:\d{2}$|^\d{1,2}:\d{2}\s?(?:AM|PM)$/i)
     .optional(),
-  durationHours: z.number().positive().optional(),
+  durationInHours: z.number().positive().optional(),
 };
 
 const createEventZodSchema = z.object({
@@ -25,21 +25,21 @@ const createEventZodSchema = z.object({
       eventType: z.enum(Object.values(EVENT_TYPE) as [string, ...string[]]),
       location: z.string().optional(),
       preferenceCard: z.string().optional(),
-      notes: z.string().optional(),
+      keyNotes: z.string().optional(),
       personnel: z
         .object({
           leadSurgeon: z.string().min(1, 'Lead surgeon is required'),
-          surgicalTeam: z.array(z.string()).optional(),
+          surgicalTeamMembers: z.array(z.string()).optional(),
         })
         .optional(),
       ...legacyDateTimeFields,
     })
     .refine(
       data =>
-        Boolean(data.startsAt) || (data.date && data.time && data.durationHours),
+        Boolean(data.startsAt) || (data.date && data.time && data.durationInHours),
       {
         message:
-          'Provide startsAt (ISO) or the legacy date + time + durationHours triple',
+          'Provide startsAt (ISO) or the legacy date + time + durationInHours triple',
       },
     ),
 });
@@ -54,11 +54,11 @@ const updateEventZodSchema = z.object({
       .optional(),
     location: z.string().optional(),
     preferenceCard: z.string().optional(),
-    notes: z.string().optional(),
+    keyNotes: z.string().optional(),
     personnel: z
       .object({
         leadSurgeon: z.string().optional(),
-        surgicalTeam: z.array(z.string()).optional(),
+        surgicalTeamMembers: z.array(z.string()).optional(),
       })
       .optional(),
     ...legacyDateTimeFields,

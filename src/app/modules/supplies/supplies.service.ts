@@ -28,7 +28,7 @@ const deleteSupplyFromDB = async (id: string) => {
 const bulkCreateSuppliesToDB = async (items: Supply[]) => {
   // Normalize names and remove empty
   const normalized = items
-    .map(i => ({ name: i.name.trim() }))
+    .map(i => ({ name: i.name.trim(), isActive: true }))
     .filter(i => i.name.length > 0);
 
   const names = normalized.map(i => i.name);

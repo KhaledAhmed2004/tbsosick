@@ -141,14 +141,18 @@ const assertCardIsPublishable = (card) => {
 };
 const getPreferenceCardCountsFromDB = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const [AllCardsCount, myCardsCount] = yield Promise.all([
-        preference_card_model_1.PreferenceCardModel.countDocuments({ published: true }),
-        preference_card_model_1.PreferenceCardModel.countDocuments({ createdBy: userId }),
+        preference_card_model_1.PreferenceCardModel.countDocuments({
+            isDeleted: false,
+            $or: [{ visibility: 'PUBLIC' }, { createdBy: userId }],
+        }),
+        preference_card_model_1.PreferenceCardModel.countDocuments({ createdBy: userId, isDeleted: false }),
     ]);
     return { AllCardsCount, myCardsCount };
 });
-const getDistinctSpecialtiesFromDB = () => __awaiter(void 0, void 0, void 0, function* () {
+const getDistinctSpecialtiesFromDB = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const specialties = yield preference_card_model_1.PreferenceCardModel.distinct('surgeon.specialty', {
-        published: true,
+        isDeleted: false,
+        $or: [{ visibility: 'PUBLIC' }, { createdBy: userId }],
     });
     return specialties.filter(Boolean).sort();
 });
@@ -160,7 +164,7 @@ const getFavoriteCardIdsForUserFromDB = (userId) => __awaiter(void 0, void 0, vo
  * Flattens a card document to make it easy for PDF generation.
  * Extracts names from populated supplies and sutures.
  */
-const flattenCard = (doc) => {
+const flattenCardForPDF = (doc) => {
     return Object.assign(Object.assign({}, doc), { supplies: (doc.supplies || []).map((s) => {
             var _a;
             return ({
@@ -219,7 +223,7 @@ const downloadPreferenceCardInDB = (id, userId, role) => __awaiter(void 0, void 
         }
     }
     // 6. Generate PDF
-    const flattenedDoc = flattenCard(doc);
+    const flattenedDoc = flattenCardForPDF(doc);
     const pdfBuffer = yield generatePreferenceCardPDF(flattenedDoc);
     return {
         buffer: pdfBuffer,
@@ -351,10 +355,10 @@ const createPreferenceCardInDB = (userId, data) => __awaiter(void 0, void 0, voi
         const normalised = normaliseClientRefField(data.sutures, 'suture');
         data.sutures = yield resolveMixedItemsWithQuantity(normalised, 'suture', sutures_model_1.SutureModel);
     }
-    const dataToSave = Object.assign(Object.assign({}, data), { createdBy: userId });
-    // If the client is creating the card already marked as published,
+    const dataToSave = Object.assign(Object.assign({}, data), { createdBy: userId, published: data.visibility === 'PUBLIC' });
+    // If the client is creating the card already marked as PUBLIC,
     // enforce the completeness invariant up front.
-    if (dataToSave.published === true) {
+    if (dataToSave.visibility === 'PUBLIC') {
         assertCardIsPublishable(dataToSave);
     }
     const card = yield preference_card_model_1.PreferenceCardModel.create(dataToSave);
@@ -363,6 +367,7 @@ const createPreferenceCardInDB = (userId, data) => __awaiter(void 0, void 0, voi
 const listPreferenceCardsForUserFromDB = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const docs = yield preference_card_model_1.PreferenceCardModel.find({
         createdBy: userId,
+        isDeleted: false,
     })
         .populate('supplies.supply', 'name -_id')
         .populate('sutures.suture', 'name -_id')
@@ -375,6 +380,7 @@ const listPreferenceCardsForUserFromDB = (userId) => __awaiter(void 0, void 0, v
 const listPrivatePreferenceCardsForUserFromDB = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const qb = new builder_1.QueryBuilder(preference_card_model_1.PreferenceCardModel.find({
         createdBy: userId,
+        isDeleted: false,
     }), query || {})
         // Text index on cardTitle + medication + surgeon.fullName + surgeon.specialty
         // handles the full search path — see `card_text_idx` in the model.
@@ -404,7 +410,7 @@ const getPreferenceCardByIdFromDB = (id, userId, role) => __awaiter(void 0, void
     }
     const isOwner = doc.createdBy.toString() === userId;
     const isSuperAdmin = role === user_1.USER_ROLES.SUPER_ADMIN;
-    if (!isOwner && !isSuperAdmin && !doc.published) {
+    if (!isOwner && !isSuperAdmin && doc.visibility !== 'PUBLIC') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to access this card');
     }
     return flattenCard(doc);
@@ -431,13 +437,17 @@ const updatePreferenceCardInDB = (id, userId, role, payload) => __awaiter(void 0
         const normalised = normaliseClientRefField(payload.sutures, 'suture');
         payload.sutures = yield resolveMixedItemsWithQuantity(normalised, 'suture', sutures_model_1.SutureModel);
     }
-    // If the update flips the card to `published: true`, pre-check the
+    // If the update flips the card to `visibility: 'PUBLIC'`, pre-check the
     // merged shape so half-filled drafts can never be published.
-    if (payload.published === true) {
+    if (payload.visibility === 'PUBLIC') {
         const full = yield preference_card_model_1.PreferenceCardModel.findById(id).lean();
         if (full) {
             assertCardIsPublishable(Object.assign(Object.assign({}, full), payload));
         }
+        payload.published = true;
+    }
+    else if (payload.visibility === 'PRIVATE') {
+        payload.published = false;
     }
     // Update the document in one step
     const updatedCard = yield preference_card_model_1.PreferenceCardModel.findOneAndUpdate({ _id: id }, { $set: payload }, { new: true });
@@ -459,11 +469,6 @@ const updateVerificationStatusInDB = (id, role, status) => __awaiter(void 0, voi
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Preference card not found');
     if (role !== user_1.USER_ROLES.SUPER_ADMIN) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to verify/reject this card');
-    }
-    // Enforce completeness before moving to VERIFIED. Drafts and
-    // UNVERIFIED cards are allowed to be incomplete.
-    if (status === 'VERIFIED') {
-        assertCardIsPublishable(doc.toObject());
     }
     doc.verificationStatus = status;
     yield doc.save();
@@ -493,13 +498,26 @@ const updateVerificationStatusInDB = (id, role, status) => __awaiter(void 0, voi
  * lower-traffic and this method is the reference pattern when they're
  * migrated.
  */
-const listPublicPreferenceCardsFromDB = (query) => __awaiter(void 0, void 0, void 0, function* () {
+const listPublicPreferenceCardsFromDB = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d;
     const rawQuery = query || {};
     const page = Math.max(Number(rawQuery.page) || 1, 1);
     const limit = Math.min(Math.max(Number(rawQuery.limit) || 10, 1), 50);
     const skip = (page - 1) * limit;
-    const match = { published: true, isDeleted: false };
+    // Unified visibility match:
+    // 1. All PUBLIC cards
+    // 2. User's own PRIVATE cards (only visible to owner)
+    const match = {
+        isDeleted: false,
+        $or: [
+            { visibility: 'PUBLIC' },
+            { createdBy: new mongoose_1.Types.ObjectId(userId) },
+        ],
+    };
+    // Optional verification status filter (Admin moderation or Library filter)
+    if (rawQuery.verificationStatus) {
+        match.verificationStatus = rawQuery.verificationStatus;
+    }
     // Specialty facet filter. Uses exact match now that `surgeon.specialty`
     // is indexed — callers pass the canonical string from `/specialties`.
     const specialtyValue = rawQuery.specialty || rawQuery.surgeonSpecialty;
@@ -664,10 +682,10 @@ const favoritePreferenceCardInDB = (cardId, userId, role) => __awaiter(void 0, v
     if (card.isDeleted) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.GONE, 'This preference card has been deleted');
     }
-    // Visibility check: Card must be published OR the user must be the creator OR SUPER_ADMIN
+    // Visibility check: Card must be PUBLIC OR the user must be the creator OR SUPER_ADMIN
     const isOwner = card.createdBy.toString() === userId;
     const isSuperAdmin = role === user_1.USER_ROLES.SUPER_ADMIN;
-    if (!card.published && !isOwner && !isSuperAdmin) {
+    if (card.visibility !== 'PUBLIC' && !isOwner && !isSuperAdmin) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to favorite this private card');
     }
     // Per-user favorites cap. Skip for re-adds (idempotent) — only enforce when
@@ -709,10 +727,10 @@ const unfavoritePreferenceCardInDB = (cardId, userId, role) => __awaiter(void 0,
     if (card.isDeleted) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.GONE, 'This preference card has been deleted');
     }
-    // Visibility check: Card must be published OR the user must be the creator OR SUPER_ADMIN
+    // Visibility check: Card must be PUBLIC OR the user must be the creator OR SUPER_ADMIN
     const isOwner = card.createdBy.toString() === userId;
     const isSuperAdmin = role === user_1.USER_ROLES.SUPER_ADMIN;
-    if (!card.published && !isOwner && !isSuperAdmin) {
+    if (card.visibility !== 'PUBLIC' && !isOwner && !isSuperAdmin) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to unfavorite this private card');
     }
     // Idempotent unfavorite

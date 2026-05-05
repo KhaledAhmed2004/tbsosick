@@ -9,7 +9,7 @@ export enum EVENT_TYPE {
 
 export interface IPersonnel {
   leadSurgeon: string;
-  surgicalTeam: string[];
+  surgicalTeamMembers: string[];
 }
 
 export interface IEvent extends Document {
@@ -17,9 +17,10 @@ export interface IEvent extends Document {
   title: string;
   startsAt: Date;
   endsAt: Date;
+  durationInHours: number;
   eventType: EVENT_TYPE;
   location?: string;
   preferenceCard?: Types.ObjectId;
-  notes?: string;
+  keyNotes?: string;
   personnel?: IPersonnel;
 }

@@ -11,7 +11,7 @@ import { NotificationBuilder } from '../../builder/NotificationBuilder';
  */
 const resolveTimeRange = (
   payload: Record<string, any>,
-): { startsAt: Date; endsAt: Date } | null => {
+): { startsAt: Date; endsAt: Date; durationInHours: number } | null => {
   if (payload.startsAt) {
     const startsAt = new Date(payload.startsAt);
     if (Number.isNaN(startsAt.getTime())) {
@@ -19,39 +19,65 @@ const resolveTimeRange = (
     }
 
     let endsAt: Date;
+    let durationInHours: number;
+
     if (payload.endsAt) {
       endsAt = new Date(payload.endsAt);
       if (Number.isNaN(endsAt.getTime())) {
         throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid endsAt');
       }
-    } else if (typeof payload.durationHours === 'number') {
-      endsAt = new Date(startsAt.getTime() + payload.durationHours * 3600_000);
+      durationInHours = (endsAt.getTime() - startsAt.getTime()) / 3600_000;
+    } else if (typeof payload.durationInHours === 'number') {
+      durationInHours = payload.durationInHours;
+      endsAt = new Date(startsAt.getTime() + durationInHours * 3600_000);
     } else {
       throw new ApiError(
         StatusCodes.BAD_REQUEST,
-        'endsAt or durationHours is required with startsAt',
+        'endsAt or durationInHours is required with startsAt',
       );
     }
 
     if (endsAt <= startsAt) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'endsAt must be after startsAt');
     }
-    return { startsAt, endsAt };
+    return { startsAt, endsAt, durationInHours };
   }
 
-  // Legacy triple: { date: 'YYYY-MM-DD', time: 'HH:MM', durationHours: N }
-  if (payload.date && payload.time && payload.durationHours) {
+  // Legacy triple: { date: 'YYYY-MM-DD', time: 'HH:MM' or 'HH:MM AM/PM', durationInHours: N }
+  if (payload.date && payload.time && payload.durationInHours) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
       throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid date');
     }
-    if (!/^\d{2}:\d{2}$/.test(payload.time)) {
-      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid time');
+
+    let startsAt: Date;
+    const timeStr = payload.time.trim();
+
+    // Check if time is in AM/PM format
+    if (/(AM|PM)$/i.test(timeStr)) {
+      const [time, modifier] = timeStr.split(/\s+/);
+      let [hours, minutes] = time.split(':').map(Number);
+
+      if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
+      if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
+
+      const paddedHours = hours.toString().padStart(2, '0');
+      const paddedMinutes = minutes.toString().padStart(2, '0');
+      startsAt = new Date(`${payload.date}T${paddedHours}:${paddedMinutes}:00.000Z`);
+    } else {
+      if (!/^\d{2}:\d{2}$/.test(timeStr)) {
+        throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid time');
+      }
+      startsAt = new Date(`${payload.date}T${timeStr}:00.000Z`);
     }
-    const startsAt = new Date(`${payload.date}T${payload.time}:00.000Z`);
-    const endsAt = new Date(
-      startsAt.getTime() + Number(payload.durationHours) * 3600_000,
-    );
-    return { startsAt, endsAt };
+
+    if (Number.isNaN(startsAt.getTime())) {
+      throw new ApiError(StatusCodes.BAD_REQUEST, 'Invalid date/time combination');
+    }
+
+    const durationInHours = Number(payload.durationInHours);
+    const endsAt = new Date(startsAt.getTime() + durationInHours * 3600_000);
+
+    return { startsAt, endsAt, durationInHours };
   }
 
   return null;
@@ -101,30 +127,95 @@ const scheduleEventReminders = async (
   }
 };
 
+/**
+ * Transforms a DB event object into the user-friendly format requested by the client.
+ */
+const transformEventResponse = (event: any, isListView: boolean = false) => {
+  const startsAt = new Date(event.startsAt);
+  const now = new Date();
+
+  // Extract date (YYYY-MM-DD)
+  const date = startsAt.toISOString().split('T')[0];
+
+  // Extract time in 12-hour AM/PM format
+  let hours = startsAt.getUTCHours();
+  const minutes = startsAt.getUTCMinutes().toString().padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12; // the hour '0' should be '12'
+  const time = `${hours}:${minutes} ${ampm}`;
+
+  const {
+    userId,
+    startsAt: _s,
+    endsAt: _e,
+    preferenceCard,
+    ...rest
+  } = event;
+
+  const tag = startsAt > now ? 'Upcoming' : 'Past';
+
+  // If list view, return minimal fields
+  if (isListView) {
+    return {
+      _id: event._id,
+      title: event.title,
+      tag,
+      date,
+      time,
+      durationInHours: event.durationInHours,
+      eventType: event.eventType,
+    };
+  }
+
+  // Handle populated preferenceCard mapping for detailed view
+  let linkedPreferenceCard = preferenceCard;
+  if (
+    preferenceCard &&
+    typeof preferenceCard === 'object' &&
+    preferenceCard.cardTitle
+  ) {
+    linkedPreferenceCard = {
+      _id: preferenceCard._id,
+      title: preferenceCard.cardTitle,
+    };
+  }
+
+  return {
+    ...rest,
+    tag,
+    date,
+    time,
+    linkedPreferenceCard,
+    createdBy: userId,
+  };
+};
+
 const createEventInDB = async (userId: string, payload: Record<string, any>) => {
   const range = resolveTimeRange(payload);
   if (!range) {
     throw new ApiError(
       StatusCodes.BAD_REQUEST,
-      'startsAt (or legacy date + time + durationHours) is required',
+      'startsAt (or legacy date + time + durationInHours) is required',
     );
   }
 
-  // Strip legacy/duration fields from the payload to avoid writing them to DB.
-  const { date, time, durationHours, startsAt, endsAt, ...rest } = payload;
+  // Strip legacy fields from the payload to avoid writing them to DB.
+  const { date, time, durationInHours, startsAt, endsAt, ...rest } = payload;
 
   const event = await EventModel.create({
     userId,
     ...rest,
     startsAt: range.startsAt,
     endsAt: range.endsAt,
+    durationInHours: range.durationInHours,
   });
 
   const eventId = (event._id as any).toString();
 
   await scheduleEventReminders(userId, eventId, payload.title, range.startsAt);
 
-  return event;
+  return transformEventResponse(event.toObject());
 };
 
 const listEventsForUserFromDB = async (
@@ -143,28 +234,29 @@ const listEventsForUserFromDB = async (
     }
   }
 
-  return EventModel.find(filter)
-    .select(
-      'title eventType startsAt endsAt location notes personnel preferenceCard',
-    )
-    .lean();
+  const events = await EventModel.find(filter).sort({ startsAt: 1 }).lean();
+
+  return events.map(event => transformEventResponse(event, true));
 };
 
 const getEventByIdFromDB = async (
   id: string,
   requester: { id: string; role: string },
-): Promise<IEvent | null> => {
+) => {
   const event = await EventModel.findById(id)
     .populate('preferenceCard', 'cardTitle')
     .lean();
+
   if (!event) return null;
-  if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'Not allowed to view this event',
-    );
+
+  if (
+    event.userId.toString() !== requester.id &&
+    requester.role !== 'SUPER_ADMIN'
+  ) {
+    throw new ApiError(StatusCodes.FORBIDDEN, 'Not allowed to view this event');
   }
-  return event;
+
+  return transformEventResponse(event);
 };
 
 const updateEventInDB = async (
@@ -190,7 +282,7 @@ const updateEventInDB = async (
     payload.endsAt !== undefined ||
     (payload as any).date !== undefined ||
     (payload as any).time !== undefined ||
-    (payload as any).durationHours !== undefined;
+    (payload as any).durationInHours !== undefined;
 
   let normalised: Record<string, any> = { ...payload };
   if (touchesTime) {
@@ -199,21 +291,19 @@ const updateEventInDB = async (
       endsAt: payload.endsAt,
       date: (payload as any).date,
       time: (payload as any).time,
-      durationHours: (payload as any).durationHours,
+      durationInHours: (payload as any).durationInHours ?? event.durationInHours,
     };
     const range = resolveTimeRange(merged);
-    if (!range) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        'Could not resolve event time range',
-      );
+    if (range) {
+      normalised.startsAt = range.startsAt;
+      normalised.endsAt = range.endsAt;
+      normalised.durationInHours = range.durationInHours;
     }
-    normalised.startsAt = range.startsAt;
-    normalised.endsAt = range.endsAt;
-    delete normalised.date;
-    delete normalised.time;
-    delete normalised.durationHours;
   }
+
+  // Strip temporary fields from normalised before updating DB
+  delete (normalised as any).date;
+  delete (normalised as any).time;
 
   Object.assign(event, normalised);
   const updatedEvent = await event.save();

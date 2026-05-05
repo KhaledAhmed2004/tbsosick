@@ -36,8 +36,8 @@ const getCards = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 
         result = yield preference_card_service_1.PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(user.id, req.query);
     }
     else {
-        // Default to public
-        result = yield preference_card_service_1.PreferenceCardService.listPublicPreferenceCardsFromDB(req.query);
+        // Default to public - now handles unified visibility (Public + My Private)
+        result = yield preference_card_service_1.PreferenceCardService.listPublicPreferenceCardsFromDB(user.id, req.query);
     }
     const [favoriteCardIds] = yield Promise.all([
         preference_card_service_1.PreferenceCardService.getFavoriteCardIdsForUserFromDB(user.id),
@@ -172,7 +172,8 @@ const getStats = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 
     });
 }));
 const getSpecialties = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield preference_card_service_1.PreferenceCardService.getDistinctSpecialtiesFromDB();
+    const user = req.user;
+    const result = yield preference_card_service_1.PreferenceCardService.getDistinctSpecialtiesFromDB(user.id);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

@@ -27,7 +27,7 @@ const deleteSutureFromDB = async (id: string) => {
 
 const bulkCreateSuturesToDB = async (items: Suture[]) => {
   const normalized = items
-    .map(i => ({ name: i.name.trim() }))
+    .map(i => ({ name: i.name.trim(), isActive: true }))
     .filter(i => i.name.length > 0);
 
   const names = normalized.map(i => i.name);

@@ -5,6 +5,7 @@ import config from '../../config';
 import { USER_STATUS } from '../../enums/user';
 import ApiError from '../../errors/ApiError';
 import { jwtHelper } from '../../helpers/jwtHelper';
+import { JwtUser } from '../../types';
 import { User } from '../modules/user/user.model';
 
 const auth =
@@ -15,10 +16,7 @@ const auth =
 
       // 1️⃣ No token provided — require authentication for all protected routes
       if (!authHeader) {
-        throw new ApiError(
-          StatusCodes.UNAUTHORIZED,
-          'Authorization token is required',
-        );
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Unauthorized access');
       }
 
       // 2️⃣ Validate Bearer format
@@ -32,7 +30,7 @@ const auth =
       // 3️⃣ Extract token and ensure it's not empty
       const token = authHeader.split(' ')[1];
       if (!token || token.trim() === '') {
-        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Valid token is required');
+        throw new ApiError(StatusCodes.UNAUTHORIZED, 'Unauthorized access');
       }
 
       // 4️⃣ Verify JWT token
@@ -86,7 +84,7 @@ const auth =
       }
 
       // 6️⃣ Attach verified user to request
-      req.user = verifiedUser;
+      req.user = verifiedUser as JwtUser;
 
       // 7️⃣ Role-based access check
       if (allowedRoles.length && !allowedRoles.includes(verifiedUser.role)) {

@@ -38,8 +38,8 @@ const deleteSuture = catchAsync(async (req: Request, res: Response) => {
 });
 
 const bulkCreate = catchAsync(async (req: Request, res: Response) => {
-  const { items } = req.body as { items: Array<{ name: string }> };
-  const result = await SuturesService.bulkCreateSuturesToDB(items);
+  const { items } = req.body as { items: Array<{ name: string; isActive: boolean }> };
+  const result = await SuturesService.bulkCreateSuturesToDB(items as any);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,

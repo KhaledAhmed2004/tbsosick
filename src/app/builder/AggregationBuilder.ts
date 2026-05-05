@@ -251,21 +251,32 @@ class AggregationBuilder<T> {
     sumField?: string;
     timeUnit: 'day' | 'week' | 'month' | 'year';
     filter?: Record<string, any>;
+    year?: number;
+    from?: string;
+    to?: string;
     limit?: number;
   }) {
-    const { sumField, timeUnit, filter = {}, limit } = options;
+    const { sumField, timeUnit, filter = {}, year, from, to } = options;
 
     const now = new Date();
-    const currentYear = now.getFullYear();
+    const targetYear = year || now.getFullYear();
     const currentMonth = now.getMonth(); // 0-indexed
 
-    // Only consider documents from the current year
-    const yearFilter = {
+    // Build date filter
+    const dateFilter: Record<string, any> = {};
+
+    if (from || to) {
+      if (from) dateFilter.$gte = new Date(from);
+      if (to) dateFilter.$lte = new Date(to);
+    } else {
+      // Default to targetYear if no range provided
+      dateFilter.$gte = new Date(targetYear, 0, 1);
+      dateFilter.$lte = new Date(targetYear, 11, 31);
+    }
+
+    const matchFilter = {
       ...filter,
-      createdAt: {
-        $gte: new Date(currentYear, 0, 1),
-        $lte: new Date(currentYear, 11, 31),
-      },
+      createdAt: dateFilter,
     };
 
     const dateGrouping = {
@@ -280,7 +291,7 @@ class AggregationBuilder<T> {
     };
 
     this.pipeline = [
-      { $match: yearFilter },
+      { $match: matchFilter },
       {
         $group: {
           _id: dateGrouping[timeUnit],
@@ -290,10 +301,10 @@ class AggregationBuilder<T> {
       },
       {
         $sort: {
-          '_id.year': -1,
-          '_id.month': -1,
-          '_id.week': -1,
-          '_id.day': -1,
+          '_id.year': 1,
+          '_id.month': 1,
+          '_id.week': 1,
+          '_id.day': 1,
         },
       },
     ];
@@ -308,18 +319,22 @@ class AggregationBuilder<T> {
           count: 0,
         }));
         results.forEach(item => {
-          const index = item._id.month - 1;
-          months[index] = {
-            month: item._id.month,
-            total: item.total,
-            count: item.count,
-          };
+          // Only populate if the year matches the targetYear to prevent data bleed from ranges spanning multiple years
+          if (item._id.year === targetYear) {
+            const index = item._id.month - 1;
+            months[index] = {
+              month: item._id.month,
+              total: item.total,
+              count: item.count,
+            };
+          }
         });
 
         return months.map(m => ({
-          label: new Date(currentYear, m.month - 1).toLocaleString('default', {
-            month: 'short',
-          }),
+          month: `${targetYear}-${String(m.month).padStart(2, '0')}`,
+          label: new Date(targetYear, m.month - 1).toLocaleString('default', {
+            month: 'long',
+          }) + ` ${targetYear}`,
           totalRevenue: m.total,
           transactionCount: m.count,
         }));
@@ -332,7 +347,7 @@ class AggregationBuilder<T> {
           count: 0,
         }));
         results.forEach(item => {
-          if (item._id.year === currentYear) {
+          if (item._id.year === targetYear) {
             const index = item._id.week - 1;
             weeks[index] = {
               week: item._id.week,
@@ -351,7 +366,7 @@ class AggregationBuilder<T> {
 
       case 'day': {
         const daysInMonth = new Date(
-          currentYear,
+          targetYear,
           currentMonth + 1,
           0
         ).getDate();
@@ -362,7 +377,7 @@ class AggregationBuilder<T> {
         }));
         results.forEach(item => {
           if (
-            item._id.year === currentYear &&
+            item._id.year === targetYear &&
             item._id.month === currentMonth + 1
           ) {
             const index = item._id.day - 1;
@@ -385,7 +400,7 @@ class AggregationBuilder<T> {
 
       case 'year': {
         const years = Array.from({ length: 5 }, (_, i) => ({
-          year: currentYear - i,
+          year: targetYear - i,
           total: 0,
           count: 0,
         }));

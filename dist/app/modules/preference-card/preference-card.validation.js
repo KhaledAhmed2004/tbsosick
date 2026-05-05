@@ -39,7 +39,7 @@ const createPreferenceCardSchema = zod_1.z.object({
         workflow: zod_1.z.string().optional(),
         keyNotes: zod_1.z.string().optional(),
         photoLibrary: zod_1.z.array(zod_1.z.string()).max(10).optional(),
-        published: zod_1.z.boolean().optional(),
+        visibility: zod_1.z.enum(['PUBLIC', 'PRIVATE']).optional(),
     }),
 });
 // Update Preference Card (partial update)
@@ -57,7 +57,7 @@ const updatePreferenceCardSchema = zod_1.z.object({
         workflow: zod_1.z.string().optional(),
         keyNotes: zod_1.z.string().optional(),
         photoLibrary: zod_1.z.array(zod_1.z.string()).max(10).optional(),
-        published: zod_1.z.boolean().optional(),
+        visibility: zod_1.z.enum(['PUBLIC', 'PRIVATE']).optional(),
     }),
 });
 // Suggest Supplies Schema

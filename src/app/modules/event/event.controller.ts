@@ -33,7 +33,7 @@ const getMyEvents = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Events retrieved successfully',
+    message: 'Events fetched successfully',
     data: result,
   });
 });
@@ -49,7 +49,7 @@ const getEventById = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: 'Event details retrieved successfully',
+    message: 'Event details fetched successfully',
     data: result,
   });
 });
