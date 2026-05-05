@@ -83,8 +83,8 @@ router.post(
   AuthController.changePassword,
 );
 
-// Resend verification email
-router.post('/resend-verify-email', AuthController.resendVerifyEmail);
+// Resend verification OTP
+router.post('/resend-otp', AuthController.resendVerifyEmail);
 
 // Refresh token — renew access token
 router.post(

@@ -1,4 +1,4 @@
-# 09. Get Own Profile
+# 03. Get Own Profile
 
 ```http
 GET /users/profile

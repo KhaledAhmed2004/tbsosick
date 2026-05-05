@@ -20,7 +20,7 @@
 | 04 | POST | `/auth/reset-password` | Reset Token | **Done**: Resets password and increments `tokenVersion` to invalidate all active sessions. | [04-reset-password.md](./04-reset-password.md) |
 | 05 | POST | `/auth/refresh-token` | Refresh Token | **Done**: Implements token rotation and reuse detection for stateless session management. | [05-refresh-token.md](./05-refresh-token.md) |
 | 06 | POST | `/auth/logout` | Bearer | **Done**: Clears refreshToken cookie and removes specific deviceToken to stop push notifications. | [06-logout.md](./06-logout.md) |
-| 07 | POST | `/auth/resend-verify-email` | Public | **Done**: Resends 6-digit verification code with built-in rate-limiting protection. | [07-resend-verify-email.md](./07-resend-verify-email.md) |
+| 07 | POST | `/auth/resend-otp` | Public | **Done**: Resends 6-digit verification code with built-in rate-limiting protection. | [07-resend-otp.md](./07-resend-otp.md) |
 | 08 | POST | `/auth/social-login` | Public | **Done**: Unified signup/login via Google or Apple ID tokens with email conflict checks. | [08-social-login.md](./08-social-login.md) |
 | 09 | POST | `/auth/change-password` | Bearer | **Done**: Allows authenticated users to update their password after verifying current credentials. | [09-change-password.md](./09-change-password.md) |
 

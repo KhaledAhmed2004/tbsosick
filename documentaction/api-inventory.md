@@ -20,7 +20,7 @@
 | 1.4 | POST | `/auth/reset-password` | Reset Token | ✅ | [Module 1.4](./modules/auth/04-reset-password.md) | [App Auth](./app-screens/01-auth.md), [Dashboard Auth](./dashboard-screens/01-auth.md) |
 | 1.5 | POST | `/auth/refresh-token` | Refresh Token | ✅ | [Module 1.5](./modules/auth/05-refresh-token.md) | [App Auth](./app-screens/01-auth.md), [Dashboard Auth](./dashboard-screens/01-auth.md) |
 | 1.6 | POST | `/auth/logout` | Bearer | ✅ | [Module 1.6](./modules/auth/06-logout.md) | [App Auth](./app-screens/01-auth.md), [App Profile](./app-screens/06-profile.md), [Dashboard Auth](./dashboard-screens/01-auth.md) |
-| 1.7 | POST | `/auth/resend-verify-email` | Public | ✅ | [Module 1.7](./modules/auth/07-resend-verify-email.md) | [App Auth](./app-screens/01-auth.md), [Dashboard Auth](./dashboard-screens/01-auth.md) |
+| 1.7 | POST | `/auth/resend-otp` | Public | ✅ | [Module 1.7](./modules/auth/07-resend-otp.md) | [App Auth](./app-screens/01-auth.md), [Dashboard Auth](./dashboard-screens/01-auth.md) |
 | 1.8 | POST | `/auth/social-login` | Public | ✅ | [Module 1.8](./modules/auth/08-social-login.md) | [App Auth](./app-screens/01-auth.md) |
 | 1.9 | POST | `/auth/change-password` | Bearer | ✅ | [Module 1.9](./modules/auth/09-change-password.md) | [Dashboard Auth](./dashboard-screens/01-auth.md) |
 
@@ -29,16 +29,10 @@
 | ID | Method | Endpoint | Roles | Status | Spec | On a screen? |
 |---|---|---|---|:---:|---|---|
 | 2.1 | POST | `/users` | Public / SUPER_ADMIN | ✅ | [Module 2.1](./modules/user/01-create-user.md) | [App Auth](./app-screens/01-auth.md), [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
-| 2.2 | GET | `/users` | SUPER_ADMIN | ✅ | [Module 2.2](./modules/user/02-list-users-admin.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
-| 2.3 | GET | `/users/stats` | SUPER_ADMIN | ✅ | [Module 2.3](./modules/user/03-user-stats-dashboard.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
-| 2.4 | PATCH | `/users/:userId` | SUPER_ADMIN | ✅ | [Module 2.4](./modules/user/04-update-user-admin.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
-| 2.5 | PATCH | `/users/:userId/status` | SUPER_ADMIN | ✅ | [Module 2.5](./modules/user/05-update-user-status-admin.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
-| 2.6 | DELETE | `/users/:userId` | SUPER_ADMIN | ✅ | [Module 2.6](./modules/user/06-delete-user-admin.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
-| 2.7 | GET | `/users/:userId` | SUPER_ADMIN | ✅ | [Module 2.7](./modules/user/07-get-user-by-id-admin.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
-| 2.8 | GET | `/users/:userId/user` | User / Admin | ✅ | [Module 2.8](./modules/user/08-get-user-details-public.md) | — |
-| 2.9 | GET | `/users/profile` | Bearer | ✅ | [Module 2.9](./modules/user/09-get-own-profile.md) | [App Profile](./app-screens/06-profile.md) |
-| 2.10 | PATCH | `/users/profile` | Bearer | ✅ | [Module 2.10](./modules/user/10-update-own-profile.md) | [App Profile](./app-screens/06-profile.md) |
-| 2.11 | GET | `/users/me/favorites` | Bearer | ✅ | [Module 2.11](./modules/user/11-list-favorite-cards.md) | [App Home](./app-screens/02-home.md) |
+| 2.2 | GET | `/users/:userId/user` | User / Admin | ✅ | [Module 2.2](./modules/user/02-get-user-details-public.md) | — |
+| 2.3 | GET | `/users/profile` | Bearer | ✅ | [Module 2.3](./modules/user/03-get-own-profile.md) | [App Profile](./app-screens/06-profile.md) |
+| 2.4 | PATCH | `/users/profile` | Bearer | ✅ | [Module 2.4](./modules/user/04-update-own-profile.md) | [App Profile](./app-screens/06-profile.md) |
+| 2.5 | GET | `/users/me/favorites` | Bearer | ✅ | [Module 2.5](./modules/user/05-list-favorite-cards.md) | [App Home](./app-screens/02-home.md) |
 
 ## Preference Card Module
 
@@ -122,3 +116,8 @@
 | 10.1 | GET | `/admin/growth-metrics` | SUPER_ADMIN | ✅ | [Module 10.1](./modules/admin/01-growth-metrics.md) | [Dashboard Overview](./dashboard-screens/02-overview.md) |
 | 10.2 | GET | `/admin/preference-cards/trends/monthly` | SUPER_ADMIN | ✅ | [Module 10.2](./modules/admin/02-monthly-preference-cards-trend.md) | [Dashboard Overview](./dashboard-screens/02-overview.md) |
 | 10.3 | GET | `/admin/subscriptions/trends/monthly` | SUPER_ADMIN | ✅ | [Module 10.3](./modules/admin/03-monthly-active-subscriptions-trend.md) | [Dashboard Overview](./dashboard-screens/02-overview.md) |
+| 10.4 | GET | `/admin/users/stats` | SUPER_ADMIN | ✅ | [Module 10.4](./modules/admin/04-user-stats-dashboard.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
+| 10.5 | GET | `/admin/users` | SUPER_ADMIN | ✅ | [Module 10.5](./modules/admin/05-list-users.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
+| 10.6 | GET | `/admin/users/:userId` | SUPER_ADMIN | ✅ | [Module 10.6](./modules/admin/06-get-user-by-id.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
+| 10.7 | PATCH | `/admin/users/:userId` | SUPER_ADMIN | ✅ | [Module 10.7](./modules/admin/07-update-user.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |
+| 10.8 | DELETE | `/admin/users/:userId` | SUPER_ADMIN | ✅ | [Module 10.8](./modules/admin/08-delete-user.md) | [Dashboard User Mgmt](./dashboard-screens/03-user-management.md) |

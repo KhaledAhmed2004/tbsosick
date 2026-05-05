@@ -1,14 +1,14 @@
-# 07. Get User by ID (Admin)
+# 06. Get User by ID (Admin)
 
 ```http
-GET /users/:userId
+GET /admin/users/:userId
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
 > Admin specific view of a user's basic info. Returns user data wrapped in a `user` object.
 
 ## Implementation
-- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `getUserById`
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `getUserByIdFromDB`
 

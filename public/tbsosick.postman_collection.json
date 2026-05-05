@@ -7,7 +7,7 @@
   "item": [
     {
       "name": "🚀 Testing Guide & Docs",
-      "description": "\n## Welcome to tbsosick API Testing Guide\n\nFollow these detailed steps to test APIs and Socket events:\n\n### 1. Setup & Auth (First Step)\n1.  **Login**: First, go to **Auth Module > 1.1 Login**.\n2.  **Auto-Token**: Successful login korle `accessToken` automatic collection variable-e save hoye jabe.\n3.  **Check**: Apni Collection-er **Variables** tab-e giye check korte paren token-ti set hoyeche kina.\n\n### 2. Standard API Testing\n- Protiti folder module onujayi organized.\n- Path variables (যেমন `:id`) thakle Postman-er **Params** tab-e value boshate hobe.\n\n### 3. Socket.IO Testing (Detailed Guide)\nPostman theke Socket test korar jonno nicher visual guide-ti follow koren:\n\n#### A. Connection Setup\n- Click **New** > **Socket.IO**.\n- **URL**: `http://localhost:5000` (Not `/api/v1`).\n- **Auth (Handshake)**:\n    - **Handshake** tab-e jan.\n    - **Auth** section-e **Auth Object** select koren.\n    - `token` key-te value `{{accessToken}}` boshie **Connect** koren.\n\n#### B. How to \"Listen\" (Receive events from server)\nServer theke real-time data receive korar jonno nicher steps follow koren:\n\n1.  **Events Tab**: Connection tab-er pashe thaka **Events** tab-e jan.\n2.  **Add Event**: `Add event` button-e click koren.\n3.  **Event Name**: `Event name` field-e nicher common event-gulo add koren (ekekti event-er jonno alada row):\n    - `USER_ONLINE`: Jokhon keu online ashe.\n    - `MESSAGE_RECEIVED`: Jokhon keu apnake message pathay.\n    - `TYPING_START`: Keu type kora shuru korle.\n    - `get-notification::{{userId}}`: Personal notifications-er jonno.\n4.  **Messages Pane**: Ekhon server theke oi event-ti asle niche **Messages** pane-e real-time JSON data dekhabe. \n    > **Note**: Ekhane kono JSON pathano lagbe na, shudhu event-er nam-ti add korlei Postman server theke asha data capture korbe.\n\n#### C. How to \"Emit\" (Send events to server)\n- Server-e data pathanor jonno **Message** tab-e jan.\n- **Event Name**: Jekhare event-er nam likhte hoy (যেমন: `JOIN_CHAT`).\n- **Payload**: Niche JSON format-e data-ti likhun:\n    ```json\n    { \"chatId\": \"664a1b2c3d4e5f6a7b8c9d0e\" }\n    ```\n- Click **Send**.\n\n### 🔌 Socket.IO Events Inventory & Guide\n\nJokhon apni Socket test korben, nicher table-ti follow koren bujhar jonno je konta apnake pathate hobe (Emit) ar konta server pathabe (Listen).\n\n| Event Name | Action Type | Direction | Payload Example | Step-by-Step Testing |\n|------------|-------------|-----------|-----------------|----------------------|\n| `JOIN_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab-e event name `JOIN_CHAT` likhun ebong payload JSON format-e diye **Send** koren. |\n| `LEAVE_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `LEAVE_CHAT` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab theke emit koren typing shuru bujhate. |\n| `TYPING_STOP` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `TYPING_STOP` likhe JSON payload shoho **Send** koren. |\n| `DELIVERED_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `DELIVERED_ACK` likhe JSON payload shoho **Send** koren. |\n| `READ_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `READ_ACK` likhe JSON payload shoho **Send** koren. |\n| `disconnect` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `disconnect` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **LISTENING** (Receive) | 📤 Server -> Client | `{ \"chatId\": \"66...\" }` | **Events** tab-e `TYPING_START` add koren listening-er jonno. |\n| `TYPING_STOP` | **LISTENING** (Receive) | 📤 Server -> Client | N/A | **Events** tab-e `TYPING_STOP` nam-er ekta event add koren jate server theke response ashole apni **Messages** pane-e dekhte paren. |\n\n\n### 4. Common Testing Scenarios\n- **Chatting**:\n    1. Login koren.\n    2. Socket connect koren.\n    3. `JOIN_CHAT` emit koren chatId diye.\n    4. Onno user theke message pathale apni listener events-e sheta paben.\n    ",
+      "description": "\n## Welcome to tbsosick API Testing Guide\n\nFollow these detailed steps to test APIs and Socket events:\n\n### 1. Setup & Auth (First Step)\n1.  **Login**: First, go to **Auth Module > 1.1 Login**.\n2.  **Auto-Token**: Successful login korle `accessToken` automatic collection variable-e save hoye jabe.\n3.  **Check**: Apni Collection-er **Variables** tab-e giye check korte paren token-ti set hoyeche kina.\n\n### 2. Standard API Testing\n- Protiti folder module onujayi organized.\n- Path variables (যেমন `:id`) thakle Postman-er **Params** tab-e value boshate hobe.\n\n### 3. Socket.IO Testing (Detailed Guide)\nPostman theke Socket test korar jonno nicher visual guide-ti follow koren:\n\n#### A. Connection Setup\n- Click **New** > **Socket.IO**.\n- **URL**: `http://localhost:5009` (Not `/api/v1`).\n- **Auth (Handshake)**:\n    - **Handshake** tab-e jan.\n    - **Auth** section-e **Auth Object** select koren.\n    - `token` key-te value `{{accessToken}}` boshie **Connect** koren.\n\n#### B. How to \"Listen\" (Receive events from server)\nServer theke real-time data receive korar jonno nicher steps follow koren:\n\n1.  **Events Tab**: Connection tab-er pashe thaka **Events** tab-e jan.\n2.  **Add Event**: `Add event` button-e click koren.\n3.  **Event Name**: `Event name` field-e nicher common event-gulo add koren (ekekti event-er jonno alada row):\n    - `USER_ONLINE`: Jokhon keu online ashe.\n    - `MESSAGE_RECEIVED`: Jokhon keu apnake message pathay.\n    - `TYPING_START`: Keu type kora shuru korle.\n    - `get-notification::{{userId}}`: Personal notifications-er jonno.\n4.  **Messages Pane**: Ekhon server theke oi event-ti asle niche **Messages** pane-e real-time JSON data dekhabe. \n    > **Note**: Ekhane kono JSON pathano lagbe na, shudhu event-er nam-ti add korlei Postman server theke asha data capture korbe.\n\n#### C. How to \"Emit\" (Send events to server)\n- Server-e data pathanor jonno **Message** tab-e jan.\n- **Event Name**: Jekhare event-er nam likhte hoy (যেমন: `JOIN_CHAT`).\n- **Payload**: Niche JSON format-e data-ti likhun:\n    ```json\n    { \"chatId\": \"664a1b2c3d4e5f6a7b8c9d0e\" }\n    ```\n- Click **Send**.\n\n### 🔌 Socket.IO Events Inventory & Guide\n\nJokhon apni Socket test korben, nicher table-ti follow koren bujhar jonno je konta apnake pathate hobe (Emit) ar konta server pathabe (Listen).\n\n| Event Name | Action Type | Direction | Payload Example | Step-by-Step Testing |\n|------------|-------------|-----------|-----------------|----------------------|\n| `JOIN_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab-e event name `JOIN_CHAT` likhun ebong payload JSON format-e diye **Send** koren. |\n| `LEAVE_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `LEAVE_CHAT` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab theke emit koren typing shuru bujhate. |\n| `TYPING_STOP` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `TYPING_STOP` likhe JSON payload shoho **Send** koren. |\n| `DELIVERED_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `DELIVERED_ACK` likhe JSON payload shoho **Send** koren. |\n| `READ_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `READ_ACK` likhe JSON payload shoho **Send** koren. |\n| `disconnect` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `disconnect` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **LISTENING** (Receive) | 📤 Server -> Client | `{ \"chatId\": \"66...\" }` | **Events** tab-e `TYPING_START` add koren listening-er jonno. |\n| `TYPING_STOP` | **LISTENING** (Receive) | 📤 Server -> Client | N/A | **Events** tab-e `TYPING_STOP` nam-er ekta event add koren jate server theke response ashole apni **Messages** pane-e dekhte paren. |\n\n\n### 4. Common Testing Scenarios\n- **Chatting**:\n    1. Login koren.\n    2. Socket connect koren.\n    3. `JOIN_CHAT` emit koren chatId diye.\n    4. Onno user theke message pathale apni listener events-e sheta paben.\n    ",
       "item": []
     },
     {
@@ -35,6 +35,9 @@
               ]
             },
             "description": "Authenticates user and issues access/refresh tokens. Supports push notification registration.",
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"StrongPassword123!\",\n  \"deviceToken\": \"fcm-token-xyz\"  // optional\n}",
@@ -87,6 +90,9 @@
               ]
             },
             "description": "Registration or Forgot Password flow OTP verification.",
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"john@example.com\",\n  \"otp\": \"123456\"\n}",
@@ -139,6 +145,9 @@
               ]
             },
             "description": "Triggers password reset flow by sending an OTP to the user's email.",
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"john@example.com\"\n}",
@@ -160,11 +169,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -178,6 +182,16 @@
               ]
             },
             "description": "Resets user password using a valid reset token.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"newPassword\": \"NewStrongPassword123!\"\n}",
@@ -212,6 +226,9 @@
               ]
             },
             "description": "Rotates refresh token and issues a new access token. Implements reuse detection.",
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"refreshToken\": \"eyJhbGciOi...\"\n}",
@@ -251,11 +268,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -269,6 +281,16 @@
               ]
             },
             "description": "Logs out user by clearing cookies and removing device tokens.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"deviceToken\": \"fcm-token-xyz\"\n}",
@@ -282,7 +304,7 @@
           "response": []
         },
         {
-          "name": "1.7 Resend OTP (Resend Verify Email)",
+          "name": "1.7 Resend OTP",
           "request": {
             "method": "POST",
             "header": [
@@ -293,16 +315,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/auth/resend-verify-email",
+              "raw": "{{baseUrl}}/auth/resend-otp",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "auth",
-                "resend-verify-email"
+                "resend-otp"
               ]
             },
             "description": "Resends a new 6-digit verification code to the user's email.",
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"john@example.com\"\n}",
@@ -337,6 +362,9 @@
               ]
             },
             "description": "Authenticates user via Google or Apple ID tokens. Handles both signup and login.",
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"provider\": \"google\",\n  \"idToken\": \"eyJhbGciOi...\",\n  \"nonce\": \"aB3xK9mP2qR7...\",\n  \"deviceToken\": \"fcm-token-xyz\",\n  \"platform\": \"ios\"\n}",
@@ -358,11 +386,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -376,6 +399,16 @@
               ]
             },
             "description": "Allows authenticated users to change their password.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"currentPassword\": \"OldPassword123!\",\n  \"newPassword\": \"NewStrongPassword123!\"\n}",
@@ -414,6 +447,9 @@
               ]
             },
             "description": "Used both for public mobile registration and for admin-driven account creation from the dashboard. Admin-created accounts are auto-verified and assigned role `USER`.",
+            "auth": {
+              "type": "noauth"
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"Password123!\",\n  \"phone\": \"+123456789\",\n  \"country\": \"USA\",\n  \"gender\": \"male\",\n  \"dateOfBirth\": \"1995-05-15\"\n}",
@@ -427,181 +463,7 @@
           "response": []
         },
         {
-          "name": "2.2 List Users (Admin)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users"
-              ]
-            },
-            "description": "Comprehensive user list with card counts, specialties, and subscription status."
-          },
-          "response": []
-        },
-        {
-          "name": "2.3 User Stats (Dashboard)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/stats",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                "stats"
-              ]
-            },
-            "description": "Aggregated growth metrics for the admin dashboard."
-          },
-          "response": []
-        },
-        {
-          "name": "2.4 Update User (Admin)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:userId",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":userId"
-              ],
-              "variable": [
-                {
-                  "key": "userId",
-                  "value": ""
-                }
-              ]
-            },
-            "description": "Update any user field (whitelist approach)."
-          },
-          "response": []
-        },
-        {
-          "name": "2.5 Update User Status (Admin)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:userId/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":userId",
-                "status"
-              ],
-              "variable": [
-                {
-                  "key": "userId",
-                  "value": ""
-                }
-              ]
-            },
-            "description": ""
-          },
-          "response": []
-        },
-        {
-          "name": "2.6 Delete User (Admin)",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:userId",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":userId"
-              ],
-              "variable": [
-                {
-                  "key": "userId",
-                  "value": ""
-                }
-              ]
-            },
-            "description": "Permanently removes a user from the database."
-          },
-          "response": []
-        },
-        {
-          "name": "2.7 Get User by ID (Admin)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/users/:userId",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "users",
-                ":userId"
-              ],
-              "variable": [
-                {
-                  "key": "userId",
-                  "value": ""
-                }
-              ]
-            },
-            "description": "Admin specific view of a user's basic info. Returns user data wrapped in a `user` object."
-          },
-          "response": []
-        },
-        {
-          "name": "2.8 Get User Details (Public/User)",
+          "name": "2.2 Get User Details (Public/User)",
           "request": {
             "method": "GET",
             "header": [
@@ -628,23 +490,28 @@
                 }
               ]
             },
-            "description": ""
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
         {
-          "name": "2.9 Get Own Profile",
+          "name": "2.3 Get Own Profile",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -658,12 +525,22 @@
                 "profile"
               ]
             },
-            "description": ""
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
         {
-          "name": "2.10 Update Own Profile",
+          "name": "2.4 Update Own Profile",
           "request": {
             "method": "PATCH",
             "header": [
@@ -671,11 +548,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -688,23 +560,28 @@
                 "profile"
               ]
             },
-            "description": "Supports text fields and a `profilePicture` file upload."
+            "description": "Supports text fields and a `profilePicture` file upload.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
         {
-          "name": "2.11 List Favorite Cards",
+          "name": "2.5 List Favorite Cards",
           "request": {
             "method": "GET",
             "header": [
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -719,7 +596,17 @@
                 "favorites"
               ]
             },
-            "description": ""
+            "description": "",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -736,11 +623,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -759,7 +641,17 @@
                 }
               ]
             },
-            "description": "**Primary Search Endpoint**: This is the main API used to search cards."
+            "description": "**Primary Search Endpoint**: This is the main API used to search cards.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -771,11 +663,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -789,7 +676,17 @@
                 "stats"
               ]
             },
-            "description": "Used to show stats on the Home screen. Returns counts for total public cards and the user's own cards."
+            "description": "Used to show stats on the Home screen. Returns counts for total public cards and the user's own cards.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -801,11 +698,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -819,7 +711,17 @@
                 "specialties"
               ]
             },
-            "description": "use case: its used to populate the filter dropdown dynamically."
+            "description": "use case: its used to populate the filter dropdown dynamically.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -831,11 +733,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -849,6 +746,16 @@
               ]
             },
             "description": "use case: User Creates a new preference card.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"visibility\": \"PRIVATE\"\n}",
@@ -870,11 +777,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -893,7 +795,17 @@
                 }
               ]
             },
-            "description": "Fetches all card details (surgeon, supplies, sutures, workflow, etc.)."
+            "description": "Fetches all card details (surgeon, supplies, sutures, workflow, etc.).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -905,11 +817,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -930,6 +837,16 @@
               ]
             },
             "description": "Updates an existing card. Only the fields that need changing should be sent. Updates are only possible for the owner or SUPER_ADMIN.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"cardTitle\": \"Updated Knee Arthroscopy\",\n  \"medication\": \"Updated medication info\",\n  \"visibility\": \"PUBLIC\"\n}",
@@ -951,11 +868,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -974,7 +886,17 @@
                 }
               ]
             },
-            "description": "Permanently deletes a card. Deletion is only possible for the owner or SUPER_ADMIN. This is a hard delete; restoration is not possible. Admins can also use this endpoint to manually delete cards."
+            "description": "Permanently deletes a card. Deletion is only possible for the owner or SUPER_ADMIN. This is a hard delete; restoration is not possible. Admins can also use this endpoint to manually delete cards.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -987,11 +909,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1012,7 +929,17 @@
                 }
               ]
             },
-            "description": "Adds a card to the favorites list. Follows idempotent behavior (returns 200 OK if already favorited)."
+            "description": "Adds a card to the favorites list. Follows idempotent behavior (returns 200 OK if already favorited).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1025,11 +952,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1050,7 +972,17 @@
                 }
               ]
             },
-            "description": "Removes from the favorites list. Follows idempotent behavior (returns 200 OK even if already unfavorited)."
+            "description": "Removes from the favorites list. Follows idempotent behavior (returns 200 OK even if already unfavorited).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1062,11 +994,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1087,7 +1014,17 @@
                 }
               ]
             },
-            "description": "use case: User increments the card download count and logs the download history."
+            "description": "use case: User increments the card download count and logs the download history.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1099,11 +1036,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1123,7 +1055,17 @@
                 }
               ]
             },
-            "description": "use case: Admin verify or unverify preference cards."
+            "description": "use case: Admin verify or unverify preference cards.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -1140,11 +1082,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1167,7 +1104,17 @@
                 }
               ]
             },
-            "description": "Fetches user-specific events. Date range filtering is supported for calendar views."
+            "description": "Fetches user-specific events. Date range filtering is supported for calendar views.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1179,11 +1126,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1197,6 +1139,16 @@
               ]
             },
             "description": "Creates a new event and automatically schedules reminders (24h and 1h before).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Knee Replacement Surgery\",\n  \"date\": \"2026-05-10\",\n  \"time\": \"10:30 AM\",\n  \"location\": \"City Hospital, Operating Room 2\",\n  \"preferenceCard\": \"6817f8b92e4a8c1d44a91f20\",\n  \"durationInHours\": 3,\n  \"eventType\": \"SURGERY\",\n  \"personnel\": {\n    \"leadSurgeon\": \"Dr. John Doe\",\n    \"surgicalTeamMembers\": [\n      \"Dr. Sarah Smith\",\n      \"Nurse Alex\",\n      \"Technician Robert\"\n    ]\n  },\n  \"keyNotes\": \"Patient requires special orthopedic instruments.\"\n}",
@@ -1218,11 +1170,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1241,7 +1188,17 @@
                 }
               ]
             },
-            "description": "Fetches full details for a specific event."
+            "description": "Fetches full details for a specific event.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1253,11 +1210,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1278,6 +1230,16 @@
               ]
             },
             "description": "Updates an existing event. Reminders are automatically rescheduled if time-related fields are changed.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Updated Surgery Title\",\n  \"time\": \"10:00\",\n  \"durationHours\": 4,\n  \"location\": \"Operating Room 1 - Main Wing\",\n  \"eventType\": \"SURGERY\",\n  \"notes\": \"Updated case notes for the surgical team.\",\n  \"personnel\": {\n    \"leadSurgeon\": \"Dr. House\",\n    \"surgicalTeam\": [\"Dr. Wilson\", \"Dr. Chase\"]\n  }\n}",
@@ -1299,11 +1261,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1322,7 +1279,17 @@
                 }
               ]
             },
-            "description": "Permanently removes an event from the system."
+            "description": "Permanently removes an event from the system.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -1340,11 +1307,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1356,7 +1318,17 @@
                 "notifications"
               ]
             },
-            "description": "0`)."
+            "description": "0`).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1368,11 +1340,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1393,7 +1360,17 @@
                 }
               ]
             },
-            "description": "Single notification ke read mark kore. Tap-er shathe shathe (optimistic) call hoy background e."
+            "description": "Single notification ke read mark kore. Tap-er shathe shathe (optimistic) call hoy background e.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1405,11 +1382,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1423,7 +1395,17 @@
                 "read-all"
               ]
             },
-            "description": "User top-right \"Mark all as read\" button e tap korle shob notifications `read: true` hoy ebong red dot disappear kore."
+            "description": "User top-right \"Mark all as read\" button e tap korle shob notifications `read: true` hoy ebong red dot disappear kore.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1435,11 +1417,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1459,7 +1436,17 @@
                 }
               ]
             },
-            "description": "Swipe-to-delete ba long-press menu theke notification delete korar jonno. Optimistic UI: row immediately list theke remove hoy. Failure hole row restore hoy + error toast dekhay."
+            "description": "Swipe-to-delete ba long-press menu theke notification delete korar jonno. Optimistic UI: row immediately list theke remove hoy. Failure hole row restore hoy + error toast dekhay.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -1488,7 +1475,10 @@
                 "legal"
               ]
             },
-            "description": "Shob available legal pages (Terms, Privacy, etc.) er title ebong slug list fetch korar jonno. Admin-side e same endpoint use kora hoy CMS list view-er jonno."
+            "description": "Shob available legal pages (Terms, Privacy, etc.) er title ebong slug list fetch korar jonno. Admin-side e same endpoint use kora hoy CMS list view-er jonno.",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "response": []
         },
@@ -1519,7 +1509,10 @@
                 }
               ]
             },
-            "description": "Slug diye specific legal page-er full HTML/Markdown content fetch korar jonno."
+            "description": "Slug diye specific legal page-er full HTML/Markdown content fetch korar jonno.",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "response": []
         },
@@ -1544,6 +1537,16 @@
               ]
             },
             "description": "Notun legal page create kore.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Terms and Conditions\",\n  \"content\": \"<h1>Terms</h1><p>Welcome to...</p>\"\n}",
@@ -1583,7 +1586,17 @@
                 }
               ]
             },
-            "description": "Existing legal page update kore."
+            "description": "Existing legal page update kore.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1614,7 +1627,17 @@
                 }
               ]
             },
-            "description": "Legal page delete kore."
+            "description": "Legal page delete kore.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -1632,11 +1655,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1648,7 +1666,17 @@
                 "supplies"
               ]
             },
-            "description": "Shob supplies paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno."
+            "description": "Shob supplies paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1660,11 +1688,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1678,6 +1701,16 @@
               ]
             },
             "description": "Single supply create kore. Shudhu `name` field required.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Sterile Gauze\"\n}",
@@ -1699,11 +1732,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1717,6 +1745,16 @@
               ]
             },
             "description": "Multiple supplies ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [\n    { \"name\": \"Sterile Gauze\" },\n    { \"name\": \"Surgical Drape\" },\n    { \"name\": \"Suction Tip\" }\n  ]\n}",
@@ -1738,11 +1776,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1762,6 +1795,16 @@
               ]
             },
             "description": "Supply er name update kore. Shudhu `name` field changeable.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated Gauze Name\"\n}",
@@ -1783,11 +1826,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1806,7 +1844,17 @@
                 }
               ]
             },
-            "description": "Supply permanently delete kore. Hard delete — restore possible na."
+            "description": "Supply permanently delete kore. Hard delete — restore possible na.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -1824,11 +1872,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1840,7 +1883,17 @@
                 "sutures"
               ]
             },
-            "description": "Shob sutures paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno."
+            "description": "Shob sutures paginated list fetch kore. `searchTerm` diye name search kora jay. Preference card create/edit screen eo ei endpoint use hoy catalog load korar jonno.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -1852,11 +1905,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -1870,6 +1918,16 @@
               ]
             },
             "description": "Single suture create kore. Shudhu `name` field required.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"3-0 Vicryl\"\n}",
@@ -1891,11 +1949,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1909,6 +1962,16 @@
               ]
             },
             "description": "Multiple sutures ekbar e create kore. Duplicate name skip kore — response e kon gula skip hoyeche dekhay.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"items\": [\n    { \"name\": \"3-0 Vicryl\" },\n    { \"name\": \"4-0 Monocryl\" },\n    { \"name\": \"2-0 Silk\" }\n  ]\n}",
@@ -1930,11 +1993,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1954,6 +2012,16 @@
               ]
             },
             "description": "Suture er name update kore. Shudhu `name` field changeable.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"4-0 Monocryl\"\n}",
@@ -1975,11 +2043,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -1998,7 +2061,17 @@
                 }
               ]
             },
-            "description": "Suture permanently delete kore. Hard delete — restore possible na."
+            "description": "Suture permanently delete kore. Hard delete — restore possible na.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -2016,11 +2089,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -2033,7 +2101,17 @@
                 "me"
               ]
             },
-            "description": "Current user-er active subscription plan ebong status fetch kore. Free user-er jonno o sobshomoy ekta plan object return hoy — 404 return hoy na."
+            "description": "Current user-er active subscription plan ebong status fetch kore. Free user-er jonno o sobshomoy ekta plan object return hoy — 404 return hoy na.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -2045,11 +2123,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -2065,6 +2138,16 @@
               ]
             },
             "description": "iOS StoreKit 2 theke pawa `signedTransactionInfo` verify kore. Apple server-er shathe cryptographic verification hoy ebong user-er plan update kore.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"signedTransactionInfo\": \"<JWS-token-from-storekit2>\"\n}",
@@ -2086,11 +2169,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -2105,6 +2183,16 @@
               ]
             },
             "description": "Android BillingClient theke pawa `purchaseToken` verify kore. Google Play Developer API use kore state fetch kora hoy.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
             "body": {
               "mode": "raw",
               "raw": "{\n  \"purchaseToken\": \"<token-from-google-play>\",\n  \"productId\": \"com.tbsosick.premium.yearly\"\n}",
@@ -2126,11 +2214,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -2144,7 +2227,17 @@
                 "free"
               ]
             },
-            "description": "User-ke manually free plan-e downgrade ba switch korte allow kore."
+            "description": "User-ke manually free plan-e downgrade ba switch korte allow kore.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
@@ -2162,11 +2255,6 @@
                 "key": "Content-Type",
                 "value": "application/json",
                 "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
-                "type": "text"
               }
             ],
             "url": {
@@ -2179,7 +2267,17 @@
                 "growth-metrics"
               ]
             },
-            "description": "This endpoint is used for dashboard summary cards. It calculates monthly growth: current month vs last month."
+            "description": "This endpoint is used for dashboard summary cards. It calculates monthly growth: current month vs last month.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -2191,11 +2289,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -2209,9 +2302,36 @@
                 "preference-cards",
                 "trends",
                 "monthly"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2026",
+                  "description": "Filter data by a specific year"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-01-01",
+                  "description": "Start date for custom range (YYYY-MM-DD)"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-12-31",
+                  "description": "End date for custom range (YYYY-MM-DD)"
+                }
               ]
             },
-            "description": "Returns monthly analytics for preference cards — includes an inline YoY comparison (current year vs. last year), with `peak` and `slowest` months pre-computed server-side."
+            "description": "Returns monthly analytics for preference cards — includes an inline YoY comparison (current year vs. last year), with `peak` and `slowest` months pre-computed server-side.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         },
@@ -2223,11 +2343,6 @@
               {
                 "key": "Content-Type",
                 "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{accessToken}}",
                 "type": "text"
               }
             ],
@@ -2241,19 +2356,309 @@
                 "subscriptions",
                 "trends",
                 "monthly"
+              ],
+              "query": [
+                {
+                  "key": "year",
+                  "value": "2026",
+                  "description": "Filter data by a specific year"
+                },
+                {
+                  "key": "from",
+                  "value": "2026-01-01",
+                  "description": "Start date for custom range (YYYY-MM-DD)"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-12-31",
+                  "description": "End date for custom range (YYYY-MM-DD)"
+                }
               ]
             },
-            "description": "Returns monthly analytics for active subscriptions — includes an inline YoY comparison (current year vs. last year), with `peak` and `slowest` months pre-computed server-side."
+            "description": "Returns monthly analytics for active subscriptions — includes an inline YoY comparison (current year vs. last year), with `peak` and `slowest` months pre-computed server-side.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.4 User Stats (Dashboard)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                "stats"
+              ]
+            },
+            "description": "Aggregated growth metrics for the admin dashboard.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.5 List Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "John",
+                  "description": "Name or email regex search"
+                },
+                {
+                  "key": "email",
+                  "value": "dr.john@example.com",
+                  "description": "Exact or regex email match"
+                },
+                {
+                  "key": "role",
+                  "value": "USER",
+                  "description": "Filter by role (`SUPER_ADMIN`, `USER`)"
+                },
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "Filter by status (`ACTIVE`, `INACTIVE`, `RESTRICTED`, `DELETE`)"
+                },
+                {
+                  "key": "specialty",
+                  "value": "Surgery",
+                  "description": "Filter by specialty (regex match on calculated list)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Pagination page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Pagination limit"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Field name for sorting"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort direction (`asc` or `desc`)"
+                }
+              ]
+            },
+            "description": "it's give lists all users, with this search, filtered by various criteria, and paginated results.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.6 Get User by ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Admin specific view of a user's basic info. Returns user data wrapped in a `user` object.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.7 Update User & Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Update any user field, including their account status (ACTIVE, RESTRICTED, etc.).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"status\": \"RESTRICTED\",\n  \"role\": \"USER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.8 Delete User (Admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users/:userId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users",
+                ":userId"
+              ],
+              "variable": [
+                {
+                  "key": "userId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Permanently removes a user from the database.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
           },
           "response": []
         }
       ]
     }
   ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5000/api/v1",
+      "value": "http://localhost:5009/api/v1",
       "type": "string"
     },
     {

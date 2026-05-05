@@ -6,6 +6,7 @@ Content-Type: application/json
 Auth: None
 ```
 
+
 > Triggers password reset flow by sending an OTP to the user's email.
 
 ## Request Body

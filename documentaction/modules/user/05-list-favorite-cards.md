@@ -1,4 +1,4 @@
-# 11. List Favorite Cards
+# 05. List Favorite Cards
 
 ```http
 GET /users/me/favorites

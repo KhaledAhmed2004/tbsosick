@@ -62,34 +62,4 @@ router.patch(
   UserController.updateProfile,
 );
 
-// --- Admin Management (Unified User/Doctor) ---
-
-// Get user growth statistics
-router.get('/stats', auth(USER_ROLES.SUPER_ADMIN), UserController.getUsersStats);
-
-// List all users with stats (Admin)
-router.get('/', auth(USER_ROLES.SUPER_ADMIN), UserController.getAllUserRoles);
-
-// Get specific user details by ID (Admin)
-router.get('/:userId', auth(USER_ROLES.SUPER_ADMIN), UserController.getUserById);
-
-// Admin: Update any user (Update fields including specialty, role, status)
-router.patch(
-  '/:userId',
-  auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(UserValidation.adminUpdateUserZodSchema),
-  UserController.adminUpdateUser,
-);
-
-// Update user status directly (Admin)
-router.patch(
-  '/:userId/status',
-  auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(UserValidation.updateUserStatusZodSchema),
-  UserController.updateUserStatus,
-);
-
-// Admin: Delete user permanently
-router.delete('/:userId', auth(USER_ROLES.SUPER_ADMIN), UserController.deleteUser);
-
 export const UserRoutes = router;

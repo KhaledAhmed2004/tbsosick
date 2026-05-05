@@ -1,14 +1,14 @@
-# 06. Delete User (Admin)
+# 08. Delete User (Admin)
 
 ```http
-DELETE /users/:userId
+DELETE /admin/users/:userId
 Authorization: Bearer {{accessToken}} (SUPER_ADMIN)
 ```
 
 > Permanently removes a user from the database.
 
 ## Implementation
-- **Route**: [user.route.ts](file:///src/app/modules/user/user.route.ts)
+- **Route**: [admin.route.ts](file:///src/app/modules/admin/admin.route.ts)
 - **Controller**: [user.controller.ts](file:///src/app/modules/user/user.controller.ts) — `deleteUser`
 - **Service**: [user.service.ts](file:///src/app/modules/user/user.service.ts) — `deleteUserPermanentlyFromDB`
 
