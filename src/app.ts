@@ -116,7 +116,7 @@ app.options(
 // signature can be verified against the original bytes. This MUST be
 // registered before the generic express.json() middleware below.
 app.use(
-  '/api/v1/subscription/apple/webhook',
+  '/api/v1/subscriptions/apple/webhook',
   express.raw({ type: 'application/json' })
 );
 
@@ -124,7 +124,7 @@ app.use(
 // service can decode the base64 message.data exactly as sent. Must be
 // registered before express.json() below.
 app.use(
-  '/api/v1/subscription/google/webhook',
+  '/api/v1/subscriptions/google/webhook',
   express.raw({ type: 'application/json' })
 );
 

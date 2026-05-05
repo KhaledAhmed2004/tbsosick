@@ -9,6 +9,9 @@ import { CacheHelper } from './app/shared/CacheHelper';
 import { generateDefaultBanner } from './shared/bannerGenerator';
 import { generateStartupSummary, type StartupStatus } from './shared/startupSummary';
 import { createSpinner } from './shared/spinnerHelper';
+import dns from 'dns';
+
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 // uncaught exception — ensure server closes before exit to avoid EADDRINUSE on respawn
 process.on('uncaughtException', error => {

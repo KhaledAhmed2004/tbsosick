@@ -4,7 +4,7 @@ import { EVENT_TYPE, IEvent, IPersonnel } from './event.interface';
 const PersonnelSchema = new Schema<IPersonnel>(
   {
     leadSurgeon: { type: String, required: true },
-    surgicalTeam: { type: [String], required: true },
+    surgicalTeamMembers: { type: [String], required: true },
   },
   { _id: false }, // prevent creating _id for subdocument
 );
@@ -15,6 +15,7 @@ const EventSchema = new Schema<IEvent>(
     title: { type: String, required: true },
     startsAt: { type: Date, required: true },
     endsAt: { type: Date, required: true },
+    durationInHours: { type: Number, required: true },
     eventType: {
       type: String,
       enum: Object.values(EVENT_TYPE),
@@ -22,7 +23,7 @@ const EventSchema = new Schema<IEvent>(
     },
     location: { type: String },
     preferenceCard: { type: Schema.Types.ObjectId, ref: 'PreferenceCard' },
-    notes: { type: String },
+    keyNotes: { type: String },
     personnel: { type: PersonnelSchema },
   },
   {

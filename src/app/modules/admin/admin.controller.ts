@@ -14,8 +14,8 @@ const getDashboardStats = catchAsync(async (_req: Request, res: Response) => {
   });
 });
 
-const getPreferenceCardMonthly = catchAsync(async (_req: Request, res: Response) => {
-  const result = await AdminService.getPreferenceCardMonthlyTrend();
+const getPreferenceCardMonthly = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getPreferenceCardMonthlyTrend(req.query);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -24,13 +24,12 @@ const getPreferenceCardMonthly = catchAsync(async (_req: Request, res: Response)
   });
 });
 
-const getActiveSubscriptionMonthly = catchAsync(async (_req: Request, res: Response) => {
-  const result = await AdminService.getActiveSubscriptionMonthlyTrend();
-  const currentYear = new Date().getFullYear();
+const getActiveSubscriptionMonthly = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.getActiveSubscriptionMonthlyTrend(req.query);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: `Monthly analytics for ${currentYear} retrieved successfully.`,
+    message: 'Active subscription monthly trend',
     data: result,
   });
 });

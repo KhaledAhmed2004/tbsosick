@@ -148,7 +148,7 @@ const socket = (io: Server) => {
           );
 
           if (undelivered && undelivered.length > 0) {
-            const ids = undelivered.map(m => m._id);
+            const ids = undelivered.map((m: any) => m._id);
             await Message.updateMany(
               { _id: { $in: ids } },
               { $addToSet: { deliveredTo: userId } }

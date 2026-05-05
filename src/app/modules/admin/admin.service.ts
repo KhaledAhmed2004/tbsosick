@@ -46,60 +46,55 @@ const getAdminDashboardStats = async () => {
   };
 };
 
-// Monthly trend for total preference cards (each month’s count)
-const getPreferenceCardMonthlyTrend = async () => {
-  const cardBuilder = new AggregationBuilder(PreferenceCardModel as any);
-  const series = await cardBuilder.getTimeTrends({ timeUnit: 'month' });
-  return series.map((s: any) => ({
-    label: s.label,
-    count: s.transactionCount,
-  }));
-};
-
-// Monthly trend for active subscriptions (complex analytics shape)
-const getActiveSubscriptionMonthlyTrend = async () => {
-  const subBuilder = new AggregationBuilder(Subscription as any);
+// Helper for monthly trends with YoY and Peak/Slowest analysis
+const getMonthlyTrendAnalytics = async (
+  Model: any,
+  query: Record<string, any>,
+  filter: Record<string, any> = {},
+) => {
+  const { year, from, to } = query;
   const now = new Date();
-  const currentYear = now.getFullYear();
+  const targetYear = year ? Number(year) : now.getFullYear();
+  const compareYear = targetYear - 1;
 
-  // Get current year trends
-  const series = await subBuilder.getTimeTrends({
+  const builder = new AggregationBuilder(Model);
+
+  // Current year trends
+  const series = await builder.getTimeTrends({
     timeUnit: 'month',
-    filter: { status: SUBSCRIPTION_STATUS.ACTIVE },
+    year: targetYear,
+    from,
+    to,
+    filter,
   });
 
-  // Get last year trends for comparison (YoY)
-  subBuilder.reset();
-  const lastYearSeries = await subBuilder.getTimeTrends({
+  // Last year trends for comparison (YoY)
+  builder.reset();
+  const lastYearSeries = await builder.getTimeTrends({
     timeUnit: 'month',
-    filter: {
-      status: SUBSCRIPTION_STATUS.ACTIVE,
-      createdAt: {
-        $gte: new Date(currentYear - 1, 0, 1),
-        $lte: new Date(currentYear - 1, 11, 31),
-      },
-    },
+    year: compareYear,
+    filter,
   });
 
   const formattedSeries = series.map((s: any, index: number) => {
     const lastYearCount = lastYearSeries[index]?.transactionCount || 0;
     const currentCount = s.transactionCount;
-    let yoy_growth_pct = 0;
+    let yoyGrowthPct = 0;
 
     if (lastYearCount > 0) {
-      yoy_growth_pct = ((currentCount - lastYearCount) / lastYearCount) * 100;
+      yoyGrowthPct = ((currentCount - lastYearCount) / lastYearCount) * 100;
     } else if (currentCount > 0) {
-      yoy_growth_pct = 100;
+      yoyGrowthPct = 100;
     }
 
     return {
-      period: `${currentYear}-${String(index + 1).padStart(2, '0')}`,
+      month: s.month,
       label: s.label,
       count: currentCount,
-      last_year_count: lastYearCount,
-      yoy_growth_pct: Number(yoy_growth_pct.toFixed(1)),
-      is_peak: false, // Will calculate below
-      is_slowest: false, // Will calculate below
+      lastYearCount,
+      yoyGrowthPct: Number(yoyGrowthPct.toFixed(1)),
+      isPeak: false,
+      isSlowest: false,
     };
   });
 
@@ -107,40 +102,63 @@ const getActiveSubscriptionMonthlyTrend = async () => {
   const validCounts = formattedSeries.filter((s: any) => s.count > 0);
   if (validCounts.length > 0) {
     const maxCount = Math.max(...formattedSeries.map((s: any) => s.count));
-    const minCount = Math.min(...formattedSeries.map((s: any) => s.count));
+    const minCount = Math.min(...validCounts.map((s: any) => s.count));
 
     formattedSeries.forEach((s: any) => {
-      if (s.count === maxCount && maxCount > 0) s.is_peak = true;
-      if (s.count === minCount && minCount > 0) s.is_slowest = true;
+      if (s.count === maxCount && maxCount > 0) s.isPeak = true;
+      if (s.count === minCount && minCount > 0) s.isSlowest = true;
     });
   }
 
-  const totalCount = formattedSeries.reduce((acc: number, s: any) => acc + s.count, 0);
-  const totalLastYearCount = formattedSeries.reduce((acc: number, s: any) => acc + s.last_year_count, 0);
-  const peakMonth = formattedSeries.find((s: any) => s.is_peak);
-  const slowestMonth = formattedSeries.find((s: any) => s.is_slowest);
+  const totalCount = formattedSeries.reduce(
+    (acc: number, s: any) => acc + s.count,
+    0,
+  );
+  const totalLastYearCount = formattedSeries.reduce(
+    (acc: number, s: any) => acc + s.lastYearCount,
+    0,
+  );
+  const peakMonth = formattedSeries.find((s: any) => s.isPeak);
+  const slowestMonth = formattedSeries.find((s: any) => s.isSlowest);
 
-  let total_yoy_growth = 0;
+  let totalYoyGrowth = 0;
   if (totalLastYearCount > 0) {
-    total_yoy_growth = ((totalCount - totalLastYearCount) / totalLastYearCount) * 100;
+    totalYoyGrowth =
+      ((totalCount - totalLastYearCount) / totalLastYearCount) * 100;
   }
 
   return {
     meta: {
-      year: currentYear,
+      year: targetYear,
       granularity: 'monthly',
-      compare_year: currentYear - 1,
+      compareYear,
       timezone: 'UTC',
     },
     summary: {
-      total_count: totalCount,
-      period_avg: Math.round(totalCount / 12),
-      yoy_growth_pct: Number(total_yoy_growth.toFixed(1)),
-      peak: peakMonth ? { period: peakMonth.period, label: peakMonth.label, count: peakMonth.count } : null,
-      slowest: slowestMonth ? { period: slowestMonth.period, label: slowestMonth.label, count: slowestMonth.count } : null,
+      totalCount,
+      periodAvg: Math.round(totalCount / 12),
+      yoyGrowthPct: Number(totalYoyGrowth.toFixed(1)),
+      peak: peakMonth
+        ? { month: peakMonth.month, label: peakMonth.label, count: peakMonth.count }
+        : null,
+      slowest: slowestMonth
+        ? { month: slowestMonth.month, label: slowestMonth.label, count: slowestMonth.count }
+        : null,
     },
     series: formattedSeries,
   };
+};
+
+// Monthly trend for total preference cards
+const getPreferenceCardMonthlyTrend = async (query: Record<string, any>) => {
+  return await getMonthlyTrendAnalytics(PreferenceCardModel, query);
+};
+
+// Monthly trend for active subscriptions
+const getActiveSubscriptionMonthlyTrend = async (query: Record<string, any>) => {
+  return await getMonthlyTrendAnalytics(Subscription, query, {
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+  });
 };
 
 export const AdminService = {

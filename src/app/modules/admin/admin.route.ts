@@ -13,14 +13,14 @@ router.get(
 
 // Preference cards monthly trend (each month’s count)
 router.get(
-  '/preference-cards/monthly',
+  '/preference-cards/trends/monthly',
   auth(USER_ROLES.SUPER_ADMIN),
   AdminController.getPreferenceCardMonthly,
 );
 
 // Active subscriptions monthly trend (each month’s count)
 router.get(
-  '/subscriptions/active/monthly',
+  '/subscriptions/trends/monthly',
   auth(USER_ROLES.SUPER_ADMIN),
   AdminController.getActiveSubscriptionMonthly,
 );

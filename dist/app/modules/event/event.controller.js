@@ -36,7 +36,7 @@ const getMyEvents = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Events retrieved successfully',
+        message: 'Events fetched successfully',
         data: result,
     });
 }));
@@ -50,7 +50,7 @@ const getEventById = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, v
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Event details retrieved successfully',
+        message: 'Event details fetched successfully',
         data: result,
     });
 }));

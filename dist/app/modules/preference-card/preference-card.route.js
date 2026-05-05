@@ -41,8 +41,8 @@ const parseBody = (req, res, next) => {
                 }
             }
         });
-        if (req.body.published && typeof req.body.published === 'string') {
-            req.body.published = req.body.published === 'true';
+        if (req.body.visibility && typeof req.body.visibility === 'string') {
+            req.body.visibility = req.body.visibility.toUpperCase();
         }
     }
     next();

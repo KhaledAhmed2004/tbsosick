@@ -133,7 +133,7 @@ const socket = (io) => {
                         deliveredTo: { $nin: [userId] },
                     }, { _id: 1 });
                     if (undelivered && undelivered.length > 0) {
-                        const ids = undelivered.map(m => m._id);
+                        const ids = undelivered.map((m) => m._id);
                         yield Message.updateMany({ _id: { $in: ids } }, { $addToSet: { deliveredTo: userId } });
                         for (const msg of undelivered) {
                             io.to(CHAT_ROOM(String(chatId))).emit('MESSAGE_DELIVERED', {

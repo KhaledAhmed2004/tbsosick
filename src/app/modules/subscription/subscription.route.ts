@@ -8,7 +8,7 @@ import { rateLimitMiddleware } from '../../middlewares/rateLimit';
 
 const router = express.Router();
 
-// GET /subscription/me
+// GET /subscriptions/me
 // নিজের সাবস্ক্রিপশন স্ট্যাটাস/প্ল্যান দেখায়
 router.get(
   '/me',
@@ -16,7 +16,7 @@ router.get(
   SubscriptionController.getMySubscriptionController
 );
 
-// POST /subscription/apple/verify
+// POST /subscriptions/apple/verify
 // iOS ক্লায়েন্ট StoreKit থেকে signedTransactionInfo পাঠায় — server verify করে
 // DB-তে সাবস্ক্রিপশন তৈরি/আপডেট করে।
 router.post(
@@ -31,7 +31,7 @@ router.post(
   SubscriptionController.verifyApplePurchaseController
 );
 
-// POST /subscription/apple/webhook
+// POST /subscriptions/apple/webhook
 // Apple App Store Server Notifications V2 — no auth middleware because
 // Apple's JWS signature is verified inside the controller/service.
 // Raw body parsing for this route is configured in src/app.ts.
@@ -40,7 +40,7 @@ router.post(
   SubscriptionController.appleWebhookController
 );
 
-// POST /subscription/google/verify
+// POST /subscriptions/google/verify
 // Android client passes the Google Play purchase token + productId from
 // the BillingClient — server verifies via Android Publisher API and
 // upserts the subscription record.
@@ -56,7 +56,7 @@ router.post(
   SubscriptionController.verifyGooglePurchaseController
 );
 
-// POST /subscription/google/webhook
+// POST /subscriptions/google/webhook
 // Google Play Real-Time Developer Notifications — Pub/Sub push.
 // No app-level auth: the service verifies the bearer JWT signed by
 // Google Cloud Pub/Sub against the configured audience.
@@ -66,7 +66,7 @@ router.post(
   SubscriptionController.googleWebhookController
 );
 
-// POST /subscription/choose/free
+// POST /subscriptions/choose/free
 // লোকালি Free প্ল্যানে সুইচ করে
 router.post(
   '/choose/free',

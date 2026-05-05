@@ -347,9 +347,14 @@ const changePasswordToDB = async (
     Number(config.bcrypt_salt_rounds)
   );
 
+  // Update user AND increment tokenVersion to invalidate all existing sessions
+  // Also clear the reset flag atomically
   await User.findOneAndUpdate(
     { _id: user.id },
-    { password: hashPassword },
+    {
+      $set: { password: hashPassword },
+      $inc: { tokenVersion: 1 },
+    },
     { new: true }
   );
 };

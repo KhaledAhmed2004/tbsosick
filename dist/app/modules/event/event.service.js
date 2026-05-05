@@ -40,34 +40,57 @@ const resolveTimeRange = (payload) => {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid startsAt');
         }
         let endsAt;
+        let durationInHours;
         if (payload.endsAt) {
             endsAt = new Date(payload.endsAt);
             if (Number.isNaN(endsAt.getTime())) {
                 throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid endsAt');
             }
+            durationInHours = (endsAt.getTime() - startsAt.getTime()) / 3600000;
         }
-        else if (typeof payload.durationHours === 'number') {
-            endsAt = new Date(startsAt.getTime() + payload.durationHours * 3600000);
+        else if (typeof payload.durationInHours === 'number') {
+            durationInHours = payload.durationInHours;
+            endsAt = new Date(startsAt.getTime() + durationInHours * 3600000);
         }
         else {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'endsAt or durationHours is required with startsAt');
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'endsAt or durationInHours is required with startsAt');
         }
         if (endsAt <= startsAt) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'endsAt must be after startsAt');
         }
-        return { startsAt, endsAt };
+        return { startsAt, endsAt, durationInHours };
     }
-    // Legacy triple: { date: 'YYYY-MM-DD', time: 'HH:MM', durationHours: N }
-    if (payload.date && payload.time && payload.durationHours) {
+    // Legacy triple: { date: 'YYYY-MM-DD', time: 'HH:MM' or 'HH:MM AM/PM', durationInHours: N }
+    if (payload.date && payload.time && payload.durationInHours) {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid date');
         }
-        if (!/^\d{2}:\d{2}$/.test(payload.time)) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid time');
+        let startsAt;
+        const timeStr = payload.time.trim();
+        // Check if time is in AM/PM format
+        if (/(AM|PM)$/i.test(timeStr)) {
+            const [time, modifier] = timeStr.split(/\s+/);
+            let [hours, minutes] = time.split(':').map(Number);
+            if (modifier.toUpperCase() === 'PM' && hours < 12)
+                hours += 12;
+            if (modifier.toUpperCase() === 'AM' && hours === 12)
+                hours = 0;
+            const paddedHours = hours.toString().padStart(2, '0');
+            const paddedMinutes = minutes.toString().padStart(2, '0');
+            startsAt = new Date(`${payload.date}T${paddedHours}:${paddedMinutes}:00.000Z`);
         }
-        const startsAt = new Date(`${payload.date}T${payload.time}:00.000Z`);
-        const endsAt = new Date(startsAt.getTime() + Number(payload.durationHours) * 3600000);
-        return { startsAt, endsAt };
+        else {
+            if (!/^\d{2}:\d{2}$/.test(timeStr)) {
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid time');
+            }
+            startsAt = new Date(`${payload.date}T${timeStr}:00.000Z`);
+        }
+        if (Number.isNaN(startsAt.getTime())) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Invalid date/time combination');
+        }
+        const durationInHours = Number(payload.durationInHours);
+        const endsAt = new Date(startsAt.getTime() + durationInHours * 3600000);
+        return { startsAt, endsAt, durationInHours };
     }
     return null;
 };
@@ -102,17 +125,61 @@ const scheduleEventReminders = (userId, eventId, title, eventStart) => __awaiter
             .send();
     }
 });
+/**
+ * Transforms a DB event object into the user-friendly format requested by the client.
+ */
+const transformEventResponse = (event, isListView = false) => {
+    const startsAt = new Date(event.startsAt);
+    const now = new Date();
+    // Extract date (YYYY-MM-DD)
+    const date = startsAt.toISOString().split('T')[0];
+    // Extract time in 12-hour AM/PM format
+    let hours = startsAt.getUTCHours();
+    const minutes = startsAt.getUTCMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    const time = `${hours}:${minutes} ${ampm}`;
+    const { userId, startsAt: _s, endsAt: _e, preferenceCard } = event, rest = __rest(event, ["userId", "startsAt", "endsAt", "preferenceCard"]);
+    const tag = startsAt > now ? 'Upcoming' : 'Past';
+    // If list view, return minimal fields
+    if (isListView) {
+        return {
+            _id: event._id,
+            title: event.title,
+            tag,
+            date,
+            time,
+            durationInHours: event.durationInHours,
+            eventType: event.eventType,
+        };
+    }
+    // Handle populated preferenceCard mapping for detailed view
+    let linkedPreferenceCard = preferenceCard;
+    if (preferenceCard &&
+        typeof preferenceCard === 'object' &&
+        preferenceCard.cardTitle) {
+        linkedPreferenceCard = {
+            _id: preferenceCard._id,
+            title: preferenceCard.cardTitle,
+        };
+    }
+    return Object.assign(Object.assign({}, rest), { tag,
+        date,
+        time,
+        linkedPreferenceCard, createdBy: userId });
+};
 const createEventInDB = (userId, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const range = resolveTimeRange(payload);
     if (!range) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'startsAt (or legacy date + time + durationHours) is required');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'startsAt (or legacy date + time + durationInHours) is required');
     }
-    // Strip legacy/duration fields from the payload to avoid writing them to DB.
-    const { date, time, durationHours, startsAt, endsAt } = payload, rest = __rest(payload, ["date", "time", "durationHours", "startsAt", "endsAt"]);
-    const event = yield event_model_1.default.create(Object.assign(Object.assign({ userId }, rest), { startsAt: range.startsAt, endsAt: range.endsAt }));
+    // Strip legacy fields from the payload to avoid writing them to DB.
+    const { date, time, durationInHours, startsAt, endsAt } = payload, rest = __rest(payload, ["date", "time", "durationInHours", "startsAt", "endsAt"]);
+    const event = yield event_model_1.default.create(Object.assign(Object.assign({ userId }, rest), { startsAt: range.startsAt, endsAt: range.endsAt, durationInHours: range.durationInHours }));
     const eventId = event._id.toString();
     yield scheduleEventReminders(userId, eventId, payload.title, range.startsAt);
-    return event;
+    return transformEventResponse(event.toObject());
 });
 const listEventsForUserFromDB = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const filter = { userId };
@@ -125,9 +192,8 @@ const listEventsForUserFromDB = (userId, query) => __awaiter(void 0, void 0, voi
             filter.startsAt.$lte = new Date(`${query.to}T23:59:59.999Z`);
         }
     }
-    return event_model_1.default.find(filter)
-        .select('title eventType startsAt endsAt location notes personnel preferenceCard')
-        .lean();
+    const events = yield event_model_1.default.find(filter).sort({ startsAt: 1 }).lean();
+    return events.map(event => transformEventResponse(event, true));
 });
 const getEventByIdFromDB = (id, requester) => __awaiter(void 0, void 0, void 0, function* () {
     const event = yield event_model_1.default.findById(id)
@@ -135,13 +201,14 @@ const getEventByIdFromDB = (id, requester) => __awaiter(void 0, void 0, void 0, 
         .lean();
     if (!event)
         return null;
-    if (event.userId.toString() !== requester.id && requester.role !== 'SUPER_ADMIN') {
+    if (event.userId.toString() !== requester.id &&
+        requester.role !== 'SUPER_ADMIN') {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed to view this event');
     }
-    return event;
+    return transformEventResponse(event);
 });
 const updateEventInDB = (eventId, user, payload) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     const event = yield event_model_1.default.findById(eventId);
     if (!event) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Event not found');
@@ -154,7 +221,7 @@ const updateEventInDB = (eventId, user, payload) => __awaiter(void 0, void 0, vo
         payload.endsAt !== undefined ||
         payload.date !== undefined ||
         payload.time !== undefined ||
-        payload.durationHours !== undefined;
+        payload.durationInHours !== undefined;
     let normalised = Object.assign({}, payload);
     if (touchesTime) {
         const merged = {
@@ -162,18 +229,18 @@ const updateEventInDB = (eventId, user, payload) => __awaiter(void 0, void 0, vo
             endsAt: payload.endsAt,
             date: payload.date,
             time: payload.time,
-            durationHours: payload.durationHours,
+            durationInHours: (_b = payload.durationInHours) !== null && _b !== void 0 ? _b : event.durationInHours,
         };
         const range = resolveTimeRange(merged);
-        if (!range) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Could not resolve event time range');
+        if (range) {
+            normalised.startsAt = range.startsAt;
+            normalised.endsAt = range.endsAt;
+            normalised.durationInHours = range.durationInHours;
         }
-        normalised.startsAt = range.startsAt;
-        normalised.endsAt = range.endsAt;
-        delete normalised.date;
-        delete normalised.time;
-        delete normalised.durationHours;
     }
+    // Strip temporary fields from normalised before updating DB
+    delete normalised.date;
+    delete normalised.time;
     Object.assign(event, normalised);
     const updatedEvent = yield event.save();
     return updatedEvent;

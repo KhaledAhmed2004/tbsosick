@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-const DOCS_DIR = path.join(process.cwd(), 'ux-flow-with-api-responses');
+const DOCS_BASE_DIR = path.join(process.cwd(), 'documentaction');
+const INVENTORY_FILE = path.join(DOCS_BASE_DIR, 'api-inventory.md');
 const OUTPUT_FILE = path.join(process.cwd(), 'public', 'tbsosick.postman_collection.json');
 const SOCKET_HELPER_PATH = path.join(process.cwd(), 'src', 'helpers', 'socketHelper.ts');
 
@@ -44,124 +45,128 @@ interface PostmanCollection {
     schema: string;
     description?: string;
   };
-  item: PostmanFolder[];
+  item: (PostmanRequest | PostmanFolder)[];
   variable: any[];
 }
 
-function parseMarkdownFile(filePath: string): PostmanRequest[] {
-  const content = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
-  const requests: PostmanRequest[] = [];
-
-  // Match API sections starting with ### X.X Name
-  const sectionRegex = /### (\d+\.\d+) (.*?)\n\n```\n(GET|POST|PUT|PATCH|DELETE) (.*?)\n([\s\S]*?)```/g;
-  let match;
-
-  while ((match = sectionRegex.exec(content)) !== null) {
-    const [_, id, name, method, fullPath, headersAndAuth] = match;
-    const requestName = `${id} ${name.trim()}`;
-    
-    // Extract description (text between the code block and "Implementation")
-    const afterCodeBlock = content.substring(match.index + match[0].length);
-    const descriptionMatch = afterCodeBlock.match(/^\s*> (.*?)\n/);
-    const description = descriptionMatch ? descriptionMatch[1].trim() : '';
-
-    // Extract request body
-    const bodyMatch = afterCodeBlock.match(/\*\*Request Body:\*\*\n```json\n([\s\S]*?)```/);
-    const bodyRaw = bodyMatch ? bodyMatch[1].trim() : null;
-
-    // Parse path and query params
-    const [pathPart, queryPart] = fullPath.trim().split('?');
-    const pathSegments = pathPart.split('/').filter(p => p);
-    
-    // Handle path variables (e.g., :cardId)
-    const variables: any[] = [];
-    const formattedPathSegments = pathSegments.map(segment => {
-      if (segment.startsWith(':')) {
-        const key = segment.substring(1);
-        variables.push({ key, value: '' });
-        return `:${key}`;
-      }
-      return segment;
-    });
-
-    const queryParams: any[] = [];
-    if (queryPart) {
-      queryPart.split('&').forEach(param => {
-        const [key, value] = param.split('=');
-        queryParams.push({ key, value: value || '' });
-      });
-    }
-
-    const request: PostmanRequest = {
-      name: requestName,
-      request: {
-        method,
-        header: [
-          {
-            key: 'Content-Type',
-            value: 'application/json',
-            type: 'text'
-          }
-        ],
-        url: {
-          raw: `{{baseUrl}}${fullPath.trim()}`,
-          host: ['{{baseUrl}}'],
-          path: formattedPathSegments,
-          query: queryParams.length > 0 ? queryParams : undefined,
-          variable: variables.length > 0 ? variables : undefined
-        },
-        description: description
-      },
-      response: []
-    };
-
-    // Handle Auth header
-    if (headersAndAuth.includes('Auth: Bearer')) {
-      request.request.header.push({
-        key: 'Authorization',
-        value: 'Bearer {{accessToken}}',
-        type: 'text'
-      });
-    }
-
-    // Add Postman Script for Login and Token Refresh to store accessToken
-    if (fullPath.includes('/login') || fullPath.includes('/verify-otp') || fullPath.includes('/refresh-token')) {
-      request.event = [
-        {
-          listen: "test",
-          script: {
-            exec: [
-              "const response = pm.response.json();",
-              "if (response.success && response.data && response.data.accessToken) {",
-              "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
-              "    console.log(\"accessToken has been set in collection variables\");",
-              "}",
-              "if (response.success && response.data && response.data.refreshToken) {",
-              "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
-              "}"
-            ],
-            type: "text/javascript"
-          }
-        }
-      ];
-    }
-
-    if (bodyRaw) {
-      request.request.body = {
-        mode: 'raw',
-        raw: bodyRaw,
-        options: {
-          raw: {
-            language: 'json'
-          }
-        }
-      };
-    }
-
-    requests.push(request);
+function parseSpecFile(filePath: string, id: string): PostmanRequest | null {
+  if (!fs.existsSync(filePath)) {
+    console.warn(`Spec file not found: ${filePath}`);
+    return null;
   }
 
-  return requests;
+  const content = fs.readFileSync(filePath, 'utf-8').replace(/\r\n/g, '\n');
+  
+  // Extract Title from H1
+  const titleMatch = content.match(/^# (?:[\d.]+\s*)?(.*)/m);
+  const apiName = titleMatch ? titleMatch[1].trim() : 'Unknown API';
+
+  // Extract HTTP block
+  const httpRegex = /```http\n(GET|POST|PUT|PATCH|DELETE) (.*?)\n([\s\S]*?)```/;
+  const httpMatch = httpRegex.exec(content);
+  if (!httpMatch) return null;
+
+  const [_, method, fullPath, headersAndAuth] = httpMatch;
+  
+  // Extract Description (first blockquote after http block or at start)
+  const descriptionMatch = content.match(/> (.*?)\n/);
+  const description = descriptionMatch ? descriptionMatch[1].trim() : '';
+
+  // Extract Request Body
+  const bodyMatch = content.match(/## Request Body[\s\S]*?```json\n([\s\S]*?)```/);
+  const bodyRaw = bodyMatch ? bodyMatch[1].trim() : null;
+
+  // Parse path and query params
+  const [pathPart, queryPart] = fullPath.trim().split('?');
+  const pathSegments = pathPart.split('/').filter(p => p);
+  
+  // Handle path variables (e.g., :cardId)
+  const variables: any[] = [];
+  const formattedPathSegments = pathSegments.map(segment => {
+    if (segment.startsWith(':')) {
+      const key = segment.substring(1);
+      variables.push({ key, value: '' });
+      return `:${key}`;
+    }
+    return segment;
+  });
+
+  const queryParams: any[] = [];
+  if (queryPart) {
+    queryPart.split('&').forEach(param => {
+      const [key, value] = param.split('=');
+      queryParams.push({ key, value: value || '' });
+    });
+  }
+
+  const request: PostmanRequest = {
+    name: `${id} ${apiName}`,
+    request: {
+      method,
+      header: [
+        {
+          key: 'Content-Type',
+          value: 'application/json',
+          type: 'text'
+        }
+      ],
+      url: {
+        raw: `{{baseUrl}}${fullPath.trim()}`,
+        host: ['{{baseUrl}}'],
+        path: formattedPathSegments,
+        query: queryParams.length > 0 ? queryParams : undefined,
+        variable: variables.length > 0 ? variables : undefined
+      },
+      description: description
+    },
+    response: []
+  };
+
+  // Handle Auth header
+  if (headersAndAuth.toLowerCase().includes('auth: bearer')) {
+    request.request.header.push({
+      key: 'Authorization',
+      value: 'Bearer {{accessToken}}',
+      type: 'text'
+    });
+  }
+
+  // Add Postman Script for Login and Token Refresh to store accessToken
+  const normalizedPath = fullPath.toLowerCase();
+  if (normalizedPath.includes('/login') || normalizedPath.includes('/verify-otp') || normalizedPath.includes('/refresh-token')) {
+    request.event = [
+      {
+        listen: "test",
+        script: {
+          exec: [
+            "const response = pm.response.json();",
+            "if (response.success && response.data && response.data.accessToken) {",
+            "    pm.collectionVariables.set(\"accessToken\", response.data.accessToken);",
+            "    console.log(\"accessToken has been set in collection variables\");",
+            "}",
+            "if (response.success && response.data && response.data.refreshToken) {",
+            "    pm.collectionVariables.set(\"refreshToken\", response.data.refreshToken);",
+            "}"
+          ],
+          type: "text/javascript"
+        }
+      }
+    ];
+  }
+
+  if (bodyRaw) {
+    request.request.body = {
+      mode: 'raw',
+      raw: bodyRaw,
+      options: {
+        raw: {
+          language: 'json'
+        }
+      }
+    };
+  }
+
+  return request;
 }
 
 function getSocketEventsDocs(): string {
@@ -215,11 +220,16 @@ function getSocketEventsDocs(): string {
 }
 
 function generateCollection() {
+  if (!fs.existsSync(INVENTORY_FILE)) {
+    console.error(`Inventory file not found: ${INVENTORY_FILE}`);
+    return;
+  }
+
   const collection: PostmanCollection = {
     info: {
       name: 'tbsosick',
       schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json',
-      description: 'Automatically generated from UX flow documentation with testing guides.'
+      description: 'Automatically generated from API Inventory & Module Specs.'
     },
     item: [],
     variable: [
@@ -251,12 +261,12 @@ function generateCollection() {
 Follow these detailed steps to test APIs and Socket events:
 
 ### 1. Setup & Auth (First Step)
-1.  **Login**: First, go to **App Screens > Auth > 1.2 Login**.
+1.  **Login**: First, go to **Auth Module > 1.1 Login**.
 2.  **Auto-Token**: Successful login korle \`accessToken\` automatic collection variable-e save hoye jabe.
 3.  **Check**: Apni Collection-er **Variables** tab-e giye check korte paren token-ti set hoyeche kina.
 
 ### 2. Standard API Testing
-- Protiti folder screen-er nam onujayi organized.
+- Protiti folder module onujayi organized.
 - Path variables (যেমন \`:id\`) thakle Postman-er **Params** tab-e value boshate hobe.
 
 ### 3. Socket.IO Testing (Detailed Guide)
@@ -285,7 +295,7 @@ Server theke real-time data receive korar jonno nicher steps follow koren:
 
 #### C. How to "Emit" (Send events to server)
 - Server-e data pathanor jonno **Message** tab-e jan.
-- **Event Name**: Jekhane event-er nam likhte hoy (যেমন: \`JOIN_CHAT\`).
+- **Event Name**: Jekhare event-er nam likhte hoy (যেমন: \`JOIN_CHAT\`).
 - **Payload**: Niche JSON format-e data-ti likhun:
     \`\`\`json
     { "chatId": "664a1b2c3d4e5f6a7b8c9d0e" }
@@ -305,35 +315,39 @@ ${socketDocs}
   };
   collection.item.push(guideFolder);
 
-  const screenFolders = fs.readdirSync(DOCS_DIR)
-    .filter(f => f.endsWith('-screens') && fs.statSync(path.join(DOCS_DIR, f)).isDirectory());
+  // 2. Parse API Inventory
+  const inventoryContent = fs.readFileSync(INVENTORY_FILE, 'utf-8').replace(/\r\n/g, '\n');
+  const moduleSections = inventoryContent.split(/^## /m).slice(1); // Split by "## " at start of line, ignore intro
 
-  for (const folderName of screenFolders) {
-    const folderPath = path.join(DOCS_DIR, folderName);
+  for (const section of moduleSections) {
+    const lines = section.split('\n');
+    const moduleName = lines[0].replace(' Module', '').trim();
+    
     const postmanFolder: PostmanFolder = {
-      name: folderName.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' '),
+      name: `${moduleName} Module`,
       item: []
     };
 
-    const files = fs.readdirSync(folderPath)
-      .filter(f => f.endsWith('.md'))
-      .sort();
-
-    for (const fileName of files) {
-      const filePath = path.join(folderPath, fileName);
-      const screenName = fileName.replace(/^\d+-/, '').replace('.md', '').split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-      
-      const requests = parseMarkdownFile(filePath);
-      
-      if (requests.length > 0) {
-        postmanFolder.item.push({
-          name: screenName,
-          item: requests
-        });
+    // Regex for table rows: | ID | Method | Endpoint | Roles | Status | Spec | On a screen? |
+    // Example: | 1.1 | POST | `/auth/login` | Public | ✅ | [Module 1.1](./modules/auth/01-login.md) |
+    const rowRegex = /\| ([\d.]+) \| (GET|POST|PUT|PATCH|DELETE) \| `(.*?)` \| .*? \| .*? \| \[(.*?)\]\((.*?)\) \|/;
+    
+    for (const line of lines) {
+      const match = rowRegex.exec(line);
+      if (match) {
+        const [_, id, method, endpoint, specName, specRelPath] = match;
+        const specAbsPath = path.resolve(DOCS_BASE_DIR, specRelPath);
+        
+        const request = parseSpecFile(specAbsPath, id);
+        if (request) {
+          postmanFolder.item.push(request);
+        }
       }
     }
 
-    collection.item.push(postmanFolder);
+    if (postmanFolder.item.length > 0) {
+      collection.item.push(postmanFolder);
+    }
   }
 
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(collection, null, 2));

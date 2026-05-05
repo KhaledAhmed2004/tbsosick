@@ -54,94 +54,100 @@ const getAdminDashboardStats = () => __awaiter(void 0, void 0, void 0, function*
         activeSubscriptions: formatMetric(activeSubscriptions),
     };
 });
-// Monthly trend for total preference cards (each month’s count)
-const getPreferenceCardMonthlyTrend = () => __awaiter(void 0, void 0, void 0, function* () {
-    const cardBuilder = new AggregationBuilder_1.default(preference_card_model_1.PreferenceCardModel);
-    const series = yield cardBuilder.getTimeTrends({ timeUnit: 'month' });
-    return series.map((s) => ({
-        label: s.label,
-        count: s.transactionCount,
-    }));
-});
-// Monthly trend for active subscriptions (complex analytics shape)
-const getActiveSubscriptionMonthlyTrend = () => __awaiter(void 0, void 0, void 0, function* () {
-    const subBuilder = new AggregationBuilder_1.default(subscription_model_1.Subscription);
+// Helper for monthly trends with YoY and Peak/Slowest analysis
+const getMonthlyTrendAnalytics = (Model_1, query_1, ...args_1) => __awaiter(void 0, [Model_1, query_1, ...args_1], void 0, function* (Model, query, filter = {}) {
+    const { year, from, to } = query;
     const now = new Date();
-    const currentYear = now.getFullYear();
-    // Get current year trends
-    const series = yield subBuilder.getTimeTrends({
+    const targetYear = year ? Number(year) : now.getFullYear();
+    const compareYear = targetYear - 1;
+    const builder = new AggregationBuilder_1.default(Model);
+    // Current year trends
+    const series = yield builder.getTimeTrends({
         timeUnit: 'month',
-        filter: { status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE },
+        year: targetYear,
+        from,
+        to,
+        filter,
     });
-    // Get last year trends for comparison (YoY)
-    subBuilder.reset();
-    const lastYearSeries = yield subBuilder.getTimeTrends({
+    // Last year trends for comparison (YoY)
+    builder.reset();
+    const lastYearSeries = yield builder.getTimeTrends({
         timeUnit: 'month',
-        filter: {
-            status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
-            createdAt: {
-                $gte: new Date(currentYear - 1, 0, 1),
-                $lte: new Date(currentYear - 1, 11, 31),
-            },
-        },
+        year: compareYear,
+        filter,
     });
     const formattedSeries = series.map((s, index) => {
         var _a;
         const lastYearCount = ((_a = lastYearSeries[index]) === null || _a === void 0 ? void 0 : _a.transactionCount) || 0;
         const currentCount = s.transactionCount;
-        let yoy_growth_pct = 0;
+        let yoyGrowthPct = 0;
         if (lastYearCount > 0) {
-            yoy_growth_pct = ((currentCount - lastYearCount) / lastYearCount) * 100;
+            yoyGrowthPct = ((currentCount - lastYearCount) / lastYearCount) * 100;
         }
         else if (currentCount > 0) {
-            yoy_growth_pct = 100;
+            yoyGrowthPct = 100;
         }
         return {
-            period: `${currentYear}-${String(index + 1).padStart(2, '0')}`,
+            month: s.month,
             label: s.label,
             count: currentCount,
-            last_year_count: lastYearCount,
-            yoy_growth_pct: Number(yoy_growth_pct.toFixed(1)),
-            is_peak: false, // Will calculate below
-            is_slowest: false, // Will calculate below
+            lastYearCount,
+            yoyGrowthPct: Number(yoyGrowthPct.toFixed(1)),
+            isPeak: false,
+            isSlowest: false,
         };
     });
     // Calculate Peak and Slowest
     const validCounts = formattedSeries.filter((s) => s.count > 0);
     if (validCounts.length > 0) {
         const maxCount = Math.max(...formattedSeries.map((s) => s.count));
-        const minCount = Math.min(...formattedSeries.map((s) => s.count));
+        const minCount = Math.min(...validCounts.map((s) => s.count));
         formattedSeries.forEach((s) => {
             if (s.count === maxCount && maxCount > 0)
-                s.is_peak = true;
+                s.isPeak = true;
             if (s.count === minCount && minCount > 0)
-                s.is_slowest = true;
+                s.isSlowest = true;
         });
     }
     const totalCount = formattedSeries.reduce((acc, s) => acc + s.count, 0);
-    const totalLastYearCount = formattedSeries.reduce((acc, s) => acc + s.last_year_count, 0);
-    const peakMonth = formattedSeries.find((s) => s.is_peak);
-    const slowestMonth = formattedSeries.find((s) => s.is_slowest);
-    let total_yoy_growth = 0;
+    const totalLastYearCount = formattedSeries.reduce((acc, s) => acc + s.lastYearCount, 0);
+    const peakMonth = formattedSeries.find((s) => s.isPeak);
+    const slowestMonth = formattedSeries.find((s) => s.isSlowest);
+    let totalYoyGrowth = 0;
     if (totalLastYearCount > 0) {
-        total_yoy_growth = ((totalCount - totalLastYearCount) / totalLastYearCount) * 100;
+        totalYoyGrowth =
+            ((totalCount - totalLastYearCount) / totalLastYearCount) * 100;
     }
     return {
         meta: {
-            year: currentYear,
+            year: targetYear,
             granularity: 'monthly',
-            compare_year: currentYear - 1,
+            compareYear,
             timezone: 'UTC',
         },
         summary: {
-            total_count: totalCount,
-            period_avg: Math.round(totalCount / 12),
-            yoy_growth_pct: Number(total_yoy_growth.toFixed(1)),
-            peak: peakMonth ? { period: peakMonth.period, label: peakMonth.label, count: peakMonth.count } : null,
-            slowest: slowestMonth ? { period: slowestMonth.period, label: slowestMonth.label, count: slowestMonth.count } : null,
+            totalCount,
+            periodAvg: Math.round(totalCount / 12),
+            yoyGrowthPct: Number(totalYoyGrowth.toFixed(1)),
+            peak: peakMonth
+                ? { month: peakMonth.month, label: peakMonth.label, count: peakMonth.count }
+                : null,
+            slowest: slowestMonth
+                ? { month: slowestMonth.month, label: slowestMonth.label, count: slowestMonth.count }
+                : null,
         },
         series: formattedSeries,
     };
+});
+// Monthly trend for total preference cards
+const getPreferenceCardMonthlyTrend = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield getMonthlyTrendAnalytics(preference_card_model_1.PreferenceCardModel, query);
+});
+// Monthly trend for active subscriptions
+const getActiveSubscriptionMonthlyTrend = (query) => __awaiter(void 0, void 0, void 0, function* () {
+    return yield getMonthlyTrendAnalytics(subscription_model_1.Subscription, query, {
+        status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
+    });
 });
 exports.AdminService = {
     getAdminDashboardStats,

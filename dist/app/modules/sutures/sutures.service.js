@@ -38,7 +38,7 @@ const deleteSutureFromDB = (id) => __awaiter(void 0, void 0, void 0, function* (
 });
 const bulkCreateSuturesToDB = (items) => __awaiter(void 0, void 0, void 0, function* () {
     const normalized = items
-        .map(i => ({ name: i.name.trim() }))
+        .map(i => ({ name: i.name.trim(), isActive: true }))
         .filter(i => i.name.length > 0);
     const names = normalized.map(i => i.name);
     const existingDocs = yield sutures_model_1.SutureModel.find({
