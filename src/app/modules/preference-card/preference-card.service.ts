@@ -9,8 +9,9 @@ import { USER_ROLES } from '../../../enums/user';
 import { QueryBuilder } from '../../builder';
 import { SupplyModel } from '../supplies/supplies.model';
 import { SutureModel } from '../sutures/sutures.model';
-import { Favorite } from '../favorite/favorite.model';
 import PDFBuilder from '../../builder/PDFBuilder';
+import { checkCardCreationQuota } from '../subscription/helpers/quota';
+import { getUserEntitlement } from '../subscription/helpers/entitlement';
 
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const MAX_FAVORITES_PER_USER = 100;
@@ -380,6 +381,15 @@ const normaliseClientRefField = (
 };
 
 const createPreferenceCardInDB = async (userId: string, data: any) => {
+  // 1. Quota Check (D11 in overview.md)
+  const quota = await checkCardCreationQuota(userId);
+  if (!quota.allowed) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      `You have reached the creation limit for your current plan (${quota.limit} cards). Please upgrade to unlock more space.`,
+    );
+  }
+
   if (data.supplies && Array.isArray(data.supplies)) {
     const normalised = normaliseClientRefField(data.supplies, 'supply');
     data.supplies = await resolveMixedItemsWithQuantity(
@@ -523,6 +533,19 @@ const updatePreferenceCardInDB = async (
       StatusCodes.FORBIDDEN,
       'Not authorized to verify/reject this card',
     );
+  }
+
+  // Roadmap §8: Verification eligibility (only Enterprise creators)
+  if (payload.verificationStatus === 'VERIFIED') {
+    const creatorEntitlement = await getUserEntitlement(
+      existingCard.createdBy.toString(),
+    );
+    if (!creatorEntitlement.isEnterprise) {
+      throw new ApiError(
+        StatusCodes.FORBIDDEN,
+        'Only cards created by Enterprise users are eligible for verification.',
+      );
+    }
   }
 
   // Resolve mixed supplies/sutures if present

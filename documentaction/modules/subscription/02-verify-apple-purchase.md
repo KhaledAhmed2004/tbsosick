@@ -16,6 +16,7 @@ Auth: Bearer {{accessToken}}
 ### Business Logic (`verifyApplePurchase`)
 - **Cryptographic Verification**: Apple library use kore JWS signature verify kora hoy.
 - **Fraud Guard**: Check kora hoy ei `originalTransactionId` onno kono account-e already link kora kina (`409 Conflict` jodi thake).
+- **Upgrade Check**: Jodi transaction-e `isUpgraded` flag `true` thake, tobe request reject kora hoy (`400 Bad Request`). User-ke latest transaction verify korte hobe.
 - **Plan Mapping**: `productId` theke server-side definition onujayi local `PREMIUM` plan map kora hoy.
 - **Persistence**: `upsertForUser` call kore user-er current state update kora hoy, jekhane `expiresDate`, `environment`, ebong `transactionId` save kora hoy.
 

@@ -63,14 +63,8 @@ export const appleWebhookController = catchAsync(
       );
     }
 
-    const result = await SubscriptionService.processAppleWebhook(signedPayload);
-
-    sendResponse(res, {
-      success: true,
-      statusCode: httpStatus.OK,
-      message: 'Apple webhook processed',
-      data: result,
-    });
+    await SubscriptionService.processAppleWebhook(signedPayload);
+    res.sendStatus(httpStatus.OK);
   }
 );
 
@@ -107,17 +101,11 @@ export const googleWebhookController = catchAsync(
 
     const authorizationHeader = req.header('authorization');
 
-    const result = await SubscriptionService.processGoogleWebhook(
+    await SubscriptionService.processGoogleWebhook(
       rawBody,
       authorizationHeader
     );
-
-    sendResponse(res, {
-      success: true,
-      statusCode: httpStatus.OK,
-      message: 'Google webhook processed',
-      data: result,
-    });
+    res.sendStatus(httpStatus.OK);
   }
 );
 
@@ -134,6 +122,96 @@ export const chooseFreePlanController = catchAsync(
   }
 );
 
+// --- Admin Controllers ---
+
+export const getAllSubscriptionsController = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await SubscriptionService.getAllSubscriptions(req.query);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Subscriptions retrieved successfully',
+      data: result,
+    });
+  }
+);
+
+export const getSubscriptionAnalyticsController = catchAsync(
+  async (_req: Request, res: Response) => {
+    const result = await SubscriptionService.getSubscriptionAnalytics();
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Subscription analytics retrieved successfully',
+      data: result,
+    });
+  }
+);
+
+export const getPendingWebhooksController = catchAsync(
+  async (_req: Request, res: Response) => {
+    const result = await SubscriptionService.getPendingWebhooks();
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Pending webhooks retrieved successfully',
+      data: result,
+    });
+  }
+);
+
+export const getSubscriptionByIdController = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await SubscriptionService.getSubscriptionById(req.params.id);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Subscription retrieved successfully',
+      data: result,
+    });
+  }
+);
+
+export const getSubscriptionEventsController = catchAsync(
+  async (req: Request, res: Response) => {
+    const result = await SubscriptionService.getSubscriptionEvents(req.params.userId);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Subscription events retrieved successfully',
+      data: result,
+    });
+  }
+);
+
+export const adminGrantPlanController = catchAsync(
+  async (req: Request, res: Response) => {
+    const { userId, plan } = req.body;
+    const result = await SubscriptionService.adminGrantPlan(userId, plan);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: `${plan} plan granted successfully`,
+      data: result,
+    });
+  }
+);
+
+export const adminResetPlanController = catchAsync(
+  async (req: Request, res: Response) => {
+    const { userId } = req.params;
+    const result = await SubscriptionService.adminResetPlan(userId);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: 'Subscription reset to FREE successfully',
+      data: result,
+    });
+  }
+);
+
+// --- End Admin Controllers ---
+
 const SubscriptionController = {
   getMySubscriptionController,
   verifyApplePurchaseController,
@@ -141,6 +219,13 @@ const SubscriptionController = {
   verifyGooglePurchaseController,
   googleWebhookController,
   chooseFreePlanController,
+  getAllSubscriptionsController,
+  getSubscriptionAnalyticsController,
+  getPendingWebhooksController,
+  getSubscriptionByIdController,
+  getSubscriptionEventsController,
+  adminGrantPlanController,
+  adminResetPlanController,
 };
 
 export default SubscriptionController;

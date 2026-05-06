@@ -7,6 +7,8 @@ import { PreferenceCardController } from './preference-card.controller';
 import { PreferenceCardValidation } from './preference-card.validation';
 import { fileHandler } from '../../middlewares/fileHandler';
 import { rateLimitMiddleware } from '../../middlewares/rateLimit';
+import subscriptionGate from '../../middlewares/subscriptionGate';
+import { SUBSCRIPTION_PLAN } from '../subscription/subscription.interface';
 
 const router = express.Router();
 
@@ -43,10 +45,22 @@ const parseBody = (req: Request, res: Response, next: NextFunction) => {
   next();
 };
 
+/**
+ * Roadmap §8: Library access (visibility=PUBLIC) is a paid feature.
+ * We gate this specifically when the user requests the public list.
+ */
+const libraryGate = async (req: Request, res: Response, next: NextFunction) => {
+  if (req.query.visibility === 'PUBLIC') {
+    return subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM)(req, res, next);
+  }
+  next();
+};
+
 // Create card
 router.post(
   '/',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM),
   fileHandler([{ name: 'photoLibrary', maxCount: 5 }]),
   parseBody,
   validateRequest(PreferenceCardValidation.createPreferenceCardSchema),
@@ -57,6 +71,7 @@ router.post(
 router.get(
   '/',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  libraryGate,
   rateLimitMiddleware({
     windowMs: 60_000,
     max: 60,
@@ -111,6 +126,7 @@ router.delete(
 router.post(
   '/:cardId/download',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM),
   rateLimitMiddleware({
     windowMs: 60_000,
     max: 20,

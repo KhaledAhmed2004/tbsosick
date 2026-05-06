@@ -18,6 +18,100 @@ import {
   mapAppleProductToPlan,
   mapGoogleProductToPlan,
 } from './helpers/plan.mapper';
+import { PendingWebhook } from './pending-webhook.model';
+import { SubscriptionEvent } from './subscription-event.model';
+import { ISubscriptionEvent } from './subscription-event.interface';
+import { ProcessedWebhook } from './processed-webhook.model';
+
+// --- Admin Service Methods ---
+
+export const getAllSubscriptions = async (
+  query: Record<string, any>
+): Promise<{ data: ISubscription[]; total: number }> => {
+  const { page = 1, limit = 10, plan, status, platform } = query;
+  const filter: any = {};
+  if (plan) filter.plan = plan;
+  if (status) filter.status = status;
+  if (platform) filter.platform = platform;
+
+  const [data, total] = await Promise.all([
+    SubscriptionModel.find(filter)
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit))
+      .sort({ updatedAt: -1 })
+      .populate('userId', 'fullName email'),
+    SubscriptionModel.countDocuments(filter),
+  ]);
+
+  return { data, total };
+};
+
+export const getSubscriptionAnalytics = async () => {
+  const planDistribution = await SubscriptionModel.aggregate([
+    { $group: { _id: '$plan', count: { $sum: 1 } } },
+  ]);
+
+  const platformDistribution = await SubscriptionModel.aggregate([
+    { $group: { _id: '$platform', count: { $sum: 1 } } },
+  ]);
+
+  const activeCount = await SubscriptionModel.countDocuments({
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+  });
+
+  return {
+    planDistribution,
+    platformDistribution,
+    activeCount,
+  };
+};
+
+export const getPendingWebhooks = async () => {
+  return PendingWebhook.find().sort({ receivedAt: -1 }).limit(100);
+};
+
+export const getSubscriptionById = async (
+  id: string
+): Promise<ISubscription | null> => {
+  return SubscriptionModel.findById(id).populate('userId', 'fullName email');
+};
+
+export const getSubscriptionEvents = async (
+  userId: string
+): Promise<ISubscriptionEvent[]> => {
+  return SubscriptionEvent.find({ userId: new Types.ObjectId(userId) }).sort({
+    occurredAt: -1,
+  });
+};
+
+export const adminGrantPlan = async (
+  userId: string,
+  plan: SUBSCRIPTION_PLAN
+): Promise<ISubscription> => {
+  const uId = new Types.ObjectId(userId);
+  return SubscriptionModel.upsertForUser(uId, {
+    plan,
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+    platform: SUBSCRIPTION_PLATFORM.ADMIN,
+    productId: `admin_granted_${plan.toLowerCase()}`,
+    currentPeriodEnd: null, // Admin grants are usually perpetual unless managed manually
+  });
+};
+
+export const adminResetPlan = async (userId: string): Promise<ISubscription> => {
+  const uId = new Types.ObjectId(userId);
+  return SubscriptionModel.upsertForUser(uId, {
+    plan: SUBSCRIPTION_PLAN.FREE,
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+    platform: SUBSCRIPTION_PLATFORM.ADMIN,
+    productId: null,
+    currentPeriodEnd: null,
+    canceledAt: new Date(),
+  });
+};
+
+// --- End Admin Service Methods ---
+
 
 const ensureSubscriptionDoc = async (
   userId: string
@@ -25,10 +119,20 @@ const ensureSubscriptionDoc = async (
   const id = new Types.ObjectId(userId);
   const doc = await SubscriptionModel.findByUser(id);
   if (doc) return doc;
-  return await SubscriptionModel.upsertForUser(id, {
-    plan: SUBSCRIPTION_PLAN.FREE,
-    status: SUBSCRIPTION_STATUS.ACTIVE,
-  });
+
+  // We use findOneAndUpdate directly here instead of upsertForUser to avoid
+  // writing a 'CREATED' event to the audit log for every first-time profile view.
+  // The zero-state FREE record is not a meaningful subscription event.
+  return (await SubscriptionModel.findOneAndUpdate(
+    { userId: id },
+    {
+      $set: {
+        plan: SUBSCRIPTION_PLAN.FREE,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+      },
+    },
+    { new: true, upsert: true }
+  )) as ISubscription;
 };
 
 export const getMySubscription = async (
@@ -38,9 +142,31 @@ export const getMySubscription = async (
 };
 
 export const setFreePlan = async (userId: string): Promise<ISubscription> => {
-  return SubscriptionModel.upsertForUser(new Types.ObjectId(userId), {
+  const uId = new Types.ObjectId(userId);
+  const existing = await SubscriptionModel.findByUser(uId);
+
+  // C2 Fix: Guard against active store subscriptions.
+  // If a user has an active Apple/Google subscription, we cannot unilaterally
+  // downgrade them to FREE, as the store remains the source of truth.
+  if (
+    existing &&
+    existing.platform !== SUBSCRIPTION_PLATFORM.ADMIN &&
+    (existing.status === SUBSCRIPTION_STATUS.ACTIVE ||
+      existing.status === SUBSCRIPTION_STATUS.TRIALING ||
+      existing.status === SUBSCRIPTION_STATUS.PAST_DUE) &&
+    existing.currentPeriodEnd &&
+    existing.currentPeriodEnd > new Date()
+  ) {
+    throw new ApiError(
+      httpStatus.CONFLICT,
+      'You have an active store subscription. Please cancel it through the App Store or Play Store first.'
+    );
+  }
+
+  return SubscriptionModel.upsertForUser(uId, {
     plan: SUBSCRIPTION_PLAN.FREE,
     status: SUBSCRIPTION_STATUS.ACTIVE,
+    platform: SUBSCRIPTION_PLATFORM.ADMIN, // Mark as admin-reset
   });
 };
 
@@ -50,6 +176,14 @@ export const verifyApplePurchase = async (
 ): Promise<ISubscription> => {
   // 1. Cryptographically verify the JWS with Apple's library.
   const decoded = await verifyAppleTransaction(signedTransactionInfo);
+
+  // C3 Fix: Reject if this transaction has been superseded by an upgrade.
+  if (decoded.isUpgraded) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'This transaction has been superseded by an upgrade. Please verify the latest transaction.'
+    );
+  }
 
   // 2. Fraud guard: reject if this transaction is already bound to a
   //    different user account.
@@ -96,6 +230,14 @@ export const verifyApplePurchase = async (
     }
   );
 
+  // 5. Re-process any orphan webhooks that arrived before this verify call.
+  // We don't await this so the user gets their response immediately.
+  reprocessPendingWebhooks(decoded.originalTransactionId, 'apple').catch(
+    err => {
+      console.error('Failed to re-process pending Apple webhooks:', err);
+    }
+  );
+
   return updated;
 };
 
@@ -114,9 +256,18 @@ export const verifyGooglePurchase = async (
   const decoded = await verifyGoogleSubscription(purchaseToken, productId);
 
   // 2. Fraud guard: a purchase token must not be linked to a different user.
+  // C1 Fix: Handle linkedPurchaseToken (upgrades/downgrades).
+  // If the user upgraded, the new token is in purchaseToken, and the old token
+  // is in linkedPurchaseToken. We should check both to find the existing row.
   const existingByToken = await SubscriptionModel.findOne({
-    googlePurchaseToken: decoded.purchaseToken,
+    $or: [
+      { googlePurchaseToken: decoded.purchaseToken },
+      ...(decoded.linkedPurchaseToken
+        ? [{ googlePurchaseToken: decoded.linkedPurchaseToken }]
+        : []),
+    ],
   });
+
   if (existingByToken && existingByToken.userId.toString() !== userId) {
     throw new ApiError(
       httpStatus.CONFLICT,
@@ -177,6 +328,11 @@ export const verifyGooglePurchase = async (
     }
   );
 
+  // 6. Re-process any orphan webhooks.
+  reprocessPendingWebhooks(decoded.purchaseToken, 'google').catch(err => {
+    console.error('Failed to re-process pending Google webhooks:', err);
+  });
+
   return updated;
 };
 
@@ -187,6 +343,35 @@ export const processGoogleWebhook = async (
   return handleGoogleNotification(rawBody, authorizationHeader);
 };
 
+const reprocessPendingWebhooks = async (
+  externalPurchaseId: string,
+  provider: 'apple' | 'google'
+) => {
+  const pending = await PendingWebhook.find({
+    externalPurchaseId,
+    provider,
+  }).sort({ receivedAt: 1 });
+
+  if (pending.length === 0) return;
+
+  for (const item of pending) {
+    try {
+      if (provider === 'apple') {
+        await handleAppleNotification(item.payload as string);
+      } else {
+        await handleGoogleNotification(item.payload as Buffer, undefined, true);
+      }
+      // Delete after successful processing
+      await PendingWebhook.findByIdAndDelete(item._id);
+    } catch (err) {
+      console.error(
+        `Failed to re-process pending ${provider} webhook ${item._id}:`,
+        err
+      );
+    }
+  }
+};
+
 const SubscriptionService = {
   getMySubscription,
   setFreePlan,
@@ -194,6 +379,13 @@ const SubscriptionService = {
   processAppleWebhook,
   verifyGooglePurchase,
   processGoogleWebhook,
+  getAllSubscriptions,
+  getSubscriptionAnalytics,
+  getPendingWebhooks,
+  getSubscriptionById,
+  getSubscriptionEvents,
+  adminGrantPlan,
+  adminResetPlan,
 };
 
 export default SubscriptionService;

@@ -1,6 +1,7 @@
 import httpStatus from 'http-status';
 import ApiError from '../../../../../errors/ApiError';
 import config from '../../../../../config';
+import { logger } from '../../../../../shared/logger';
 import { getAndroidPublisher } from './google.client';
 import { DecodedGoogleSubscription, GoogleEnvironment } from './google.types';
 
@@ -83,6 +84,30 @@ export const verifyGoogleSubscription = async (
   // testPurchase indicates a license-tester / sandbox transaction.
   const testPurchase = Boolean((data as any).testPurchase);
   const environment: GoogleEnvironment = testPurchase ? 'sandbox' : 'production';
+
+  // ✅ Google Policy: purchases must be acknowledged within 72 hours or
+  // Google automatically refunds the user. We acknowledge here (after confirming
+  // the subscription is valid) using the Publisher API. We do NOT block the
+  // verify response on a transient ack failure — the subscription IS valid at
+  // this point, and the 72-hour window gives room for a retry.
+  //
+  // Note: acknowledgement uses `purchases.subscriptions.acknowledge` (v1 endpoint)
+  // because `purchases.subscriptionsv2` has no separate acknowledge method.
+  try {
+    await publisher.purchases.subscriptions.acknowledge({
+      packageName,
+      subscriptionId: resolvedProductId,
+      token: purchaseToken,
+      requestBody: {},
+    });
+  } catch (ackErr) {
+    const msg = ackErr instanceof Error ? ackErr.message : 'unknown';
+    // This is not fatal — the user gets access. Log so ops can monitor.
+    logger.warn(
+      `[Google IAP] Purchase acknowledgement failed for token ${purchaseToken.slice(0, 12)}...: ${msg}. ` +
+        'Will need manual re-acknowledgement within 72h to prevent auto-refund.'
+    );
+  }
 
   return {
     purchaseToken,

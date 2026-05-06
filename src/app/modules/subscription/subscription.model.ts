@@ -5,8 +5,10 @@ import {
   SUBSCRIPTION_PLAN,
   SUBSCRIPTION_STATUS,
   SUBSCRIPTION_PLATFORM,
+  PLAN_RANK,
 } from './subscription.interface';
 import { SubscriptionEvent } from './subscription-event.model';
+import { SubscriptionEventType } from './subscription-event.interface';
 
 const subscriptionSchema = new Schema<ISubscription>(
   {
@@ -87,46 +89,84 @@ subscriptionSchema.statics.upsertForUser = async function (
   userId: Types.ObjectId,
   payload: Partial<ISubscription>
 ) {
-  const before = await this.findOne({ userId }).lean();
-
-  const next = await this.findOneAndUpdate(
+  // 1. Atomically perform the update and capture the state BEFORE the change.
+  // { new: false } returns the document as it was before the update.
+  // If the document is newly inserted via upsert, `before` will be null.
+  const before = await this.findOneAndUpdate(
     { userId },
     { $set: { ...payload, userId } },
-    { new: true, upsert: true }
+    { new: false, upsert: true, setDefaultsOnInsert: true }
   );
+
+  // 2. Fetch the state AFTER the change to return to the caller and log the diff.
+  const next = await this.findOne({ userId });
+  if (!next) {
+    throw new Error('Failed to retrieve subscription after upsert');
+  }
 
   // Diff and log only the meaningful transitions.
   const beforePlan = before?.plan;
   const afterPlan = next.plan;
   const beforeStatus = before?.status;
   const afterStatus = next.status;
+  const beforeEnd = before?.currentPeriodEnd;
+  const afterEnd = next.currentPeriodEnd;
 
-  const events: Array<{
-    eventType:
-      | 'CREATED'
-      | 'PLAN_CHANGED'
-      | 'STATUS_CHANGED'
-      | 'UPGRADED'
-      | 'DOWNGRADED';
-  }> = [];
+  const eventTypes: SubscriptionEventType[] = [];
 
   if (!before) {
-    events.push({ eventType: 'CREATED' });
+    eventTypes.push('CREATED');
   } else {
+    // 1. Detect Plan Changes (Upgrade/Downgrade)
     if (beforePlan !== afterPlan) {
-      events.push({ eventType: 'PLAN_CHANGED' });
+      const rankBefore = PLAN_RANK[beforePlan as SUBSCRIPTION_PLAN] ?? 0;
+      const rankAfter = PLAN_RANK[afterPlan as SUBSCRIPTION_PLAN] ?? 0;
+
+      if (rankAfter > rankBefore) {
+        eventTypes.push('UPGRADED');
+      } else if (rankAfter < rankBefore) {
+        eventTypes.push('DOWNGRADED');
+      } else {
+        eventTypes.push('PLAN_CHANGED');
+      }
     }
+
+    // 2. Detect Renewals (Period extended without plan change)
+    if (
+      beforePlan === afterPlan &&
+      beforeEnd &&
+      afterEnd &&
+      afterEnd.getTime() > beforeEnd.getTime() &&
+      afterStatus === SUBSCRIPTION_STATUS.ACTIVE
+    ) {
+      eventTypes.push('RENEWED');
+    }
+
+    // 3. Detect Status Transitions
     if (beforeStatus !== afterStatus) {
-      events.push({ eventType: 'STATUS_CHANGED' });
+      if (afterStatus === SUBSCRIPTION_STATUS.CANCELED) {
+        eventTypes.push('CANCELED');
+      } else if (afterStatus === SUBSCRIPTION_STATUS.INACTIVE) {
+        eventTypes.push('EXPIRED');
+      } else if (afterStatus === SUBSCRIPTION_STATUS.PAST_DUE) {
+        eventTypes.push('GRACE_STARTED');
+      } else if (
+        beforeStatus === SUBSCRIPTION_STATUS.PAST_DUE &&
+        afterStatus === SUBSCRIPTION_STATUS.ACTIVE
+      ) {
+        eventTypes.push('GRACE_RESOLVED');
+      } else {
+        eventTypes.push('STATUS_CHANGED');
+      }
     }
   }
 
-  for (const evt of events) {
+  for (const type of eventTypes) {
     try {
       await SubscriptionEvent.create({
         userId,
         subscriptionId: next._id,
-        eventType: evt.eventType,
+        eventType: type,
         previousPlan: beforePlan,
         nextPlan: afterPlan,
         previousStatus: beforeStatus,
@@ -141,7 +181,6 @@ subscriptionSchema.statics.upsertForUser = async function (
         occurredAt: new Date(),
       });
     } catch (err) {
-      // Audit writes must never fail the primary subscription update.
       console.error('Failed to write SubscriptionEvent:', err);
     }
   }

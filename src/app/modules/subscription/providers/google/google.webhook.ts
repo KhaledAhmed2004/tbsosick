@@ -12,6 +12,8 @@ import { mapGoogleProductToPlan } from '../../helpers/plan.mapper';
 import { getPubsubVerifier } from './google.client';
 import { verifyGoogleSubscription } from './google.verify';
 import { GoogleWebhookResult } from './google.types';
+import { ProcessedWebhook } from '../../processed-webhook.model';
+import { PendingWebhook } from '../../pending-webhook.model';
 
 // Google RTDN notification type codes (V1).
 // https://developer.android.com/google/play/billing/rtdn-reference
@@ -157,8 +159,10 @@ const buildUpdatesForGoogleNotification = (
       if (expiry) updates.gracePeriodEndsAt = expiry;
       return updates;
 
-    case 5: // SUBSCRIPTION_ON_HOLD — Google's account hold (no access)
-      updates.status = SUBSCRIPTION_STATUS.PAST_DUE;
+    case 5: // SUBSCRIPTION_ON_HOLD — Grace period expired, payment still failed → NO access.
+      // ⚠️ Do NOT map to PAST_DUE. PAST_DUE is in ACTIVE_STATUSES (grace period, keeps access).
+      // Account hold is a harder state: billing retries failed, access is suspended.
+      updates.status = SUBSCRIPTION_STATUS.INACTIVE;
       return updates;
 
     case 3: // SUBSCRIPTION_CANCELED — user canceled but keeps access until expiry
@@ -193,13 +197,16 @@ const buildUpdatesForGoogleNotification = (
 
 export const handleGoogleNotification = async (
   rawBody: Buffer | string,
-  authorizationHeader: string | undefined
+  authorizationHeader: string | undefined,
+  skipAuth = false
 ): Promise<GoogleWebhookResult> => {
   // 1. Trust check — the request must come from Google Pub/Sub.
-  const auth = await verifyPubsubJwt(authorizationHeader);
-  if (!auth.ok) {
-    logger.warn(`Google webhook rejected: ${auth.reason}`);
-    return { processed: false, reason: 'unauthorized' };
+  if (!skipAuth) {
+    const auth = await verifyPubsubJwt(authorizationHeader);
+    if (!auth.ok) {
+      logger.warn(`Google webhook rejected: ${auth.reason}`);
+      return { processed: false, reason: 'unauthorized' };
+    }
   }
 
   // 2. Parse the Pub/Sub envelope and decode the inner RTDN payload.
@@ -233,30 +240,48 @@ export const handleGoogleNotification = async (
   });
 
   if (!existing) {
-    // Notification arrived before the client called /google/verify, or it
-    // belongs to an account we haven't recorded yet. Skip — the verify
-    // call will create the record.
+    // H1 Fix: If not found, it might be an upgrade/downgrade where we only know
+    // the old token. Fetch latest state to see if there's a linkedPurchaseToken.
+    try {
+      const decoded = await verifyGoogleSubscription(
+        purchaseToken,
+        subNotif.subscriptionId
+      );
+
+      if (decoded.linkedPurchaseToken) {
+        const linked = await SubscriptionModel.findOne({
+          googlePurchaseToken: decoded.linkedPurchaseToken,
+        });
+        if (linked) {
+          // Found it via the linked token! Continue with this record.
+          return await processValidatedGoogleNotification(
+            linked,
+            decoded,
+            notificationTypeCode,
+            notificationType,
+            messageId
+          );
+        }
+      }
+    } catch (err) {
+      // If verify fails here, we can't do much. Fall through to orphan warning.
+    }
+
+    // 🟠 5 Fix: Store the orphan webhook in the queue for later re-processing.
+    await PendingWebhook.create({
+      externalPurchaseId: purchaseToken,
+      provider: 'google',
+      payload: rawBody,
+    });
+
     logger.warn(
-      `Orphan Google RTDN ${notificationType} for purchaseToken=${purchaseToken.slice(0, 12)}...`
+      `Queued orphan Google RTDN ${notificationType} for purchaseToken=${purchaseToken.slice(0, 12)}...`
     );
     return {
       processed: false,
       notificationType,
       rawNotificationType: notificationTypeCode,
-      reason: 'no_matching_subscription',
-    };
-  }
-
-  // 6. Idempotency: Pub/Sub re-delivers messages on failure or retries.
-  if (
-    messageId &&
-    existing.metadata?.lastGoogleMessageId === messageId
-  ) {
-    return {
-      processed: false,
-      notificationType,
-      rawNotificationType: notificationTypeCode,
-      reason: 'duplicate',
+      reason: 'queued_as_orphan',
     };
   }
 
@@ -278,8 +303,51 @@ export const handleGoogleNotification = async (
       processed: false,
       notificationType,
       rawNotificationType: notificationTypeCode,
-      reason: 'no_matching_subscription',
+      reason: 'google_api_error', // M5 Fix: Correct reason string
     };
+  }
+
+  return await processValidatedGoogleNotification(
+    existing,
+    decoded,
+    notificationTypeCode,
+    notificationType,
+    messageId
+  );
+};
+
+/**
+ * Shared logic to apply updates once both the DB record and Google state are resolved.
+ */
+const processValidatedGoogleNotification = async (
+  existing: ISubscription,
+  decoded: any,
+  notificationTypeCode: number,
+  notificationType: string,
+  messageId: string
+): Promise<GoogleWebhookResult> => {
+  // ✅ Idempotency — Write-first pattern eliminates TOCTOU race.
+  // Two concurrent deliveries of the same messageId could both pass a
+  // findOne() check before either writes. Instead we attempt the insert
+  // immediately and let the unique index reject the second one atomically.
+  if (messageId) {
+    try {
+      await ProcessedWebhook.create({
+        webhookId: messageId,
+        provider: 'google',
+      });
+    } catch (err: any) {
+      if (err.code === 11000) {
+        // Duplicate key → already processed, safe to acknowledge and ignore.
+        return {
+          processed: false,
+          notificationType,
+          rawNotificationType: notificationTypeCode,
+          reason: 'duplicate',
+        };
+      }
+      throw err; // unexpected DB error — bubble up so webhook is not 200'd
+    }
   }
 
   const updates = buildUpdatesForGoogleNotification(
@@ -297,12 +365,11 @@ export const handleGoogleNotification = async (
     lastGoogleNotificationAt: new Date().toISOString(),
   };
 
-  await SubscriptionModel.findByIdAndUpdate(existing._id, {
-    $set: {
-      ...updates,
-      googleOrderId: decoded.orderId || existing.googleOrderId,
-      metadata: newMetadata,
-    },
+  await SubscriptionModel.upsertForUser(existing.userId, {
+    ...updates,
+    googlePurchaseToken: decoded.purchaseToken, // Migrate to latest token on upgrade
+    googleOrderId: decoded.orderId || existing.googleOrderId,
+    metadata: newMetadata,
   });
 
   logger.info(

@@ -36,13 +36,14 @@ Dui platform er state machine same `Subscription` doc e converge kore — same `
 | Google Play subscriptionsv2 verification | ✅ Complete |
 | Google Play RTDN (Pub/Sub) webhook | ✅ Complete |
 | Pub/Sub JWT verification | ✅ Complete |
-| Subscription lifecycle state machine | ✅ Complete |
-| Idempotent webhook handling | ✅ Complete |
+| Subscription lifecycle state machine | ✅ Complete (Robust) |
+| Idempotent webhook handling | ✅ Complete (DB-backed) |
 | Fraud prevention (unique indexes) | ✅ Complete |
 | Grace period support | ✅ Complete |
 | Refund immediate revoke | ✅ Complete |
-| Access gating helpers (`isUserPremium`) | ✅ Complete |
+| Access gating helpers (`getUserEntitlement`) | ✅ Complete |
 | Enterprise tier via store purchase | ✅ Complete |
+| Upgrade/Downgrade migration | ✅ Complete (Token migration) |
 
 ---
 
@@ -580,24 +581,11 @@ Apple App Store Server Notifications V2 webhook. Called by Apple's servers when 
 ```
 
 **Response 200:**
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Apple webhook processed",
-  "data": {
-    "processed": true,
-    "notificationType": "DID_RENEW",
-    "subtype": null,
-    "reason": "applied"
-  }
-}
+```http
+HTTP/1.1 200 OK
+Content-Length: 0
 ```
-
-**Response 200 (skipped cases — still 200 to prevent Apple retries):**
-- `{ processed: false, reason: "duplicate" }` — idempotency hit
-- `{ processed: false, reason: "no_transaction_info" }` — payload missing transaction
-- `{ processed: false, reason: "no_matching_subscription" }` — orphan notification
+*(No body is returned to avoid leaking internal processing state to Apple servers)*
 
 **Error responses:**
 - `400` — Invalid JWS or malformed body
@@ -691,26 +679,15 @@ Google Play Real-Time Developer Notifications webhook (Pub/Sub push). Called by 
 ```
 
 **Response 200:**
-```json
-{
-  "success": true,
-  "statusCode": 200,
-  "message": "Google webhook processed",
-  "data": {
-    "processed": true,
-    "notificationType": "SUBSCRIPTION_RENEWED",
-    "rawNotificationType": 2,
-    "reason": "applied"
-  }
-}
+```http
+HTTP/1.1 200 OK
+Content-Length: 0
 ```
+*(No body is returned to avoid leaking internal processing state to Google servers)*
 
-**Skipped cases (still return 200 to prevent Pub/Sub retries):**
-- `{ processed: false, reason: "duplicate" }` — same `messageId` already processed
-- `{ processed: false, reason: "no_subscription_notification" }` — Pub/Sub message wasn't a subscription RTDN
-- `{ processed: false, reason: "no_matching_subscription" }` — orphan notification (client hasn't called `/google/verify` yet)
-- `{ processed: false, reason: "test" }` — Play Console "Send test notification" button
-- `{ processed: false, reason: "unauthorized" }` — JWT verification failed
+**Error responses:**
+- `400` — Invalid Pub/Sub JWT verification failed
+- `500` — Google credentials not configured
 
 **Configuration required:**
 - GCP Pub/Sub topic + push subscription pointing here
@@ -721,9 +698,22 @@ Google Play Real-Time Developer Notifications webhook (Pub/Sub push). Called by 
 
 ### `POST /api/v1/subscription/choose/free`
 
-Manually switch user to FREE plan. Does not cancel actual Apple subscription (user must cancel via Settings).
+Manually switch user to FREE plan.
 
 **Auth:** Bearer JWT required
+
+**Business Logic:**
+- **Active Store Guard**: Jodi user-er active Apple ba Google subscription thake, tobe request **409 Conflict** return korbe. User-ke age store theke cancel korte hobe.
+- **Audit Log**: Transition track kora hoy `SubscriptionEvent` collections e.
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Switched to Free plan successfully",
+  "data": { ...subscriptionDoc }
+}
+```
 
 ---
 

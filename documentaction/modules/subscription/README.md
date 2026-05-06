@@ -17,6 +17,9 @@
 | 03 | POST | `/subscriptions/google/verify` | Bearer | [03-verify-google-purchase.md](./03-verify-google-purchase.md) | [App Profile](../../app-screens/06-profile.md) — Upgrade flow |
 | 04 | POST | `/subscriptions/choose/free` | Bearer | [04-set-free-plan.md](./04-set-free-plan.md) | [App Profile](../../app-screens/06-profile.md) — Downgrade flow |
 | 05 | POST | `/subscriptions/.../webhook` | Public | [05-platform-webhooks.md](./05-platform-webhooks.md) | Apple/Google Store Notifications |
+| 06 | N/A | `Internal Architecture` | Docs | [06-technical-architecture.md](./06-technical-architecture.md) | System Design & Reliability |
+| 07 | GET/POST | `/admin/subscriptions/...` | Admin | [07-admin-endpoints.md](./07-admin-endpoints.md) | Admin Dashboard |
+| 08 | N/A | `subscriptionGate` | Middleware | [entitlement.ts (Helper)](file:///src/app/modules/subscription/helpers/entitlement.ts) | Feature Gating across modules |
 
 ---
 
@@ -25,7 +28,10 @@
 | # | Endpoint | Status | Notes |
 |---|---|:---:|---|
 | 01 | `GET /subscriptions/me` | Done | Plan status check — never returns 404 (free users get `plan: "FREE"`) |
-| 02 | `POST /subscriptions/apple/verify` | Done | iOS IAP verification using StoreKit 2 JWS |
-| 03 | `POST /subscriptions/google/verify` | Done | Android IAP verification via Google Publisher API |
-| 04 | `POST /subscriptions/choose/free` | Done | Downgrade to FREE plan |
-| 05 | `POST /subscriptions/.../webhook` | Done | Apple/Google server notifications (auto-sync) |
+| 02 | `POST /subscriptions/apple/verify` | Done | iOS JWS verification + upgrade/fraud guards |
+| 03 | `POST /subscriptions/google/verify` | Done | Android API verification + token migration |
+| 04 | `POST /subscriptions/choose/free` | Done | Downgrade guard (active store subscription check) |
+| 05 | `POST /subscriptions/.../webhook` | Done | Security verified (JWT/JWS) + Audit logging |
+| 06 | `Technical Architecture` | Done | Idempotency, Orphan Queues, and Quotas |
+| 07 | `GET/POST /subscriptions/admin/...` | Done | Full suite of Admin monitoring & management APIs |
+
