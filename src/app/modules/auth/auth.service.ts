@@ -105,16 +105,14 @@ const loginUserFromDB = async (
     config.jwt.jwt_refresh_expire_in as string
   );
 
-  if (isExistUser.isFirstLogin) {
-    await User.findByIdAndUpdate(isExistUser._id, { isFirstLogin: false });
-  }
+  const isOnboardingCompleted = isExistUser.isOnboardingCompleted;
 
   // ✅ save device token
   if (deviceToken) {
     await User.addDeviceToken(isExistUser._id.toString(), deviceToken);
   }
 
-  return { tokens: { accessToken, refreshToken } };
+  return { tokens: { accessToken, refreshToken }, isOnboardingCompleted };
 };
 
 // logout
@@ -191,6 +189,7 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
 
   if (!isExistUser.verified) {
     // Mark as verified and clear OTP
+    const isOnboardingCompleted = isExistUser.isOnboardingCompleted;
     await User.findOneAndUpdate(
       { _id: isExistUser._id },
       {
@@ -227,6 +226,7 @@ const verifyEmailToDB = async (payload: IVerifyEmail) => {
 
     tokens = { accessToken, refreshToken };
     message = 'Email verify successfully';
+    return { data: { ...tokens, isOnboardingCompleted }, message, tokens };
   } else {
     // For password reset flow
     await User.findOneAndUpdate(
@@ -261,6 +261,10 @@ const resetPasswordToDB = async (
   payload: IAuthResetPassword
 ) => {
   const { newPassword } = payload;
+
+  if (!token) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, 'Reset token is required');
+  }
 
   // Use a transaction or atomic approach:
   // Find valid token and its user in one go
@@ -497,9 +501,7 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
     }
   }
 
-  if (user.isFirstLogin) {
-    await User.findByIdAndUpdate(user._id, { isFirstLogin: false });
-  }
+  const isOnboardingCompleted = user.isOnboardingCompleted;
 
   // Register device token
   if (deviceToken) {
@@ -534,7 +536,7 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
     config.jwt.jwt_refresh_expire_in as string
   );
 
-  return { tokens: { accessToken, refreshToken } };
+  return { tokens: { accessToken, refreshToken }, isOnboardingCompleted };
 };
 
 // Refresh token: verify and issue new tokens with rotation

@@ -62,4 +62,11 @@ router.patch(
   UserController.updateProfile,
 );
 
+// Mark onboarding as completed
+router.patch(
+  '/complete-onboarding',
+  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
+  UserController.completeOnboarding,
+);
+
 export const UserRoutes = router;

@@ -79,6 +79,7 @@ const resolveMixedItemsWithQuantity = async (
 const flattenCard = (doc: any) => {
   if (!doc) return doc;
   const obj = doc.toObject ? doc.toObject() : doc;
+
   if (obj.supplies) {
     obj.supplies = obj.supplies.map((item: any) => ({
       name: item.supply?.name || item.supply,
@@ -134,22 +135,14 @@ const assertCardIsPublishable = (card: any) => {
 };
 
 const getPreferenceCardCountsFromDB = async (userId: string) => {
-  const [AllCardsCount, myCardsCount] = await Promise.all([
+  const [publicCardsCount, myCardsCount] = await Promise.all([
     PreferenceCardModel.countDocuments({
+      visibility: 'PUBLIC',
       isDeleted: false,
-      $or: [{ visibility: 'PUBLIC' }, { createdBy: userId }],
     }),
     PreferenceCardModel.countDocuments({ createdBy: userId, isDeleted: false }),
   ]);
-  return { AllCardsCount, myCardsCount };
-};
-
-const getDistinctSpecialtiesFromDB = async (userId: string) => {
-  const specialties = await PreferenceCardModel.distinct('surgeon.specialty', {
-    isDeleted: false,
-    $or: [{ visibility: 'PUBLIC' }, { createdBy: userId }],
-  });
-  return specialties.filter(Boolean).sort();
+  return { publicCardsCount, myCardsCount };
 };
 
 const getFavoriteCardIdsForUserFromDB = async (userId: string) => {
@@ -247,25 +240,24 @@ const downloadPreferenceCardInDB = async (
  */
 const generatePreferenceCardPDF = async (card: any): Promise<Buffer> => {
   const builder = new PDFBuilder()
-    .setTheme('corporate') // Using corporate for a more professional/beautiful look
+    .setTheme('modern') // Modern is now very clean and professional
     .setTitle(card.cardTitle)
     .setHeader({
       title: card.cardTitle,
-      subtitle: 'Official Preference Card',
+      subtitle: `Surgeon: ${card.surgeon?.fullName || 'N/A'}`,
       showDate: true,
       style: {
-        padding: 24,
+        padding: 32,
       },
     })
     .addText({
-      content: 'Surgeon Information',
+      content: 'Quick Overview',
       style: 'heading',
-      margin: { top: 20, bottom: 10 },
+      margin: { top: 10, bottom: 15 },
     })
     .addTable({
-      headers: ['Field', 'Details'],
+      headers: ['Information', 'Value'],
       rows: [
-        ['Full Name', card.surgeon?.fullName || 'N/A'],
         ['Specialty', card.surgeon?.specialty || 'N/A'],
         ['Hand Preference', card.surgeon?.handPreference || 'N/A'],
         ['Contact', card.surgeon?.contactNumber || 'N/A'],
@@ -273,7 +265,7 @@ const generatePreferenceCardPDF = async (card: any): Promise<Buffer> => {
       ],
       striped: true,
     })
-    .addSpacer(20);
+    .addSpacer(30);
 
   if (card.medication) {
     builder
@@ -281,73 +273,89 @@ const generatePreferenceCardPDF = async (card: any): Promise<Buffer> => {
       .addText({
         content: card.medication,
         style: 'body',
-        margin: { bottom: 15 },
+        margin: { bottom: 20 },
       })
       .addDivider();
   }
 
   if (card.supplies && card.supplies.length > 0) {
-    builder.addText({ content: 'Supplies', style: 'subheading' }).addTable({
-      headers: ['Item Name', 'Quantity'],
-      rows: card.supplies.map((s: any) => [s.name, s.quantity]),
-      striped: true,
-    });
-    builder.addSpacer(20);
+    builder
+      .addText({
+        content: 'Supplies Inventory',
+        style: 'heading',
+        margin: { top: 20 },
+      })
+      .addTable({
+        headers: ['Item Name', 'Quantity'],
+        rows: card.supplies.map((s: any) => [s.name, s.quantity]),
+        striped: true,
+      })
+      .addSpacer(20);
   }
 
   if (card.sutures && card.sutures.length > 0) {
-    builder.addText({ content: 'Sutures', style: 'subheading' }).addTable({
-      headers: ['Item Name', 'Quantity'],
-      rows: card.sutures.map((s: any) => [s.name, s.quantity]),
-      striped: true,
-    });
-    builder.addSpacer(20);
+    builder
+      .addText({
+        content: 'Sutures & Needles',
+        style: 'heading',
+        margin: { top: 20 },
+      })
+      .addTable({
+        headers: ['Item Name', 'Quantity'],
+        rows: card.sutures.map((s: any) => [s.name, s.quantity]),
+        striped: true,
+      })
+      .addSpacer(20);
   }
 
   const sections = [
-    { label: 'Instruments', value: card.instruments },
-    { label: 'Positioning Equipment', value: card.positioningEquipment },
-    { label: 'Prepping', value: card.prepping },
-    { label: 'Workflow', value: card.workflow },
-    { label: 'Key Notes', value: card.keyNotes },
+    { title: 'Instruments', content: card.instruments },
+    { title: 'Positioning & Equipment', content: card.positioningEquipment },
+    { title: 'Prepping & Draping', content: card.prepping },
+    { title: 'Surgical Workflow', content: card.workflow },
+    { title: 'Key Notes & Preferences', content: card.keyNotes },
   ];
 
-  for (const section of sections) {
-    if (section.value) {
+  sections.forEach(section => {
+    if (section.content) {
       builder
-        .addText({ content: section.label, style: 'subheading' })
         .addText({
-          content: section.value,
+          content: section.title,
+          style: 'subheading',
+          margin: { top: 15 },
+        })
+        .addText({
+          content: section.content,
           style: 'body',
           margin: { bottom: 15 },
-        })
-        .addDivider();
+        });
     }
-  }
+  });
 
-  // Add Photo Library if exists
+  // 7. Add Photo Library if exists
   if (card.photoLibrary && card.photoLibrary.length > 0) {
     builder.addText({
       content: 'Photo Library',
       style: 'heading',
-      margin: { top: 20, bottom: 10 },
+      margin: { top: 20, bottom: 15 },
     });
 
-    for (const photo of card.photoLibrary) {
-      if (photo.url) {
+    card.photoLibrary.forEach((photoUrl: string) => {
+      if (photoUrl) {
         builder
           .addImage({
-            src: photo.url,
+            src: photoUrl,
             width: 500, // Large enough to see details
+            align: 'center',
           })
-          .addSpacer(10);
+          .addSpacer(15);
       }
-    }
+    });
   }
 
   builder.setFooter({
+    text: 'Generated by TBSosick Preference Card System',
     showPageNumbers: true,
-    text: '© Preference Card System - Secure Document',
   });
 
   return builder.toBuffer();
@@ -402,7 +410,12 @@ const createPreferenceCardInDB = async (userId: string, data: any) => {
   }
 
   const card = await PreferenceCardModel.create(dataToSave);
-  return card;
+  const populated = await card.populate([
+    { path: 'supplies.supply', select: 'name -_id' },
+    { path: 'sutures.suture', select: 'name -_id' },
+  ]);
+
+  return flattenCard(populated);
 };
 
 const listPreferenceCardsForUserFromDB = async (userId: string) => {
@@ -504,6 +517,14 @@ const updatePreferenceCardInDB = async (
     );
   }
 
+  // Admin-only fields: verificationStatus
+  if (payload.verificationStatus && role !== USER_ROLES.SUPER_ADMIN) {
+    throw new ApiError(
+      StatusCodes.FORBIDDEN,
+      'Not authorized to verify/reject this card',
+    );
+  }
+
   // Resolve mixed supplies/sutures if present
   if (payload.supplies && Array.isArray(payload.supplies)) {
     const normalised = normaliseClientRefField(payload.supplies, 'supply');
@@ -522,14 +543,17 @@ const updatePreferenceCardInDB = async (
     );
   }
 
-  // If the update flips the card to `visibility: 'PUBLIC'`, pre-check the
-  // merged shape so half-filled drafts can never be published.
-  if (payload.visibility === 'PUBLIC') {
+  // If the update flips the card to `visibility: 'PUBLIC'` or admin verifies it,
+  // pre-check the merged shape so half-filled drafts can never be published/verified.
+  if (payload.visibility === 'PUBLIC' || payload.verificationStatus === 'VERIFIED') {
     const full = await PreferenceCardModel.findById(id).lean();
     if (full) {
       assertCardIsPublishable({ ...full, ...payload });
     }
-    payload.published = true;
+
+    if (payload.visibility === 'PUBLIC') {
+      payload.published = true;
+    }
   } else if (payload.visibility === 'PRIVATE') {
     payload.published = false;
   }
@@ -539,9 +563,12 @@ const updatePreferenceCardInDB = async (
     { _id: id },
     { $set: payload },
     { new: true }, // return the updated doc
-  );
+  ).populate([
+    { path: 'supplies.supply', select: 'name -_id' },
+    { path: 'sutures.suture', select: 'name -_id' },
+  ]);
 
-  return updatedCard;
+  return flattenCard(updatedCard);
 };
 
 const deletePreferenceCardFromDB = async (
@@ -560,27 +587,6 @@ const deletePreferenceCardFromDB = async (
   }
   await PreferenceCardModel.findByIdAndDelete(id);
   return { deleted: true };
-};
-
-const updateVerificationStatusInDB = async (
-  id: string,
-  role: string | undefined,
-  status: 'VERIFIED' | 'UNVERIFIED',
-) => {
-  const doc = await PreferenceCardModel.findById(id);
-  if (!doc)
-    throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
-
-  if (role !== USER_ROLES.SUPER_ADMIN) {
-    throw new ApiError(
-      StatusCodes.FORBIDDEN,
-      'Not authorized to verify/reject this card',
-    );
-  }
-
-  doc.verificationStatus = status;
-  await doc.save();
-  return { verificationStatus: doc.verificationStatus };
 };
 
 /**
@@ -634,9 +640,8 @@ const listPublicPreferenceCardsFromDB = async (
 
   // Specialty facet filter. Uses exact match now that `surgeon.specialty`
   // is indexed — callers pass the canonical string from `/specialties`.
-  const specialtyValue = rawQuery.specialty || rawQuery.surgeonSpecialty;
-  if (specialtyValue) {
-    match['surgeon.specialty'] = String(specialtyValue);
+  if (rawQuery.specialty) {
+    match['surgeon.specialty'] = String(rawQuery.specialty);
   }
 
   // Text search — leverages `card_text_idx` and `score` sorting.
@@ -665,8 +670,8 @@ const listPublicPreferenceCardsFromDB = async (
           { $skip: skip },
           { $limit: limit },
           {
-            $lookup: {
-              from: 'supplies',
+        $lookup: {
+          from: 'supplies',
               localField: 'supplies.supply',
               foreignField: '_id',
               as: 'supplyDocs',
@@ -908,7 +913,6 @@ const unfavoritePreferenceCardInDB = async (
 
 export const PreferenceCardService = {
   getPreferenceCardCountsFromDB,
-  getDistinctSpecialtiesFromDB,
   getFavoriteCardIdsForUserFromDB,
   downloadPreferenceCardInDB,
   createPreferenceCardInDB,
@@ -917,7 +921,6 @@ export const PreferenceCardService = {
   getPreferenceCardByIdFromDB,
   updatePreferenceCardInDB,
   deletePreferenceCardFromDB,
-  updateVerificationStatusInDB,
   listPublicPreferenceCardsFromDB,
   listFavoritePreferenceCardsForUserFromDB,
   favoritePreferenceCardInDB,

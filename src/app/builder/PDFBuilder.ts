@@ -331,7 +331,8 @@ class PDFBuilder {
     if (!PDFBuilder.browser) {
       PDFBuilder.browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security'],
+        ignoreHTTPSErrors: true,
       });
     }
     return PDFBuilder.browser;
@@ -537,10 +538,14 @@ class PDFBuilder {
 
     return `
       <div class="header" ${headerStyle}>
-        ${logo ? `<img src="${logo}" class="header-logo" alt="Logo">` : ''}
-        ${title ? `<div class="header-title">${title}</div>` : ''}
-        ${subtitle ? `<div class="header-subtitle">${subtitle}</div>` : ''}
-        ${showDate ? `<div class="header-date">${new Date().toLocaleDateString()}</div>` : ''}
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            ${title ? `<div class="header-title">${title}</div>` : ''}
+            ${subtitle ? `<div class="header-subtitle">${subtitle}</div>` : ''}
+            ${showDate ? `<div class="header-date">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</div>` : ''}
+          </div>
+          ${logo ? `<img src="${logo}" class="header-logo" alt="Logo">` : ''}
+        </div>
       </div>
     `;
   }

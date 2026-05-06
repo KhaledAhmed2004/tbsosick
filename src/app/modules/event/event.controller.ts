@@ -27,6 +27,7 @@ const getMyEvents = catchAsync(async (req: Request, res: Response) => {
     {
       from: req.query.from as string,
       to: req.query.to as string,
+      date: req.query.date as string,
     },
   );
 
@@ -34,6 +35,24 @@ const getMyEvents = catchAsync(async (req: Request, res: Response) => {
     success: true,
     statusCode: StatusCodes.OK,
     message: 'Events fetched successfully',
+    data: result,
+  });
+});
+
+const getCalendarHighlights = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const result = await EventService.getCalendarHighlightsFromDB(
+    (user as any).id,
+    {
+      from: req.query.from as string,
+      to: req.query.to as string,
+    },
+  );
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Calendar highlights fetched successfully',
     data: result,
   });
 });
@@ -93,6 +112,7 @@ const deleteEvent = catchAsync(async (req: Request, res: Response) => {
 export const EventController = {
   createEvent,
   getMyEvents,
+  getCalendarHighlights,
   getEventById,
   updateEvent,
   deleteEvent,

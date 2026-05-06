@@ -5,17 +5,18 @@ GET /preference-cards/stats
 Auth: Bearer {{accessToken}}
 ```
 
-> Used to show stats on the Home screen. Returns counts for total public cards and the user's own cards.
+> Used to show stats on the Home screen. Returns counts for all public cards in the system and the user's own total cards.
 
 ## Implementation
 - **Route**: [preference-card.route.ts](file:///src/app/modules/preference-card/preference-card.route.ts)
 - **Controller**: [preference-card.controller.ts](file:///src/app/modules/preference-card/preference-card.controller.ts) — `getStats`
-- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `getCountsForCards`
+- **Service**: [preference-card.service.ts](file:///src/app/modules/preference-card/preference-card.service.ts) — `getPreferenceCardCountsFromDB`
 
-### Business Logic (`getCountsForCards`)
+### Business Logic (`getPreferenceCardCountsFromDB`)
 - Database queries are run in parallel using `Promise.all`.
-- The count of total published cards (`AllCardsCount`) and the count of cards created by the current user (`myCardsCount`) are calculated.
-- Accurate counts are returned to keep dashboard stats updated.
+- `publicCards`: Total count of all cards with `visibility: 'PUBLIC'` across the entire system.
+- `myCards`: Total count of cards (public + private) created by the current user.
+- This ensures the user sees the global community size and their own contribution stats on the dashboard.
 
 ## Responses
 
@@ -26,8 +27,8 @@ Auth: Bearer {{accessToken}}
   "statusCode": 200,
   "message": "Card statistics retrieved successfully",
   "data": {
-    "publicCards": 120,
-    "myCards": 15
+    "publicCards": 4,
+    "myCards": 4
   }
 }
 ```

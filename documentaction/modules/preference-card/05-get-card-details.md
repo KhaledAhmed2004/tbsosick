@@ -14,7 +14,7 @@ Auth: Bearer {{accessToken}} (USER)
 
 ### Business Logic (`getPreferenceCardByIdFromDB`)
 - **Authorization**: Private (unpublished) cards can only be accessed by the owner or SUPER_ADMIN.
-- **Data Enrichment**: Returns details by populating Supplies and Sutures.
+- **Data Enrichment**: Returns details by populating Supplies and Sutures. Specialty is returned as a raw string as stored in the document.
 - **Flattening**: Data is flattened for easier mapping in the UI.
 
 ## Responses

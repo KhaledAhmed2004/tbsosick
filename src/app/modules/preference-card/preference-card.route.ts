@@ -66,18 +66,19 @@ router.get(
   PreferenceCardController.getCards,
 );
 
+// List my own cards (Public + Private created by me)
+router.get(
+  '/my-cards',
+  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  validateRequest(PreferenceCardValidation.searchCardsSchema),
+  PreferenceCardController.listPrivateCards,
+);
+
 // Cards count (Stats): public cards and user's own cards
 router.get(
   '/stats',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   PreferenceCardController.getStats,
-);
-
-// Fetch distinct specialties
-router.get(
-  '/specialties',
-  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  PreferenceCardController.getSpecialties,
 );
 
 // Card details view by ID
@@ -150,14 +151,6 @@ router.delete(
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
   validateRequest(PreferenceCardValidation.paramIdSchema),
   PreferenceCardController.unfavoriteCard,
-);
-
-// Update verification status (APPROVE/REJECT)
-router.patch(
-  '/:cardId/status',
-  auth(USER_ROLES.SUPER_ADMIN),
-  validateRequest(PreferenceCardValidation.updateVerificationStatusSchema),
-  PreferenceCardController.updateVerificationStatus,
 );
 
 export const PreferenceCardRoutes = router;

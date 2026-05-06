@@ -32,7 +32,7 @@ Auth: Bearer {{accessToken}}
     "dateOfBirth": "1995-05-15",
     "specialty": "Cardiology",
     "hospital": "City Hospital",
-    "isFirstLogin": false,
+    "isOnboardingCompleted": true,
     "createdAt": "2026-03-15T10:30:00.000Z",
     "updatedAt": "2026-04-29T11:00:00.000Z"
   }

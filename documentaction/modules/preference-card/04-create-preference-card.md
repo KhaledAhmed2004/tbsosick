@@ -16,41 +16,32 @@ Auth: Bearer {{accessToken}} (USER)
 ### Business Logic (`createPreferenceCardInDB`)
 - **Draft Support**: Long-form fields are optional at the schema level, allowing incomplete cards to be saved as `PRIVATE` drafts.
 - **Publish Validation**: If `visibility: 'PUBLIC'` is sent, the system verifies whether required fields like `medication`, `instruments`, `workflow`, etc., are filled.
+- **Verification Status**: New cards default to `UNVERIFIED` and can only be verified by an admin.
 - **Auto-Cataloging**: If new names are found in the Supplies and Sutures fields, the backend automatically inserts them into their respective catalogs.
 - **Ownership**: The current user's ID is set in the `createdBy` field.
 
 **Middleware chain**: `auth(USER) → fileHandler(photoLibrary max 5) → parseBody → validateRequest`
 
-## Request Body
-```json
-{
-  "cardTitle": "Knee Arthroscopy",
-  "surgeon": {
-    "fullName": "Dr. Smith",
-    "handPreference": "Right",
-    "specialty": "Orthopedics",
-    "contactNumber": "+1234567890",
-    "musicPreference": "Classical"
-  },
-  "medication": "Lidocaine with Epinephrine",
-  "supplies": [
-    { "name": "Sterile Gauze", "quantity": 10 },
-    { "name": "Surgical Drape", "quantity": 2 }
-  ],
-  "sutures": [
-    { "name": "3-0 Vicryl", "quantity": 1 }
-  ],
-  "instruments": "Standard arthroscopy set",
-  "positioningEquipment": "Leg holder",
-  "prepping": "Betadine",
-  "workflow": "Incision, portal placement, joint inspection...",
-  "keyNotes": "Be careful with the ACL",
-  "visibility": "PRIVATE"
-}
-```
+## Request Body (Multipart Form-Data)
 
-> Upload `photoLibrary` files using the form field name `photoLibrary`, max 5 files.
-> Send `supplies` and `sutures` as JSON strings in the multipart form data.
+In Postman, select the **form-data** body type. All fields below must be added as separate keys in the form-data table.
+
+| Key | Value Type | Description |
+| :--- | :--- | :--- |
+| `cardTitle` | `text` | e.g., "Knee Arthroscopy" |
+| `surgeon` | `text (JSON string)` | e.g., `{"fullName": "Dr. Smith", "handPreference": "Right", "specialty": "Orthopedics", "contactNumber": "+1234567890", "musicPreference": "Classical"}` |
+| `medication` | `text` | e.g., "Lidocaine with Epinephrine" |
+| `supplies` | `text (JSON string)` | e.g., `[{"name": "Sterile Gauze", "quantity": 10}, {"name": "Surgical Drape", "quantity": 2}]` |
+| `sutures` | `text (JSON string)` | e.g., `[{"name": "3-0 Vicryl", "quantity": 1}]` |
+| `instruments` | `text` | e.g., "Standard arthroscopy set" |
+| `positioningEquipment` | `text` | e.g., "Leg holder" |
+| `prepping` | `text` | e.g., "Betadine" |
+| `workflow` | `text` | e.g., "Incision, portal placement, joint inspection..." |
+| `keyNotes` | `text` | e.g., "Be careful with the ACL" |
+| `visibility` | `text` | "PRIVATE" or "PUBLIC" |
+| `photoLibrary` | `file` | Select binary image files (max 5) |
+
+> **Note for Postman**: Since the request uses `multipart/form-data`, you cannot use a raw JSON body. Ensure all fields (including nested objects like `surgeon` and arrays like `supplies`) are passed as **text** keys with their values formatted as JSON strings.
 
 ## Responses
 
@@ -61,7 +52,7 @@ Auth: Bearer {{accessToken}} (USER)
   "statusCode": 201,
   "message": "Preference card created",
   "data": {
-    "_id": "664a1b2c3d4e5f6a7b8c9d0e",
+    "createdBy": "69fa332f3fc3858c40265420",
     "cardTitle": "Knee Arthroscopy",
     "surgeon": {
       "fullName": "Dr. Smith",
@@ -70,27 +61,40 @@ Auth: Bearer {{accessToken}} (USER)
       "contactNumber": "+1234567890",
       "musicPreference": "Classical"
     },
-    "medication": "Lidocaine with Epinephrine",
     "supplies": [
-      { "supply": "664a1b2c3d4e5f6a7b8c9d10", "quantity": 10 },
-      { "supply": "664a1b2c3d4e5f6a7b8c9d11", "quantity": 2 }
+      {
+        "name": "Sterile Gauze",
+        "quantity": 10
+      },
+      {
+        "name": "Surgical Drape",
+        "quantity": 2
+      }
     ],
     "sutures": [
-      { "suture": "664b2c3d4e5f6a7b8c9d1a0e", "quantity": 1 }
+      {
+        "name": "3-0 Vicryl",
+        "quantity": 1
+      }
     ],
+    "medication": "Lidocaine with Epinephrine",
     "instruments": "Standard arthroscopy set",
     "positioningEquipment": "Leg holder",
     "prepping": "Betadine",
     "workflow": "Incision, portal placement, joint inspection...",
     "keyNotes": "Be careful with the ACL",
-    "photoLibrary": [],
-    "visibility": "PRIVATE",
-    "published": false,
-    "verificationStatus": "UNVERIFIED",
+    "photoLibrary": [
+      "http://localhost:5001/uploads/images/1778011654291-unzavs.png"
+    ],
     "downloadCount": 0,
-    "createdBy": "664a1b2c3d4e5f6a7b8c0001",
-    "createdAt": "2026-03-15T10:30:00.000Z",
-    "updatedAt": "2026-03-15T10:30:00.000Z"
+    "published": false,
+    "visibility": "PRIVATE",
+    "verificationStatus": "UNVERIFIED",
+    "isDeleted": false,
+    "id": "69fa4e06276f92747b080301",
+    "createdAt": "2026-05-05T20:07:34.544Z",
+    "updatedAt": "2026-05-05T20:07:34.544Z",
+    "_v": 0
   }
 }
 ```

@@ -24,21 +24,18 @@ const createCard = catchAsync(async (req: Request, res: Response) => {
 // Unified list/search method (Step 4 & 7)
 const getCards = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
-  const { visibility } = req.query;
+  const query = { ...req.query };
 
-  let result;
-  if (visibility === 'private') {
-    result = await PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(
-      (user as any).id,
-      req.query,
-    );
-  } else {
-    // Default to public - now handles unified visibility (Public + My Private)
-    result = await PreferenceCardService.listPublicPreferenceCardsFromDB(
-      (user as any).id,
-      req.query,
-    );
+  // Normalize parameters to uppercase for database compatibility
+  if (typeof query.verificationStatus === 'string') {
+    query.verificationStatus = query.verificationStatus.toUpperCase();
   }
+
+  // Default to public - now handles unified visibility (Public + My Private)
+  const result = await PreferenceCardService.listPublicPreferenceCardsFromDB(
+    (user as any).id,
+    query,
+  );
 
   const [favoriteCardIds] = await Promise.all([
     PreferenceCardService.getFavoriteCardIdsForUserFromDB((user as any).id),
@@ -65,7 +62,7 @@ const getCards = catchAsync(async (req: Request, res: Response) => {
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
-    message: `${visibility === 'private' ? 'Private' : 'Public'} preference cards fetched successfully`,
+    message: `${query.visibility === 'PRIVATE' ? 'Private' : 'Public'} preference cards fetched successfully`,
     meta: result.meta,
     data: summarized,
   });
@@ -73,9 +70,16 @@ const getCards = catchAsync(async (req: Request, res: Response) => {
 
 const listPrivateCards = catchAsync(async (req: Request, res: Response) => {
   const user = req.user as JwtPayload;
+  const query = { ...req.query };
+
+  // Normalize parameters to uppercase for database compatibility
+  if (typeof query.visibility === 'string') {
+    query.visibility = query.visibility.toUpperCase();
+  }
+
   const result = await PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(
     (user as any).id,
-    req.query,
+    query,
   );
 
   const [favoriteCardIds] = await Promise.all([
@@ -225,39 +229,9 @@ const getStats = catchAsync(async (req: Request, res: Response) => {
     statusCode: StatusCodes.OK,
     message: 'Card statistics retrieved successfully',
     data: {
-      publicCards: result.AllCardsCount,
+      publicCards: result.publicCardsCount,
       myCards: result.myCardsCount,
     },
-  });
-});
-
-const getSpecialties = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as JwtPayload;
-  const result = await PreferenceCardService.getDistinctSpecialtiesFromDB((user as any).id);
-
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Specialties retrieved successfully',
-    data: result,
-  });
-});
-
-const updateVerificationStatus = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as JwtPayload;
-  const { verificationStatus } = req.body;
-
-  const result = await PreferenceCardService.updateVerificationStatusInDB(
-    req.params.cardId,
-    (user as any).role,
-    verificationStatus,
-  );
-
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: `Preference card status updated to ${verificationStatus}`,
-    data: result,
   });
 });
 
@@ -272,6 +246,4 @@ export const PreferenceCardController = {
   favoriteCard,
   unfavoriteCard,
   getStats,
-  getSpecialties,
-  updateVerificationStatus,
 };

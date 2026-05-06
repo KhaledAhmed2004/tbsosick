@@ -4,7 +4,7 @@
 PUT /preference-cards/favorites/cards/:cardId
 Auth: Bearer {{accessToken}}
 ```
-
+ 
 > Adds a card to the favorites list. Follows idempotent behavior (returns 200 OK if already favorited).
 
 ## Implementation

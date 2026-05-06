@@ -15,23 +15,28 @@ import QueryBuilder from '../../builder/QueryBuilder';
 import AggregationBuilder from '../../builder/AggregationBuilder';
 import { IUser } from './user.interface';
 
-const createUserToDB = async (payload: Partial<IUser>): Promise<IUser> => {
-  // Users start unverified. The verify-OTP flow flips `verified: true`
-  // once the user enters the code emailed below. Do NOT pass
-  // `verified: true` here — it bypasses email verification and defeats
-  // the auth flow.
-  const createUser = await User.create({ ...payload });
+const createUserToDB = async (
+  payload: Partial<IUser>,
+  isAdmin = false
+): Promise<IUser> => {
+  // If created by admin, auto-verify. Otherwise, start unverified.
+  const userData = {
+    ...payload,
+    verified: isAdmin ? true : false,
+  };
+
+  const createUser = await User.create(userData);
   if (!createUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user');
   }
 
-  // Fire and forget OTP email. Signup must still succeed even if the
-  // email transport has a transient failure — the user can request a
-  // resend via /auth/resend-verify-email.
-  try {
-    await sendVerificationOTP(createUser.email);
-  } catch (err) {
-    console.error('Signup OTP send failed:', err);
+  // Only send OTP for public registrations (non-admins)
+  if (!isAdmin) {
+    try {
+      await sendVerificationOTP(createUser.email);
+    } catch (err) {
+      console.error('Signup OTP send failed:', err);
+    }
   }
 
   return createUser;
@@ -344,6 +349,22 @@ const getUserDetailsByIdFromDB = async (id: string) => {
   return user;
 };
 
+const completeOnboardingToDB = async (user: JwtPayload) => {
+  const { id } = user;
+  const isExistUser = await User.isExistUserById(id);
+  if (!isExistUser) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "User doesn't exist!");
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(
+    id,
+    { $set: { isOnboardingCompleted: true } },
+    { new: true },
+  );
+
+  return updatedUser;
+};
+
 export const UserService = {
   createUserToDB,
   getUserProfileFromDB,
@@ -356,4 +377,5 @@ export const UserService = {
   getUserByIdFromDB,
   getUserDetailsByIdFromDB,
   getUsersStatsFromDB,
+  completeOnboardingToDB,
 };

@@ -71,7 +71,8 @@ Auth: None
   "message": "Email verified successfully",
   "data": {
     "accessToken": "eyJhbGciOi...",
-    "refreshToken": "eyJhbGciOi..."
+    "refreshToken": "eyJhbGciOi...",
+    "isOnboardingCompleted": false
   }
 }
 ```
