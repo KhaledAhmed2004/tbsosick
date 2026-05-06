@@ -10,14 +10,11 @@ Auth: Bearer {{accessToken}}
 > By default, it returns:
 > - All **public (published) cards**
 > - Your **own private cards**
-> - **Use `visibility=private`**  
->   → You get: Only your own private cards 
 
 ## Query Parameters
 - `searchTerm`: (Optional) Search by card title, surgeon name, or medication.
-- `visibility`: `public` (Default) or `private` (Only your cards).
-- `surgeonSpecialty` / `specialty`: Filter by surgeon's specialty.
-- `verificationStatus`: Filter by `VERIFIED` or `UNVERIFIED`.
+- `specialty`: Filter by surgeon's specialty.
+- `verificationStatus`: Filter by `verified` or `unverified`. *Note: Case-insensitive.*
 - `page` / `limit`: Standard pagination.
 
 ## Implementation
@@ -29,8 +26,8 @@ Auth: Bearer {{accessToken}}
 - **Unified Visibility**: Uses an `$or` query to fetch cards that are either `visibility: 'PUBLIC'` OR `createdBy: authenticatedUser`.
 - **Privacy Enforcement**: PRIVATE cards from other users are never returned, even to `SUPER_ADMIN`.
 - **Aggregation Pipeline**: MongoDB aggregation is used for efficiency to apply search and filters.
-- **Text Search**: Search is performed on `cardTitle`, `surgeon.fullName`, and `medication` fields using a full-text index (`$text`).
-- **Specialty Filter**: Exact matching is applied to the `surgeon.specialty` field.
+- **Text Search**: Search is performed on `cardTitle`, `surgeon.fullName`, `surgeon.specialty`, and `medication` fields using a full-text index (`$text`).
+- **Specialty Filter**: Exact matching is applied to the `surgeon.specialty` field (stored as a raw string).
 - **Data Flattening**: Supplies and sutures are populated to extract names for easier client-side rendering.
 - **Deleted Filter**: Only cards with `isDeleted: false` are returned.
 

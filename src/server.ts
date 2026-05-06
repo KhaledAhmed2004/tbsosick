@@ -71,13 +71,20 @@ async function main() {
       };
     } catch (dbError) {
       dbSpinner.fail('MongoDB connection failed');
+      errorLogger.error('❌ MongoDB connection error:', dbError);
       throw dbError;
     }
 
     // Seed Super Admin after database connection is successful
     const seedSpinner = createSpinner({ text: 'Verifying super admin account...', color: 'cyan' });
-    await seedSuperAdmin();
-    seedSpinner.succeed('Super admin ready');
+    try {
+      await seedSuperAdmin();
+      seedSpinner.succeed('Super admin ready');
+    } catch (seedError) {
+      seedSpinner.fail('Super admin verification failed');
+      errorLogger.error('❌ Super admin seeding error:', seedError);
+      throw seedError;
+    }
 
     // Initialize CacheHelper (in-memory)
     const cacheSpinner = createSpinner({ text: 'Initializing cache system...', color: 'cyan' });
@@ -186,11 +193,13 @@ async function main() {
       }
     });
   } catch (error) {
-    errorLogger.error('❌ Database connection failed');
+    errorLogger.error('❌ Server startup failed');
     notifyCritical(
-      'Database Connection Failed',
+      'Server Startup Failed',
       (error as Error)?.message || 'Unknown error'
     );
+    // Exit if startup fails
+    process.exit(1);
   }
 
   //handle unhandleRejection

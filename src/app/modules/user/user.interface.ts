@@ -38,7 +38,7 @@ export type IUser = {
   profilePicture?: string;
   status: USER_STATUS;
   verified: boolean;
-  isFirstLogin?: boolean;
+  isOnboardingCompleted: boolean;
   deviceTokens?: IDeviceToken[];
   about?: string;
   googleId?: string;

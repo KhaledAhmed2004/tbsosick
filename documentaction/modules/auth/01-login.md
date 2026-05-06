@@ -41,7 +41,7 @@ Auth: None
 3. **Password Validation**: Compares input password with hashed password using `bcrypt`.
 4. **Token Generation**: Issues **Access Token** (short-lived) and **Refresh Token** (long-lived). Both tokens include `id`, `role`, `email`, and `tokenVersion`. `tokenVersion` defaults to `0` if not present in DB.
 5. **Session Management**:
-   - Updates `isFirstLogin` to `false` on successful first login.
+   - Returns `isOnboardingCompleted` flag to help client decide whether to show onboarding screens.
    - Registers/updates `deviceToken` for push notifications if provided.
    - Sets `refreshToken` in a secure `httpOnly` cookie.
 
@@ -58,7 +58,8 @@ Auth: None
   "message": "User logged in successfully.",
   "data": {
     "accessToken": "eyJhbGciOi...",
-    "refreshToken": "eyJhbGciOi..."
+    "refreshToken": "eyJhbGciOi...",
+    "isOnboardingCompleted": false
   }
 }
 ```

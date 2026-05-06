@@ -18,6 +18,17 @@ Auth: Bearer {{accessToken}}
 2. **File Cleanup**: If a new `profilePicture` is uploaded, the old file is automatically unlinked (deleted) from the server using `unlinkFile`.
 3. **Atomic Update**: Uses `findOneAndUpdate` to apply changes and returns the updated document.
 
+## Request Body (Multipart Form-Data)
+
+| Key | Value Type | Description |
+| :--- | :--- | :--- |
+| `name` | `text` | e.g., "John Updated" |
+| `phone` | `text` | e.g., "+123456789" |
+| `country` | `text` | e.g., "USA" |
+| `profilePicture` | `file` | Select binary image file |
+
+> **Note for Postman**: Since the request uses `multipart/form-data`, use the **form-data** body type in Postman and pass these keys individually.
+
 ## Responses
 
 ### Scenario: Success (200)

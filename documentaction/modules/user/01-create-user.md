@@ -52,7 +52,7 @@ Auth: None (registration) | Bearer {{accessToken}} (SUPER_ADMIN admin create)
     "profilePicture": "https://i.ibb.co/z5YHLV9/profile.png",
     "status": "ACTIVE",
     "verified": false,
-    "isFirstLogin": true,
+    "isOnboardingCompleted": false,
     "createdAt": "2026-04-29T10:00:00.000Z",
     "updatedAt": "2026-04-29T10:00:00.000Z"
   }

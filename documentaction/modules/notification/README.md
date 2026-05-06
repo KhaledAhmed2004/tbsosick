@@ -76,8 +76,8 @@ Complex logic ebong future scheduling-er jonno `NotificationBuilder` use kora ho
 
 Notifications use a multi-channel fan-out pattern that's shared across triggering services:
 
-- **Model**: [notification.model.ts](file:///src/app/modules/notification/notification.model.ts) — Schema (`userId`, `type`, `title`, `subtitle`, `read`, `icon`).
-- **Helper**: [notificationsHelper.ts](file:///src/app/modules/notification/notificationsHelper.ts) — Socket emission + FCM push.
+- **Model**: [notification.model.ts](file:///src/app/modules/notification/notification.model.ts) — Schema (`userId`, `type`, `title`, `subtitle`, `isRead`, `icon`).
+- **Helper**: [notificationsHelper.ts](file:///src/app/modules/notification/notificationsHelper.ts) — Socket emission (`notification:new`) + FCM push.
 - **Builder**: [NotificationBuilder.ts](file:///src/app/builder/NotificationBuilder/NotificationBuilder.ts) — Unified API for complex multi-channel notifications.
 
 For cross-cutting error responses (401, 429, 400), see [Common Error Scenarios](../../README.md#common-error-scenarios).
@@ -91,4 +91,4 @@ For cross-cutting error responses (401, 429, 400), see [Common Error Scenarios](
 | 01 | `/notifications` | `GET` | Bearer | Done | Paginated list — backend returns `unreadCount` in `meta` |
 | 02 | `/notifications/:notificationId/read` | `PATCH` | Bearer | Done | Mark single as read |
 | 03 | `/notifications/read-all` | `PATCH` | Bearer | Done | Mark all as read |
-| 04 | `/notifications/:notificationId` | `DELETE` | Bearer | Done | Hard delete |
+| 04 | `/notifications/:notificationId` | `DELETE` | Bearer | Done | Soft delete (`deletedAt`) |

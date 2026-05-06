@@ -22,6 +22,14 @@ router.get(
   EventController.getMyEvents,
 );
 
+// Calendar highlights (unique dates with events)
+router.get(
+  '/calendar-highlights',
+  auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
+  validateRequest(EventValidation.getHighlightsZodSchema),
+  EventController.getCalendarHighlights,
+);
+
 // Event details
 router.get(
   '/:eventId',

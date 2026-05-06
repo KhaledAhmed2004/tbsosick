@@ -79,9 +79,9 @@ const userSchema = new Schema<IUser>(
       type: String,
       default: 'https://i.ibb.co/z5YHLV9/profile.png',
     },
-    isFirstLogin: {
+    isOnboardingCompleted: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     status: {
       type: String,

@@ -33,6 +33,7 @@
 | 2.3 | GET | `/users/profile` | Bearer | ✅ | [Module 2.3](./modules/user/03-get-own-profile.md) | [App Profile](./app-screens/06-profile.md) |
 | 2.4 | PATCH | `/users/profile` | Bearer | ✅ | [Module 2.4](./modules/user/04-update-own-profile.md) | [App Profile](./app-screens/06-profile.md) |
 | 2.5 | GET | `/users/me/favorites` | Bearer | ✅ | [Module 2.5](./modules/user/05-list-favorite-cards.md) | [App Home](./app-screens/02-home.md) |
+| 2.6 | PATCH | `/users/complete-onboarding` | Bearer | ✅ | [Module 2.6](./modules/user/06-complete-onboarding.md) | [App Onboarding](./app-screens/01-auth.md) |
 
 ## Preference Card Module
 
@@ -40,21 +41,21 @@
 |---|---|---|---|:---:|---|---|
 | 3.1 | GET | `/preference-cards` | Bearer | ✅ | [Module 3.1](./modules/preference-card/01-list-search-cards.md) | [App Home](./app-screens/02-home.md), [App Library](./app-screens/04-library.md), [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
 | 3.2 | GET | `/preference-cards/stats` | Bearer | ✅ | [Module 3.2](./modules/preference-card/02-get-cards-stats.md) | [App Home](./app-screens/02-home.md) |
-| 3.3 | GET | `/preference-cards/specialties` | Bearer | ✅ | [Module 3.3](./modules/preference-card/03-fetch-distinct-specialties.md) | [App Library](./app-screens/04-library.md) |
-| 3.4 | POST | `/preference-cards` | Bearer | ✅ | [Module 3.4](./modules/preference-card/04-create-preference-card.md) | [App Card Details](./app-screens/03-preference-card-details.md) |
-| 3.5 | GET | `/preference-cards/:cardId` | Bearer | ✅ | [Module 3.5](./modules/preference-card/05-get-card-details.md) | [App Card Details](./app-screens/03-preference-card-details.md), [App Library](./app-screens/04-library.md) |
-| 3.6 | PATCH | `/preference-cards/:cardId` | Bearer | ✅ | [Module 3.6](./modules/preference-card/06-update-preference-card.md) | [App Card Details](./app-screens/03-preference-card-details.md) |
-| 3.7 | DELETE | `/preference-cards/:cardId` | Bearer | ✅ | [Module 3.7](./modules/preference-card/07-delete-preference-card.md) | [App Card Details](./app-screens/03-preference-card-details.md), [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
-| 3.8 | PUT | `/preference-cards/favorites/cards/:cardId` | Bearer | ✅ | [Module 3.8](./modules/preference-card/08-favorite-card.md) | [App Home](./app-screens/02-home.md), [App Card Details](./app-screens/03-preference-card-details.md), [App Library](./app-screens/04-library.md), [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
-| 3.9 | DELETE | `/preference-cards/favorites/cards/:cardId` | Bearer | ✅ | [Module 3.9](./modules/preference-card/09-unfavorite-card.md) | [App Home](./app-screens/02-home.md), [App Card Details](./app-screens/03-preference-card-details.md), [App Library](./app-screens/04-library.md), [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
-| 3.10 | POST | `/preference-cards/:cardId/download` | Bearer | ✅ | [Module 3.10](./modules/preference-card/10-download-preference-card.md) | [App Card Details](./app-screens/03-preference-card-details.md), [App Library](./app-screens/04-library.md) |
-| 3.11 | PATCH | `/preference-cards/:cardId` | SUPER_ADMIN | 🟡 | [Module 3.11](./modules/preference-card/11-admin-verification.md) | [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
+| 3.10 | GET | `/preference-cards/my-cards` | Bearer | ✅ | [Module 3.3](./modules/preference-card/03-list-my-cards.md) | [App Library](./app-screens/04-library.md) |
+| 3.3 | POST | `/preference-cards` | Bearer | ✅ | [Module 3.4](./modules/preference-card/04-create-preference-card.md) | [App Card Details](./app-screens/03-preference-card-details.md) |
+| 3.4 | GET | `/preference-cards/:cardId` | Bearer | ✅ | [Module 3.5](./modules/preference-card/05-get-card-details.md) | [App Card Details](./app-screens/03-preference-card-details.md), [App Library](./app-screens/04-library.md) |
+| 3.5 | PATCH | `/preference-cards/:cardId` | Bearer / Admin | ✅ | [Module 3.6](./modules/preference-card/06-update-preference-card.md) | [App Card Details](./app-screens/03-preference-card-details.md), [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
+| 3.6 | DELETE | `/preference-cards/:cardId` | Bearer | ✅ | [Module 3.7](./modules/preference-card/07-delete-preference-card.md) | [App Card Details](./app-screens/03-preference-card-details.md), [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
+| 3.7 | PUT | `/preference-cards/favorites/cards/:cardId` | Bearer | ✅ | [Module 3.8](./modules/preference-card/08-favorite-card.md) | [App Home](./app-screens/02-home.md), [App Card Details](./app-screens/03-preference-card-details.md), [App Library](./app-screens/04-library.md), [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
+| 3.8 | DELETE | `/preference-cards/favorites/cards/:cardId` | Bearer | ✅ | [Module 3.9](./modules/preference-card/09-unfavorite-card.md) | [App Home](./app-screens/02-home.md), [App Card Details](./app-screens/03-preference-card-details.md), [App Library](./app-screens/04-library.md), [Dashboard Card Mgmt](./dashboard-screens/04-preference-card-management.md) |
+| 3.9 | POST | `/preference-cards/:cardId/download` | Bearer | ✅ | [Module 3.10](./modules/preference-card/10-download-preference-card.md) | [App Card Details](./app-screens/03-preference-card-details.md), [App Library](./app-screens/04-library.md) |
 
 ## Event Module
 
 | ID | Method | Endpoint | Roles | Status | Spec | On a screen? |
 |---|---|---|---|:---:|---|---|
 | 4.1 | GET | `/events` | Bearer | ✅ | [Module 4.1](./modules/event/01-list-events.md) | [App Calendar](./app-screens/05-calendar.md) |
+| 4.6 | GET | `/events/calendar-highlights` | Bearer | ✅ | [Module 4.6](./modules/event/06-get-calendar-highlights.md) | [App Calendar](./app-screens/05-calendar.md) |
 | 4.2 | POST | `/events` | Bearer | ✅ | [Module 4.2](./modules/event/02-create-event.md) | [App Calendar](./app-screens/05-calendar.md) |
 | 4.3 | GET | `/events/:eventId` | Bearer | ✅ | [Module 4.3](./modules/event/03-get-single-event-details.md) | [App Calendar](./app-screens/05-calendar.md) |
 | 4.4 | PATCH | `/events/:eventId` | Bearer | ✅ | [Module 4.4](./modules/event/04-update-event.md) | [App Calendar](./app-screens/05-calendar.md) |
@@ -97,6 +98,15 @@
 | 8.2 | POST | `/sutures` | SUPER_ADMIN | ✅ | [Module 8.2](./modules/suture/02-create-suture.md) | [Dashboard Sutures Mgmt](./dashboard-screens/07-sutures-management.md) |
 | 8.3 | POST | `/sutures/bulk` | SUPER_ADMIN | ✅ | [Module 8.3](./modules/suture/03-bulk-create-sutures.md) | [Dashboard Sutures Mgmt](./dashboard-screens/07-sutures-management.md) |
 | 8.4 | PATCH | `/sutures/:sutureId` | SUPER_ADMIN | ✅ | [Module 8.4](./modules/suture/04-update-suture.md) | [Dashboard Sutures Mgmt](./dashboard-screens/07-sutures-management.md) |
+
+## Specialty Module
+
+| ID | Method | Endpoint | Roles | Status | Spec | On a screen? |
+|---|---|---|---|:---:|---|---|
+| 9.1 | GET | `/specialties` | Bearer | ✅ | [Module 9.1](./modules/specialty/01-list-specialties.md) | [App Library](./app-screens/04-library.md), [Dashboard Specialty Mgmt](./dashboard-screens/08-specialty-management.md) |
+| 9.2 | POST | `/specialties` | SUPER_ADMIN | ✅ | [Module 9.2](./modules/specialty/02-create-specialty.md) | [Dashboard Specialty Mgmt](./dashboard-screens/08-specialty-management.md) |
+| 9.3 | PATCH | `/specialties/:specialtyId` | SUPER_ADMIN | ✅ | [Module 9.3](./modules/specialty/03-update-specialty.md) | [Dashboard Specialty Mgmt](./dashboard-screens/08-specialty-management.md) |
+| 9.4 | DELETE | `/specialties/:specialtyId` | SUPER_ADMIN | ✅ | [Module 9.4](./modules/specialty/04-delete-specialty.md) | [Dashboard Specialty Mgmt](./dashboard-screens/08-specialty-management.md) |
 | 8.5 | DELETE | `/sutures/:sutureId` | SUPER_ADMIN | ✅ | [Module 8.5](./modules/suture/05-delete-suture.md) | [Dashboard Sutures Mgmt](./dashboard-screens/07-sutures-management.md) |
 
 ## Subscription Module

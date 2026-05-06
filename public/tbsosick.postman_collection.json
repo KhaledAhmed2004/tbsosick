@@ -7,7 +7,7 @@
   "item": [
     {
       "name": "🚀 Testing Guide & Docs",
-      "description": "\n## Welcome to tbsosick API Testing Guide\n\nFollow these detailed steps to test APIs and Socket events:\n\n### 1. Setup & Auth (First Step)\n1.  **Login**: First, go to **Auth Module > 1.1 Login**.\n2.  **Auto-Token**: Successful login korle `accessToken` automatic collection variable-e save hoye jabe.\n3.  **Check**: Apni Collection-er **Variables** tab-e giye check korte paren token-ti set hoyeche kina.\n\n### 2. Standard API Testing\n- Protiti folder module onujayi organized.\n- Path variables (যেমন `:id`) thakle Postman-er **Params** tab-e value boshate hobe.\n\n### 3. Socket.IO Testing (Detailed Guide)\nPostman theke Socket test korar jonno nicher visual guide-ti follow koren:\n\n#### A. Connection Setup\n- Click **New** > **Socket.IO**.\n- **URL**: `http://localhost:5009` (Not `/api/v1`).\n- **Auth (Handshake)**:\n    - **Handshake** tab-e jan.\n    - **Auth** section-e **Auth Object** select koren.\n    - `token` key-te value `{{accessToken}}` boshie **Connect** koren.\n\n#### B. How to \"Listen\" (Receive events from server)\nServer theke real-time data receive korar jonno nicher steps follow koren:\n\n1.  **Events Tab**: Connection tab-er pashe thaka **Events** tab-e jan.\n2.  **Add Event**: `Add event` button-e click koren.\n3.  **Event Name**: `Event name` field-e nicher common event-gulo add koren (ekekti event-er jonno alada row):\n    - `USER_ONLINE`: Jokhon keu online ashe.\n    - `MESSAGE_RECEIVED`: Jokhon keu apnake message pathay.\n    - `TYPING_START`: Keu type kora shuru korle.\n    - `get-notification::{{userId}}`: Personal notifications-er jonno.\n4.  **Messages Pane**: Ekhon server theke oi event-ti asle niche **Messages** pane-e real-time JSON data dekhabe. \n    > **Note**: Ekhane kono JSON pathano lagbe na, shudhu event-er nam-ti add korlei Postman server theke asha data capture korbe.\n\n#### C. How to \"Emit\" (Send events to server)\n- Server-e data pathanor jonno **Message** tab-e jan.\n- **Event Name**: Jekhare event-er nam likhte hoy (যেমন: `JOIN_CHAT`).\n- **Payload**: Niche JSON format-e data-ti likhun:\n    ```json\n    { \"chatId\": \"664a1b2c3d4e5f6a7b8c9d0e\" }\n    ```\n- Click **Send**.\n\n### 🔌 Socket.IO Events Inventory & Guide\n\nJokhon apni Socket test korben, nicher table-ti follow koren bujhar jonno je konta apnake pathate hobe (Emit) ar konta server pathabe (Listen).\n\n| Event Name | Action Type | Direction | Payload Example | Step-by-Step Testing |\n|------------|-------------|-----------|-----------------|----------------------|\n| `JOIN_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab-e event name `JOIN_CHAT` likhun ebong payload JSON format-e diye **Send** koren. |\n| `LEAVE_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `LEAVE_CHAT` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab theke emit koren typing shuru bujhate. |\n| `TYPING_STOP` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `TYPING_STOP` likhe JSON payload shoho **Send** koren. |\n| `DELIVERED_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `DELIVERED_ACK` likhe JSON payload shoho **Send** koren. |\n| `READ_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `READ_ACK` likhe JSON payload shoho **Send** koren. |\n| `disconnect` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `disconnect` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **LISTENING** (Receive) | 📤 Server -> Client | `{ \"chatId\": \"66...\" }` | **Events** tab-e `TYPING_START` add koren listening-er jonno. |\n| `TYPING_STOP` | **LISTENING** (Receive) | 📤 Server -> Client | N/A | **Events** tab-e `TYPING_STOP` nam-er ekta event add koren jate server theke response ashole apni **Messages** pane-e dekhte paren. |\n\n\n### 4. Common Testing Scenarios\n- **Chatting**:\n    1. Login koren.\n    2. Socket connect koren.\n    3. `JOIN_CHAT` emit koren chatId diye.\n    4. Onno user theke message pathale apni listener events-e sheta paben.\n    ",
+      "description": "\n## Welcome to tbsosick API Testing Guide\n\nFollow these detailed steps to test APIs and Socket events:\n\n### 1. Setup & Auth (First Step)\n1.  **Login**: First, go to **Auth Module > 1.1 Login**.\n2.  **Auto-Token**: Successful login korle `accessToken` automatic collection variable-e save hoye jabe.\n3.  **Check**: Apni Collection-er **Variables** tab-e giye check korte paren token-ti set hoyeche kina.\n\n### 2. Standard API Testing\n- Protiti folder module onujayi organized.\n- Path variables (যেমন `:id`) thakle Postman-er **Params** tab-e value boshate hobe.\n\n### 3. Socket.IO Testing (Detailed Guide)\nPostman theke Socket test korar jonno nicher visual guide-ti follow koren:\n\n#### A. Connection Setup\n- Click **New** > **Socket.IO**.\n- **URL**: `http://localhost:5001` (Not `/api/v1`).\n- **Auth (Handshake)**:\n    - **Handshake** tab-e jan.\n    - **Auth** section-e **Auth Object** select koren.\n    - `token` key-te value `{{accessToken}}` boshie **Connect** koren.\n\n#### B. How to \"Listen\" (Receive events from server)\nServer theke real-time data receive korar jonno nicher steps follow koren:\n\n1.  **Events Tab**: Connection tab-er pashe thaka **Events** tab-e jan.\n2.  **Add Event**: `Add event` button-e click koren.\n3.  **Event Name**: `Event name` field-e nicher common event-gulo add koren (ekekti event-er jonno alada row):\n    - `USER_ONLINE`: Jokhon keu online ashe.\n    - `MESSAGE_RECEIVED`: Jokhon keu apnake message pathay.\n    - `TYPING_START`: Keu type kora shuru korle.\n    - `get-notification::{{userId}}`: Personal notifications-er jonno.\n4.  **Messages Pane**: Ekhon server theke oi event-ti asle niche **Messages** pane-e real-time JSON data dekhabe. \n    > **Note**: Ekhane kono JSON pathano lagbe na, shudhu event-er nam-ti add korlei Postman server theke asha data capture korbe.\n\n#### C. How to \"Emit\" (Send events to server)\n- Server-e data pathanor jonno **Message** tab-e jan.\n- **Event Name**: Jekhare event-er nam likhte hoy (যেমন: `JOIN_CHAT`).\n- **Payload**: Niche JSON format-e data-ti likhun:\n    ```json\n    { \"chatId\": \"664a1b2c3d4e5f6a7b8c9d0e\" }\n    ```\n- Click **Send**.\n\n### 🔌 Socket.IO Events Inventory & Guide\n\nJokhon apni Socket test korben, nicher table-ti follow koren bujhar jonno je konta apnake pathate hobe (Emit) ar konta server pathabe (Listen).\n\n| Event Name | Action Type | Direction | Payload Example | Step-by-Step Testing |\n|------------|-------------|-----------|-----------------|----------------------|\n| `JOIN_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab-e event name `JOIN_CHAT` likhun ebong payload JSON format-e diye **Send** koren. |\n| `LEAVE_CHAT` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `LEAVE_CHAT` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **EMITTING** (Send) | 📥 Client -> Server | `{ \"chatId\": \"66...\" }` | **Message** tab theke emit koren typing shuru bujhate. |\n| `TYPING_STOP` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `TYPING_STOP` likhe JSON payload shoho **Send** koren. |\n| `DELIVERED_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `DELIVERED_ACK` likhe JSON payload shoho **Send** koren. |\n| `READ_ACK` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `READ_ACK` likhe JSON payload shoho **Send** koren. |\n| `disconnect` | **EMITTING** (Send) | 📥 Client -> Server | N/A | **Message** tab-e event name `disconnect` likhe JSON payload shoho **Send** koren. |\n| `TYPING_START` | **LISTENING** (Receive) | 📤 Server -> Client | `{ \"chatId\": \"66...\" }` | **Events** tab-e `TYPING_START` add koren listening-er jonno. |\n| `TYPING_STOP` | **LISTENING** (Receive) | 📤 Server -> Client | N/A | **Events** tab-e `TYPING_STOP` nam-er ekta event add koren jate server theke response ashole apni **Messages** pane-e dekhte paren. |\n\n\n### 4. Common Testing Scenarios\n- **Chatting**:\n    1. Login koren.\n    2. Socket connect koren.\n    3. `JOIN_CHAT` emit koren chatId diye.\n    4. Onno user theke message pathale apni listener events-e sheta paben.\n    ",
       "item": []
     },
     {
@@ -546,7 +546,7 @@
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "multipart/form-data",
                 "type": "text"
               }
             ],
@@ -568,6 +568,35 @@
                   "key": "token",
                   "value": "{{accessToken}}",
                   "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "name",
+                  "value": "John Updated",
+                  "type": "text",
+                  "description": "e.g., \"John Updated\""
+                },
+                {
+                  "key": "phone",
+                  "value": "+123456789",
+                  "type": "text",
+                  "description": "e.g., \"+123456789\""
+                },
+                {
+                  "key": "country",
+                  "value": "USA",
+                  "type": "text",
+                  "description": "e.g., \"USA\""
+                },
+                {
+                  "key": "profilePicture",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select binary image file"
                 }
               ]
             }
@@ -609,6 +638,50 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "2.6 Complete Onboarding",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/complete-onboarding",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "complete-onboarding"
+              ]
+            },
+            "description": "Marks the user's onboarding process as completed.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Onboarding marked as completed\",\n  \"data\": {\n    \"id\": \"69fa332f3fc3858c40265420\",\n    \"name\": \"Khaled Ahmed\",\n    \"role\": \"USER\",\n    \"email\": \"khaledahmednayeem2004@gmail.com\",\n    \"country\": \"USA\",\n    \"gender\": \"male\",\n    \"dateOfBirth\": \"1995-05-15\",\n    \"phone\": \"+123456789\",\n    \"profilePicture\": \"https://i.ibb.co/z5YHLV9/profile.png\",\n    \"isOnboardingCompleted\": true,\n    \"status\": \"ACTIVE\",\n    \"verified\": true,\n    \"deviceTokens\": [\n      {\n        \"token\": \"fcm-token-xyz\",\n        \"lastSeenAt\": \"2026-05-05T18:32:02.435Z\"\n      }\n    ],\n    \"createdAt\": \"2026-05-05T18:13:03.393Z\",\n    \"updatedAt\": \"2026-05-05T18:33:49.649Z\",\n    \"_v\": 0\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -638,6 +711,26 @@
                 {
                   "key": "searchTerm",
                   "value": "keyword"
+                },
+                {
+                  "key": "specialty",
+                  "value": "",
+                  "description": "Filter by surgeon's specialty."
+                },
+                {
+                  "key": "verificationStatus",
+                  "value": "",
+                  "description": "Filter by `verified` or `unverified`. *Note: Case-insensitive.*"
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Standard pagination."
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Standard pagination."
                 }
               ]
             },
@@ -676,7 +769,7 @@
                 "stats"
               ]
             },
-            "description": "Used to show stats on the Home screen. Returns counts for total public cards and the user's own cards.",
+            "description": "Used to show stats on the Home screen. Returns counts for all public cards in the system and the user's own total cards.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -691,7 +784,7 @@
           "response": []
         },
         {
-          "name": "3.3 Fetch Distinct Specialties",
+          "name": "3.10 List My Cards",
           "request": {
             "method": "GET",
             "header": [
@@ -702,16 +795,47 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/preference-cards/specialties",
+              "raw": "{{baseUrl}}/preference-cards/my-cards?searchTerm=keyword",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "preference-cards",
-                "specialties"
+                "my-cards"
+              ],
+              "query": [
+                {
+                  "key": "searchTerm",
+                  "value": "keyword"
+                },
+                {
+                  "key": "visibility",
+                  "value": "",
+                  "description": "(Optional) `public` or `private`. Filter your cards by their visibility status."
+                },
+                {
+                  "key": "page",
+                  "value": "",
+                  "description": "Standard pagination."
+                },
+                {
+                  "key": "limit",
+                  "value": "",
+                  "description": "Standard pagination."
+                },
+                {
+                  "key": "sortBy",
+                  "value": "",
+                  "description": "Standard sorting."
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "",
+                  "description": "Standard sorting."
+                }
               ]
             },
-            "description": "use case: its used to populate the filter dropdown dynamically.",
+            "description": "**Personal Library Endpoint**: This API is used to fetch all cards created by the authenticated user, regardless of whether they are `PUBLIC` or `PRIVATE`.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -726,13 +850,13 @@
           "response": []
         },
         {
-          "name": "3.4 Create Preference Card",
+          "name": "3.3 Create Preference Card",
           "request": {
             "method": "POST",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "multipart/form-data",
                 "type": "text"
               }
             ],
@@ -757,19 +881,87 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"cardTitle\": \"Knee Arthroscopy\",\n  \"surgeon\": {\n    \"fullName\": \"Dr. Smith\",\n    \"handPreference\": \"Right\",\n    \"specialty\": \"Orthopedics\",\n    \"contactNumber\": \"+1234567890\",\n    \"musicPreference\": \"Classical\"\n  },\n  \"medication\": \"Lidocaine with Epinephrine\",\n  \"supplies\": [\n    { \"name\": \"Sterile Gauze\", \"quantity\": 10 },\n    { \"name\": \"Surgical Drape\", \"quantity\": 2 }\n  ],\n  \"sutures\": [\n    { \"name\": \"3-0 Vicryl\", \"quantity\": 1 }\n  ],\n  \"instruments\": \"Standard arthroscopy set\",\n  \"positioningEquipment\": \"Leg holder\",\n  \"prepping\": \"Betadine\",\n  \"workflow\": \"Incision, portal placement, joint inspection...\",\n  \"keyNotes\": \"Be careful with the ACL\",\n  \"visibility\": \"PRIVATE\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "cardTitle",
+                  "value": "Knee Arthroscopy",
+                  "type": "text",
+                  "description": "e.g., \"Knee Arthroscopy\""
+                },
+                {
+                  "key": "surgeon",
+                  "value": "{\"fullName\": \"Dr. Smith\", \"handPreference\": \"Right\", \"specialty\": \"Orthopedics\", \"contactNumber\": \"+1234567890\", \"musicPreference\": \"Classical\"}",
+                  "type": "text",
+                  "description": "e.g., `{\"fullName\": \"Dr. Smith\", \"handPreference\": \"Right\", \"specialty\": \"Orthopedics\", \"contactNumber\": \"+1234567890\", \"musicPreference\": \"Classical\"}`"
+                },
+                {
+                  "key": "medication",
+                  "value": "Lidocaine with Epinephrine",
+                  "type": "text",
+                  "description": "e.g., \"Lidocaine with Epinephrine\""
+                },
+                {
+                  "key": "supplies",
+                  "value": "[{\"name\": \"Sterile Gauze\", \"quantity\": 10}, {\"name\": \"Surgical Drape\", \"quantity\": 2}]",
+                  "type": "text",
+                  "description": "e.g., `[{\"name\": \"Sterile Gauze\", \"quantity\": 10}, {\"name\": \"Surgical Drape\", \"quantity\": 2}]`"
+                },
+                {
+                  "key": "sutures",
+                  "value": "[{\"name\": \"3-0 Vicryl\", \"quantity\": 1}]",
+                  "type": "text",
+                  "description": "e.g., `[{\"name\": \"3-0 Vicryl\", \"quantity\": 1}]`"
+                },
+                {
+                  "key": "instruments",
+                  "value": "Standard arthroscopy set",
+                  "type": "text",
+                  "description": "e.g., \"Standard arthroscopy set\""
+                },
+                {
+                  "key": "positioningEquipment",
+                  "value": "Leg holder",
+                  "type": "text",
+                  "description": "e.g., \"Leg holder\""
+                },
+                {
+                  "key": "prepping",
+                  "value": "Betadine",
+                  "type": "text",
+                  "description": "e.g., \"Betadine\""
+                },
+                {
+                  "key": "workflow",
+                  "value": "Incision, portal placement, joint inspection...",
+                  "type": "text",
+                  "description": "e.g., \"Incision, portal placement, joint inspection...\""
+                },
+                {
+                  "key": "keyNotes",
+                  "value": "Be careful with the ACL",
+                  "type": "text",
+                  "description": "e.g., \"Be careful with the ACL\""
+                },
+                {
+                  "key": "visibility",
+                  "value": "",
+                  "type": "text",
+                  "description": "\"PRIVATE\" or \"PUBLIC\""
+                },
+                {
+                  "key": "photoLibrary",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select binary image files (max 5)"
                 }
-              }
+              ]
             }
           },
           "response": []
         },
         {
-          "name": "3.5 Get Card Details",
+          "name": "3.4 Get Card Details",
           "request": {
             "method": "GET",
             "header": [
@@ -810,13 +1002,13 @@
           "response": []
         },
         {
-          "name": "3.6 Update Preference Card",
+          "name": "3.5 Update Preference Card / Admin Verification",
           "request": {
             "method": "PATCH",
             "header": [
               {
                 "key": "Content-Type",
-                "value": "application/json",
+                "value": "multipart/form-data",
                 "type": "text"
               }
             ],
@@ -836,7 +1028,7 @@
                 }
               ]
             },
-            "description": "Updates an existing card. Only the fields that need changing should be sent. Updates are only possible for the owner or SUPER_ADMIN.",
+            "description": "**Unified Endpoint**: Updates an existing card. This single endpoint handles both regular user updates (title, surgeon, etc.) and Admin moderation (verification).",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -848,19 +1040,45 @@
               ]
             },
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"cardTitle\": \"Updated Knee Arthroscopy\",\n  \"medication\": \"Updated medication info\",\n  \"visibility\": \"PUBLIC\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "cardTitle",
+                  "value": "Updated Knee Arthroscopy",
+                  "type": "text",
+                  "description": "e.g., \"Updated Knee Arthroscopy\""
+                },
+                {
+                  "key": "medication",
+                  "value": "Updated medication info",
+                  "type": "text",
+                  "description": "e.g., \"Updated medication info\""
+                },
+                {
+                  "key": "visibility",
+                  "value": "",
+                  "type": "text",
+                  "description": "\"PRIVATE\" or \"PUBLIC\""
+                },
+                {
+                  "key": "verificationStatus",
+                  "value": "",
+                  "type": "text",
+                  "description": "**Admin Only**: \"VERIFIED\" or \"UNVERIFIED\""
+                },
+                {
+                  "key": "photoLibrary",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select new binary image files to append"
                 }
-              }
+              ]
             }
           },
           "response": []
         },
         {
-          "name": "3.7 Delete Preference Card",
+          "name": "3.6 Delete Preference Card",
           "request": {
             "method": "DELETE",
             "header": [
@@ -901,7 +1119,7 @@
           "response": []
         },
         {
-          "name": "3.8 Favorite a Card",
+          "name": "3.7 Favorite a Card",
           "request": {
             "method": "PUT",
             "header": [
@@ -944,7 +1162,7 @@
           "response": []
         },
         {
-          "name": "3.9 Unfavorite a Card",
+          "name": "3.8 Unfavorite a Card",
           "request": {
             "method": "DELETE",
             "header": [
@@ -987,7 +1205,7 @@
           "response": []
         },
         {
-          "name": "3.10 Download Preference Card",
+          "name": "3.9 Download Preference Card",
           "request": {
             "method": "POST",
             "header": [
@@ -1027,47 +1245,6 @@
             }
           },
           "response": []
-        },
-        {
-          "name": "3.11 Admin Verification",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/preference-cards/:cardId",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "preference-cards",
-                ":cardId"
-              ],
-              "variable": [
-                {
-                  "key": "cardId",
-                  "value": ""
-                }
-              ]
-            },
-            "description": "use case: Admin verify or unverify preference cards.",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{accessToken}}",
-                  "type": "string"
-                }
-              ]
-            }
-          },
-          "response": []
         }
       ]
     },
@@ -1086,7 +1263,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/events?from=2026-04-01&to=2026-04-30",
+              "raw": "{{baseUrl}}/events?date=2026-04-10",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -1095,16 +1272,67 @@
               ],
               "query": [
                 {
+                  "key": "date",
+                  "value": "2026-04-10"
+                },
+                {
                   "key": "from",
-                  "value": "2026-04-01"
+                  "value": "",
+                  "description": "Start range (ISO YYYY-MM-DD)."
                 },
                 {
                   "key": "to",
-                  "value": "2026-04-30"
+                  "value": "",
+                  "description": "End range (ISO YYYY-MM-DD)."
                 }
               ]
             },
-            "description": "Fetches user-specific events. Date range filtering is supported for calendar views.",
+            "description": "**Dual Pattern Endpoint**: Used for both single-day views (Home screen) and monthly calendar views (Calendar screen).",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.6 Get Calendar Highlights",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/calendar-highlights?from=2026-05-01&to=2026-05-31",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events",
+                "calendar-highlights"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2026-05-01"
+                },
+                {
+                  "key": "to",
+                  "value": "2026-05-31"
+                }
+              ]
+            },
+            "description": "**Performance Optimized**: This endpoint is designed specifically for the Monthly Calendar view. It returns ONLY the unique dates that have events, making the response extremely lightweight for high-speed calendar dot rendering.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -1395,7 +1623,7 @@
                 "read-all"
               ]
             },
-            "description": "User top-right \"Mark all as read\" button e tap korle shob notifications `read: true` hoy ebong red dot disappear kore.",
+            "description": "User top-right \"Mark all as read\" button e tap korle shob notifications `isRead: true` hoy ebong red dot disappear kore.",
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -2033,6 +2261,179 @@
             }
           },
           "response": []
+        }
+      ]
+    },
+    {
+      "name": "Specialty Module",
+      "item": [
+        {
+          "name": "9.1 List Specialties",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties"
+              ]
+            },
+            "description": "Fetches a list of all active specialties available in the system.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.2 Create Specialty",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties"
+              ]
+            },
+            "description": "**Admin Only**: Creates a new specialty in the system. This must be done by an Admin before users can select this specialty while creating preference cards.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true,\n  \"statusCode\": 201,\n  \"message\": \"Specialty created\",\n  \"data\": {\n    \"id\": \"69fa332f3fc3858c40265421\",\n    \"name\": \"Orthopedics\",\n    \"isActive\": true,\n    \"createdAt\": \"2026-05-06T10:05:00.000Z\",\n    \"updatedAt\": \"2026-05-06T10:05:00.000Z\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.3 Update Specialty",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/specialties/:specialtyId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties",
+                ":specialtyId"
+              ],
+              "variable": [
+                {
+                  "key": "specialtyId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Updates an existing specialty.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"success\": true,\n  \"statusCode\": 200,\n  \"message\": \"Specialty updated\",\n  \"data\": {\n    \"id\": \"69fa332f3fc3858c40265421\",\n    \"name\": \"Orthopedic Surgery\",\n    \"isActive\": false,\n    \"createdAt\": \"2026-05-06T10:05:00.000Z\",\n    \"updatedAt\": \"2026-05-06T10:10:00.000Z\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.4 Delete Specialty",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/specialties/:specialtyId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties",
+                ":specialtyId"
+              ],
+              "variable": [
+                {
+                  "key": "specialtyId",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Deletes a specialty from the system.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "response": []
         },
         {
           "name": "8.5 Delete Suture",
@@ -2658,7 +3059,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:5009/api/v1",
+      "value": "http://localhost:5001/api/v1",
       "type": "string"
     },
     {

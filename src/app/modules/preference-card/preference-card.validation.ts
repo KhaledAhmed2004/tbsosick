@@ -4,7 +4,7 @@ import { z } from 'zod';
 const surgeonSchema = z.object({
   fullName: z.string().min(3),
   handPreference: z.string().min(1),
-  specialty: z.string().min(1),
+  specialty: z.string().min(1), // Accepts name
   contactNumber: z.string().min(1),
   musicPreference: z.string().min(1),
 });
@@ -41,6 +41,7 @@ const createPreferenceCardSchema = z.object({
     keyNotes: z.string().optional(),
     photoLibrary: z.array(z.string()).max(10).optional(),
     visibility: z.enum(['PUBLIC', 'PRIVATE']).optional(),
+    verificationStatus: z.enum(['VERIFIED', 'UNVERIFIED']).optional(),
   }),
 });
 
@@ -96,13 +97,17 @@ const paramIdSchema = z.object({
 const searchCardsSchema = z.object({
   query: z.object({
     searchTerm: z.string().trim().max(100).optional(),
-    visibility: z.enum(['public', 'private']).default('public'),
-    page: z.coerce.number().int().positive().default(1),
-    limit: z.coerce.number().int().min(1).max(50).default(10),
-    sort: z
-      .string()
-      .regex(/^-?(createdAt|cardTitle)$/)
+    specialty: z.string().optional(),
+    verificationStatus: z
+      .preprocess(
+        val => (typeof val === 'string' ? val.toLowerCase() : val),
+        z.enum(['verified', 'unverified']),
+      )
       .optional(),
+    page: z.preprocess(val => Number(val), z.number().int().min(1)).default(1),
+    limit: z
+      .preprocess(val => Number(val), z.number().int().min(1).max(50))
+      .default(10),
   }),
 });
 
@@ -118,16 +123,6 @@ const downloadPreferenceCardSchema = z.object({
   }),
 });
 
-// Update Verification Status Schema (Admin)
-const updateVerificationStatusSchema = z.object({
-  params: z.object({
-    cardId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
-  }),
-  body: z.object({
-    verificationStatus: z.enum(['VERIFIED', 'UNVERIFIED']),
-  }),
-});
-
 export const PreferenceCardValidation = {
   createPreferenceCardSchema,
   updatePreferenceCardSchema,
@@ -135,5 +130,4 @@ export const PreferenceCardValidation = {
   searchCardsSchema,
   publishPreferenceCardSchema,
   downloadPreferenceCardSchema,
-  updateVerificationStatusSchema,
 };

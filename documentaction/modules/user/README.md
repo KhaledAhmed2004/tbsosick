@@ -25,7 +25,8 @@
 | 08 | GET | `/users/:userId/user` | Bearer (User/Admin) | [08-get-user-details-public.md](./08-get-user-details-public.md) | Public user details |
 | 09 | GET | `/users/profile` | Bearer | [09-get-own-profile.md](./09-get-own-profile.md) | [App - Profile Screen] |
 | 10 | PATCH | `/users/profile` | Bearer | [10-update-own-profile.md](./10-update-own-profile.md) | [App - Profile Screen] |
-| 11 | GET | `/users/me/favorites` | Bearer | [11-list-favorite-cards.md](./11-list-favorite-cards.md) | [App - Home Screen] |
+| 05 | GET | `/users/me/favorites` | Bearer | [05-list-favorite-cards.md](./05-list-favorite-cards.md) | [App - Home Screen] |
+| 06 | PATCH | `/users/complete-onboarding` | Bearer | [06-complete-onboarding.md](./06-complete-onboarding.md) | [App - Onboarding Flow] |
 
 ---
 
@@ -34,13 +35,8 @@
 | # | Endpoint | Status | Roles | Notes |
 |---|---|:---:|:---:|---|
 | 01 | `POST /users` | Done | Public / SUPER_ADMIN | Shared handler |
-| 02 | `GET /users` | Done | SUPER_ADMIN | Comprehensive aggregation |
-| 03 | `GET /users/stats` | Done | SUPER_ADMIN | Growth metrics |
-| 04 | `PATCH /users/:userId` | Done | SUPER_ADMIN | Whitelisted update |
-| 05 | `PATCH /users/:userId/status` | Done | SUPER_ADMIN | Status toggle |
-| 06 | `DELETE /users/:userId` | Done | SUPER_ADMIN | Permanent delete |
-| 07 | `GET /users/:userId` | Done | SUPER_ADMIN | Admin view |
-| 08 | `GET /users/:userId/user` | Done | User / Admin | Public details |
-| 09 | `GET /users/profile` | Done | User / Admin | Self profile |
+| 02 | `GET /users/:userId/user` | Done | User / Admin | Public details |
+| 03 | `GET /users/profile` | Done | User / Admin | Self profile |
 | 10 | `PATCH /users/profile` | Done | User / Admin | Self update + upload |
 | 11 | `GET /users/me/favorites` | Done | User / Admin | Summarized list |
+| 12 | `PATCH /users/complete-onboarding` | Done | User / Admin | Mark onboarding completed |

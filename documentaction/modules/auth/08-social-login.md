@@ -43,7 +43,7 @@ Auth: None
    - *Security Note*: Does not match by email to prevent "Account Hijacking" (where an attacker controls a provider account with the same email as a local account).
 3. **Scenario: Existing User**:
    - Checks account status (`DELETED`, `RESTRICTED`).
-   - Updates `deviceToken` and `isFirstLogin` if needed.
+   - Updates `deviceToken` if needed.
 4. **Scenario: New User**:
    - Checks if the email already belongs to a password-based account. If yes, throws `409 Conflict` (no auto-linking for security).
    - Creates a new user document with `verified: true` and the provider ID.
@@ -62,7 +62,8 @@ Auth: None
   "message": "User logged in successfully.",
   "data": {
     "accessToken": "eyJhbGciOi...",
-    "refreshToken": "eyJhbGciOi..."
+    "refreshToken": "eyJhbGciOi...",
+    "isOnboardingCompleted": false
   }
 }
 ```

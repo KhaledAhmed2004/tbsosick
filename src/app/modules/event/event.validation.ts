@@ -65,7 +65,19 @@ const updateEventZodSchema = z.object({
   }),
 });
 
+const getHighlightsZodSchema = z.object({
+  query: z.object({
+    from: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid format (YYYY-MM-DD)'),
+    to: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid format (YYYY-MM-DD)'),
+  }),
+});
+
 export const EventValidation = {
   createEventZodSchema,
   updateEventZodSchema,
+  getHighlightsZodSchema,
 };

@@ -22,7 +22,14 @@ interface PostmanRequest {
     };
     body?: {
       mode: string;
-      raw: string;
+      raw?: string;
+      formdata?: {
+        key: string;
+        value?: string;
+        src?: string;
+        type: string;
+        description?: string;
+      }[];
       options?: {
         raw: {
           language: string;
@@ -88,9 +95,56 @@ function parseSpecFile(filePath: string, id: string): PostmanRequest | null {
   const descriptionMatch = content.match(/> (.*?)\n/);
   const description = descriptionMatch ? descriptionMatch[1].trim() : '';
 
-  // Extract Request Body
+  // Extract Request Body (JSON)
   const bodyMatch = content.match(/## Request Body[\s\S]*?```json\n([\s\S]*?)```/);
   const bodyRaw = bodyMatch ? bodyMatch[1].trim() : null;
+
+  // Extract Request Body (Multipart Form-Data)
+  const isMultipart = headersAndAuth.toLowerCase().includes('multipart/form-data');
+  const formData: any[] = [];
+  
+  if (isMultipart) {
+    const formDataTableRegex = /## Request Body \(Multipart Form-Data\)[\s\S]*?\| Key \| Value Type \| Description \|[\s\S]*?\n\| :--- \| :--- \| :--- \|([\s\S]*?)(?:\n\n|\n#|$)/;
+    const formDataMatch = content.match(formDataTableRegex);
+    
+    if (formDataMatch) {
+      const rows = formDataMatch[1].trim().split('\n');
+      rows.forEach(row => {
+        const columns = row.split('|').map(c => c.trim()).filter(c => c !== '');
+        if (columns.length >= 2) {
+          let [key, type, description] = columns;
+          key = key.replace(/`/g, '');
+          type = type.toLowerCase();
+          
+          const isFile = type.includes('file');
+          const valueMatch = description ? description.match(/e\.g\.,\s*(.*)/) : null;
+          let value = valueMatch ? valueMatch[1].replace(/`/g, '').trim() : '';
+          
+          // Strip leading and trailing double quotes if they exist, 
+          // unless it's a JSON string (starts with { or [)
+          if (value.startsWith('"') && value.endsWith('"') && !value.startsWith('{"') && !value.startsWith('["')) {
+            value = value.substring(1, value.length - 1);
+          }
+
+          if (isFile) {
+            formData.push({
+              key,
+              type: 'file',
+              src: [],
+              description: description || undefined
+            });
+          } else {
+            formData.push({
+              key,
+              value,
+              type: 'text',
+              description: description || undefined
+            });
+          }
+        }
+      });
+    }
+  }
 
   // Parse path and query params
   const [pathPart, queryPart] = fullPath.trim().split('?');
@@ -115,35 +169,92 @@ function parseSpecFile(filePath: string, id: string): PostmanRequest | null {
     });
   }
 
-  // Extract Query Parameters from Markdown Table
-  const queryParamsTableRegex = /## Query Parameters[\s\S]*?\| Parameter \| Description \| Default \| Example \|[\s\S]*?\| (.*?) \|/g;
-  const tableContentRegex = /## Query Parameters[\s\S]*?\n\| :--- \| :--- \| :--- \| :--- \|([\s\S]*?)(?:\n\n|\n#|$)/;
-  const tableMatch = content.match(tableContentRegex);
-  
-  if (tableMatch) {
-    const rows = tableMatch[1].trim().split('\n');
-    rows.forEach(row => {
-      const columns = row.split('|').map(c => c.trim()).filter(c => c !== '');
-      if (columns.length >= 4) {
-        let [param, description, defaultValue, example] = columns;
-        
-        // Clean backticks from parameter names and values
-        param = param.replace(/`/g, '');
-        example = example.replace(/`/g, '');
-        defaultValue = defaultValue.replace(/`/g, '');
+  // Extract Query Parameters from Markdown (Table or List)
+  const queryParamsSectionRegex = /## Query Parameters([\s\S]*?)(?:\n## |$)/;
+  const queryParamsMatch = content.match(queryParamsSectionRegex);
 
-        if (param !== '—' && param !== 'None') {
-          // Check if already added from URL query part to avoid duplicates
-          if (!queryParams.find(q => q.key === param)) {
-            queryParams.push({
-              key: param,
-              value: example !== '—' ? example : (defaultValue !== '—' ? defaultValue : ''),
-              description: description !== '—' ? description : undefined
-            });
+  if (queryParamsMatch) {
+    const sectionContent = queryParamsMatch[1].trim();
+    
+    // 1. Handle Table Format
+    if (sectionContent.includes('|')) {
+      const tableLines = sectionContent.split('\n').filter(line => line.includes('|'));
+      if (tableLines.length >= 2) {
+        // Parse header to find column indices
+        const header = tableLines[0].split('|').map(c => c.trim().toLowerCase());
+        // Remove first and last empty elements if they exist (due to leading/trailing |)
+        if (header[0] === '') header.shift();
+        if (header[header.length - 1] === '') header.pop();
+
+        const paramIdx = header.findIndex(h => h.includes('parameter'));
+        const descIdx = header.findIndex(h => h.includes('description'));
+        const exampleIdx = header.findIndex(h => h.includes('example'));
+        const defaultIdx = header.findIndex(h => h.includes('default'));
+
+        // Start from index 2 (skipping header and separator row)
+        for (let i = 2; i < tableLines.length; i++) {
+          const columns = tableLines[i].split('|').map(c => c.trim());
+          if (columns[0] === '') columns.shift();
+          // Don't pop last one yet, as we need indices to match header
+
+          if (columns.length > 0 && paramIdx !== -1) {
+            let param = columns[paramIdx]?.replace(/`/g, '') || '';
+            let description = descIdx !== -1 ? columns[descIdx] : '';
+            let example = exampleIdx !== -1 ? columns[exampleIdx]?.replace(/`/g, '') : '';
+            let defaultValue = defaultIdx !== -1 ? columns[defaultIdx]?.replace(/`/g, '') : '';
+
+            if (param && param !== '—' && param !== 'None') {
+              // Handle multiple params in one cell (e.g., `page` / `limit`)
+              const params = param.split(/[\/,]/).map(p => p.trim());
+              params.forEach(p => {
+                if (p && !queryParams.find(q => q.key === p)) {
+                  queryParams.push({
+                    key: p,
+                    value: (example && example !== '—') ? example : (defaultValue && defaultValue !== '—' ? defaultValue : ''),
+                    description: description !== '—' ? description : undefined
+                  });
+                }
+              });
+            }
           }
         }
       }
-    });
+    } 
+    // 2. Handle List Format
+    else {
+      const lines = sectionContent.split('\n');
+      lines.forEach(line => {
+        const listMatch = line.match(/^[-*]\s+(.*)/);
+        if (listMatch) {
+          const lineContent = listMatch[1].trim();
+          
+          // Pattern: `param`: Description or `param1` / `param2`: Description
+          const parts = lineContent.split(':');
+          const paramPart = parts[0];
+          const description = parts.slice(1).join(':').trim();
+
+          // Extract all backticked params from paramPart
+          const paramRegex = /`([^`]+)`/g;
+          let match;
+          while ((match = paramRegex.exec(paramPart)) !== null) {
+            const param = match[1].trim();
+            if (!queryParams.find(q => q.key === param)) {
+              // Try to find example in description (e.g., "Default: public" or "e.g., 10" or "`public` (Default)")
+              const exampleMatch = description.match(/e\.g\.,\s*`?([^`\s,)]+)`?/i) || 
+                                 description.match(/default:?\s*`?([^`\s,)]+)`?/i) ||
+                                 description.match(/`?([^`\s,)]+)`?\s*\(Default\)/i);
+              const example = exampleMatch ? exampleMatch[1] : '';
+
+              queryParams.push({
+                key: param,
+                value: example,
+                description: description || undefined
+              });
+            }
+          }
+        }
+      });
+    }
   }
 
   const request: PostmanRequest = {
@@ -213,7 +324,17 @@ function parseSpecFile(filePath: string, id: string): PostmanRequest | null {
     ];
   }
 
-  if (bodyRaw) {
+  if (isMultipart && formData.length > 0) {
+    request.request.body = {
+      mode: 'formdata',
+      formdata: formData
+    };
+    // Update Content-Type to multipart/form-data for Postman UI clarity, 
+    // although Postman usually handles this automatically when mode is formdata
+    request.request.header = request.request.header.map(h => 
+      h.key === 'Content-Type' ? { ...h, value: 'multipart/form-data' } : h
+    );
+  } else if (bodyRaw) {
     request.request.body = {
       mode: 'raw',
       raw: bodyRaw,

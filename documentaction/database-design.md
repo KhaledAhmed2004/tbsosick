@@ -99,7 +99,7 @@ System er sob users (Admin ebong Doctors) er data eikhane thake.
 | `hospital` | String | ❌ | Hospital name |
 | `profilePicture` | String | ❌ | URL — default placeholder |
 | `about` | String | ❌ | Bio text |
-| `isFirstLogin` | Boolean | ❌ | Default `true` — cleared on first successful login |
+| `isOnboardingCompleted` | Boolean | ❌ | Default `false` — manually set to `true` by user at end of onboarding |
 | `deviceTokens` | Sub-doc[] | ❌ | Array of `{ token, platform, appVersion, lastSeenAt }` — upsert refreshes `lastSeenAt` instead of duplicating. *Favorites moved to a separate collection — see §7.* |
 | `googleId` | String | ❌ | OAuth ID (sparse index — allows multiple nulls) |
 | `authentication` | Object | ❌ | Hidden sub-doc: `{ isResetPassword, oneTimeCode, expireAt }` (select: false) |
@@ -893,7 +893,7 @@ Duplicate key errors still surface to the client with a clean message because `g
 No data migration needed. The unique index already exists — this change just stops doing redundant work.
 
 **Performance win**
-~30-50% fewer queries on any User `.save()` call path. Especially visible on hot paths like login (`isFirstLogin` flip), push-token registration (before the Fix 15 rebinding which already does `updateMany`), profile picture upload.
+~30-50% fewer queries on any User `.save()` call path. Especially visible on hot paths like login, push-token registration (before the Fix 15 rebinding which already does `updateMany`), profile picture upload.
 
 ---
 
@@ -1032,8 +1032,7 @@ Throws `ApiError(400)` with the list of missing fields if incomplete.
 
 **(c) Gates wired up:**
 - `createPreferenceCardInDB` — if `published: true` passed at creation, assert first.
-- `updatePreferenceCardInDB` — if update flips `published: true`, fetch merged doc and assert.
-- `updateVerificationStatusInDB` — if admin sets `VERIFIED`, assert. (`UNVERIFIED` always allowed since that's the default for incomplete cards.)
+- `updatePreferenceCardInDB` — if update flips `published: true` or if admin sets `verificationStatus: 'VERIFIED'`, fetch merged doc and assert. (`UNVERIFIED` always allowed since that's the default for incomplete cards.)
 
 **(d) Validation relaxed** — `createPreferenceCardSchema` in Zod also mirrors the schema relaxation so the API doesn't reject draft payloads at the validation layer. Max photo count (`max(10)`) added to Zod as well.
 

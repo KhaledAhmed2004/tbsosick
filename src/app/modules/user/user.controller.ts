@@ -3,19 +3,44 @@ import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { UserService } from './user.service';
-import { USER_STATUS } from '../../../enums/user';
-import { JwtPayload } from 'jsonwebtoken';
+import { USER_STATUS, USER_ROLES } from '../../../enums/user';
+import { JwtPayload, Secret } from 'jsonwebtoken';
 import { PreferenceCardService } from '../preference-card/preference-card.service';
+import { jwtHelper } from '../../../helpers/jwtHelper';
+import config from '../../../config';
 
 const createUser = catchAsync(async (req: Request, res: Response) => {
   const { ...userData } = req.body;
-  const result = await UserService.createUserToDB(userData);
+
+  // Check if requester is an admin (optional auth for this specific endpoint)
+  let isAdmin = false;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const verifiedUser = jwtHelper.verifyToken(
+        token,
+        config.jwt.jwt_secret as Secret
+      );
+      if (verifiedUser && verifiedUser.role === USER_ROLES.SUPER_ADMIN) {
+        isAdmin = true;
+      }
+    } catch (err) {
+      // Ignore token errors; fallback to public registration flow
+    }
+  }
+
+  const result = await UserService.createUserToDB(userData, isAdmin);
+
+  // Convert to object and sanitize response (remove password)
+  const responseData = result.toObject();
+  delete responseData.password;
 
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.CREATED,
     message: 'User created successfully',
-    data: result,
+    data: responseData,
   });
 });
 
@@ -211,6 +236,18 @@ const getUsersStats = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const completeOnboarding = catchAsync(async (req: Request, res: Response) => {
+  const user = req.user as JwtPayload;
+  const result = await UserService.completeOnboardingToDB(user);
+
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: 'Onboarding marked as completed',
+    data: result,
+  });
+});
+
 export const UserController = {
   createUser,
   getUserProfile,
@@ -224,4 +261,5 @@ export const UserController = {
   getUserById,
   getUserDetailsById,
   getUsersStats,
+  completeOnboarding,
 };
