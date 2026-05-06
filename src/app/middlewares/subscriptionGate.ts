@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import ApiError from '../../errors/ApiError';
 import { getUserEntitlement } from '../modules/subscription/helpers/entitlement';
 import { SUBSCRIPTION_PLAN } from '../modules/subscription/subscription.interface';
-import { USER_ROLES } from '../../../enums/user';
+import { USER_ROLES } from '../../enums/user';
 
 /**
  * Middleware to enforce subscription plan requirements.
