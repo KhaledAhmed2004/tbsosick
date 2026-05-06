@@ -30,9 +30,13 @@ Auth: Bearer {{accessToken}}
     "userId": "664a1b2c3d4e5f6a7b8c9d0e",
     "plan": "PREMIUM",
     "status": "ACTIVE",
-    "expiresAt": "2027-04-07T10:30:00.000Z"
+    "platform": "APPLE",
+    "currentPeriodEnd": "2027-04-07T10:30:00.000Z"
   }
 }
 ```
+
+> [!NOTE]
+> **Feature Gating**: User-er access permission (Premium features) determine korar jonno backend application level-e `subscriptionGate` middleware use kora hoy, ja ei current state-er upor bhitti kore access allow ba block kore.
 
 > **Edge case (Free user):** `GET /subscriptions/me` always returns a plan object — for free users it returns `plan: "FREE"` instead of 404.

@@ -6,6 +6,12 @@ export enum SUBSCRIPTION_PLAN {
   ENTERPRISE = 'ENTERPRISE',
 }
 
+export const PLAN_RANK: Record<SUBSCRIPTION_PLAN, number> = {
+  [SUBSCRIPTION_PLAN.FREE]: 0,
+  [SUBSCRIPTION_PLAN.PREMIUM]: 1,
+  [SUBSCRIPTION_PLAN.ENTERPRISE]: 2,
+};
+
 export enum SUBSCRIPTION_STATUS {
   ACTIVE = 'active',
   TRIALING = 'trialing',

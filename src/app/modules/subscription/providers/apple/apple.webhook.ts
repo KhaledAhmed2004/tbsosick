@@ -11,6 +11,8 @@ import {
 } from '../../subscription.interface';
 import { mapAppleProductToPlan } from '../../helpers/plan.mapper';
 import { AppleWebhookResult } from './apple.types';
+import { ProcessedWebhook } from '../../processed-webhook.model';
+import { PendingWebhook } from '../../pending-webhook.model';
 
 // Apply the Apple webhook state-machine to an existing subscription document.
 // Returns the update delta to persist. All logic is expressed here so the
@@ -93,6 +95,34 @@ const buildUpdatesForNotification = (
     case NotificationTypeV2.DID_CHANGE_RENEWAL_PREF: {
       // Plan change scheduled — the actual plan switch lands on DID_RENEW.
       // Nothing to persist here.
+      return updates;
+    }
+
+    case NotificationTypeV2.PRICE_INCREASE: {
+      // subtype is PENDING (user not yet consented) or ACCEPTED.
+      // If the user doesn't accept, Apple will cancel at period end —
+      // we mark autoRenewing false now as a pessimistic defensive move.
+      // When/if they accept, DID_RENEW will restore active state.
+      if (subtype !== 'ACCEPTED') {
+        updates.autoRenewing = false;
+      }
+      return updates;
+    }
+
+    case NotificationTypeV2.OFFER_REDEEMED: {
+      // User redeemed a promotional offer (free trial, discount).
+      // The transaction contains the new productId (may differ from current).
+      // Update plan + period end to reflect the offer terms.
+      updates.status = SUBSCRIPTION_STATUS.ACTIVE;
+      if (decodedTransaction.productId) {
+        updates.plan = mapAppleProductToPlan(decodedTransaction.productId);
+      }
+      if (decodedTransaction.expiresDate) {
+        updates.currentPeriodEnd = new Date(decodedTransaction.expiresDate);
+      }
+      if (decodedTransaction.transactionId) {
+        updates.appleLatestTransactionId = decodedTransaction.transactionId;
+      }
       return updates;
     }
 
@@ -179,31 +209,46 @@ export const handleAppleNotification = async (
   });
 
   if (!existing) {
-    // Notification arrived before the client's first verify call, or the
-    // subscription belongs to an account we haven't seen yet. Ignore —
-    // the client's /apple/verify call will create the record.
+    // 🟠 5 Fix: Store the orphan webhook in the queue for later re-processing.
+    await PendingWebhook.create({
+      externalPurchaseId: originalTransactionId,
+      provider: 'apple',
+      payload: signedPayload,
+    });
+
     logger.warn(
-      `Orphan Apple notification ${notificationType} for originalTransactionId=${originalTransactionId}`
+      `Queued orphan Apple notification ${notificationType} for originalTransactionId=${originalTransactionId}`
     );
     return {
       processed: false,
       notificationType,
       subtype,
-      reason: 'no_matching_subscription',
+      reason: 'queued_as_orphan',
     };
   }
 
-  // Idempotency: Apple retries notifications on failure; skip duplicates.
-  if (
-    notificationUUID &&
-    existing.metadata?.lastAppleNotificationUUID === notificationUUID
-  ) {
-    return {
-      processed: false,
-      notificationType,
-      subtype,
-      reason: 'duplicate',
-    };
+  // ✅ Idempotency — Write-first pattern eliminates TOCTOU race.
+  // Two concurrent deliveries of the same notificationUUID could both pass
+  // a findOne() check before either writes. We attempt the DB insert first
+  // and rely on the unique index to reject the second atomically.
+  if (notificationUUID) {
+    try {
+      await ProcessedWebhook.create({
+        webhookId: notificationUUID,
+        provider: 'apple',
+      });
+    } catch (err: any) {
+      if (err.code === 11000) {
+        // Duplicate key → already processed.
+        return {
+          processed: false,
+          notificationType,
+          subtype,
+          reason: 'duplicate',
+        };
+      }
+      throw err; // unexpected DB error — bubble up
+    }
   }
 
   const updates = buildUpdatesForNotification(notificationType, subtype, {
@@ -220,8 +265,9 @@ export const handleAppleNotification = async (
     lastAppleNotificationAt: new Date().toISOString(),
   };
 
-  await SubscriptionModel.findByIdAndUpdate(existing._id, {
-    $set: { ...updates, metadata: newMetadata },
+  await SubscriptionModel.upsertForUser(existing.userId, {
+    ...updates,
+    metadata: newMetadata,
   });
 
   logger.info(

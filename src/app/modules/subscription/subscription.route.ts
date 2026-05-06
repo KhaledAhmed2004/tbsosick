@@ -74,4 +74,52 @@ router.post(
   SubscriptionController.chooseFreePlanController
 );
 
+// --- Admin Routes ---
+
+router.get(
+  '/admin',
+  auth(USER_ROLES.SUPER_ADMIN),
+  SubscriptionController.getAllSubscriptionsController
+);
+
+router.get(
+  '/admin/analytics',
+  auth(USER_ROLES.SUPER_ADMIN),
+  SubscriptionController.getSubscriptionAnalyticsController
+);
+
+router.get(
+  '/admin/pending-webhooks',
+  auth(USER_ROLES.SUPER_ADMIN),
+  SubscriptionController.getPendingWebhooksController
+);
+
+router.get(
+  '/admin/:id',
+  auth(USER_ROLES.SUPER_ADMIN),
+  SubscriptionController.getSubscriptionByIdController
+);
+
+router.get(
+  '/admin/events/:userId',
+  auth(USER_ROLES.SUPER_ADMIN),
+  SubscriptionController.getSubscriptionEventsController
+);
+
+router.post(
+  '/admin/grant',
+  auth(USER_ROLES.SUPER_ADMIN),
+  validateRequest(SubscriptionValidation.adminGrantPlanSchema),
+  SubscriptionController.adminGrantPlanController
+);
+
+router.post(
+  '/admin/reset/:userId',
+  auth(USER_ROLES.SUPER_ADMIN),
+  validateRequest(SubscriptionValidation.adminResetPlanSchema),
+  SubscriptionController.adminResetPlanController
+);
+
+// --- End Admin Routes ---
+
 export const SubscriptionRoutes = router;

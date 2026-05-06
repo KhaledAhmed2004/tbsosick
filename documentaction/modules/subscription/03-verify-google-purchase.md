@@ -15,7 +15,7 @@ Auth: Bearer {{accessToken}}
 
 ### Business Logic (`verifyGooglePurchase`)
 - **State Fetching**: Google Play API (v2) theke latest subscription state fetch kora hoy.
-- **Fraud Guard**: Purchase token check kora hoy jate same purchase multiple accounts-e link na hoy.
+- **Fraud Guard**: Purchase token check kora hoy jate same purchase multiple accounts-e link na hoy. Upgrades/Downgrades-er khetre `linkedPurchaseToken` check kore existing record identify kora hoy.
 - **Status Normalization**: Google-er `subscriptionState` (e.g., Active, Grace Period) local `ACTIVE` ba `PAST_DUE` status-e convert kora hoy.
 - **Persistence**: User-er subscription record update kora hoy including `autoRenewing`, `googleOrderId`, ebong `expiryTime`.
 

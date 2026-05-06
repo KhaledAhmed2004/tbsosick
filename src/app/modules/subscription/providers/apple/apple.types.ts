@@ -24,9 +24,8 @@ export type AppleWebhookResult = {
   notificationType?: string;
   subtype?: string;
   reason?:
-    | 'duplicate'
-    | 'no_transaction_info'
-    | 'no_matching_subscription'
-    | 'unhandled_type'
-    | 'applied';
+    | 'duplicate'           // notificationUUID already in ProcessedWebhook
+    | 'no_transaction_info' // signedTransactionInfo missing or un-decodable
+    | 'queued_as_orphan'   // no matching subscription yet; stored in PendingWebhook
+    | 'applied';            // state machine ran and subscription was updated
 };

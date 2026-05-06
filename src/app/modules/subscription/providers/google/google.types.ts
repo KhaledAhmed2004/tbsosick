@@ -36,9 +36,9 @@ export type GoogleWebhookResult = {
   reason?:
     | 'duplicate'
     | 'no_subscription_notification'
-    | 'no_matching_subscription'
-    | 'unhandled_type'
+    | 'queued_as_orphan'
     | 'applied'
     | 'test'
-    | 'unauthorized';
+    | 'unauthorized'
+    | 'google_api_error';
 };
