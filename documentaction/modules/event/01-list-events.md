@@ -42,7 +42,7 @@ Pass `from` and `to` to get all events for a month. The frontend can then map th
     - End: Sets `$lte` to `23:59:59.999Z` of the resolved end date.
 4. **Status Tagging**: Dynamically adds a `tag` field for each event (`Upcoming` vs `Past`).
 5. **Sorting**: Sorts results by `startsAt` ascending.
-6. **Projection**: Returns minimal fields (`title`, `tag`, `date`, `time`, `durationInHours`, `eventType`) to keep the payload light for calendar dots.
+6. **Projection**: Returns minimal fields (`title`, `tag`, `date`, `time`, `durationInHours`, `eventType`, `location`) to keep the payload light for calendar dots.
 7. **Performance**: Uses `.lean()`.
 
 ## Responses
@@ -62,7 +62,8 @@ Pass `from` and `to` to get all events for a month. The frontend can then map th
       "date": "2026-04-10",
       "time": "08:00 AM",
       "durationInHours": 1.5,
-      "eventType": "SURGERY"
+      "eventType": "SURGERY",
+      "location": "Operating Room 4"
     }
   ]
 }

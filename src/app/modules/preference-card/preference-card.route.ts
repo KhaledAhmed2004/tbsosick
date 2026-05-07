@@ -35,6 +35,20 @@ const parseBody = (req: Request, res: Response, next: NextFunction) => {
         } else if (!Array.isArray(req.body[field])) {
           req.body[field] = [req.body[field]];
         }
+
+        // Deep parse objects within arrays if they are still strings
+        if (Array.isArray(req.body[field])) {
+          req.body[field] = req.body[field].map((item: any) => {
+            if (typeof item === 'string') {
+              try {
+                return JSON.parse(item);
+              } catch {
+                return item;
+              }
+            }
+            return item;
+          });
+        }
       }
     });
 
@@ -60,7 +74,7 @@ const libraryGate = async (req: Request, res: Response, next: NextFunction) => {
 router.post(
   '/',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM),
+  subscriptionGate(SUBSCRIPTION_PLAN.FREE),
   fileHandler([{ name: 'photoLibrary', maxCount: 5 }]),
   parseBody,
   validateRequest(PreferenceCardValidation.createPreferenceCardSchema),

@@ -54,6 +54,7 @@ Dui platform er state machine same `Subscription` doc e converge kore — same `
 ```
 src/app/modules/subscription/
 ├── README.md                           ← this file
+├── FLUTTER_IMPLEMENTATION_GUIDE.md     ← Guide for Flutter developers
 │
 ├── providers/
 │   ├── apple/
