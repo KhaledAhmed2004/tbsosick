@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN));
 
 // 2. Then check subscription (depends on req.user)
-router.use(subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM));
+// router.use(subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM));
 
 // Create event
 router.post(

@@ -166,6 +166,7 @@ const transformEventResponse = (event: any, isListView: boolean = false) => {
       time,
       durationInHours: event.durationInHours,
       eventType: event.eventType,
+      location: event.location,
     };
   }
 

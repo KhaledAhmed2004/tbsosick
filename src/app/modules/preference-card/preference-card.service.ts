@@ -12,6 +12,7 @@ import { SutureModel } from '../sutures/sutures.model';
 import PDFBuilder from '../../builder/PDFBuilder';
 import { checkCardCreationQuota } from '../subscription/helpers/quota';
 import { getUserEntitlement } from '../subscription/helpers/entitlement';
+import { Favorite } from '../favorite/favorite.model';
 
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const MAX_FAVORITES_PER_USER = 100;
