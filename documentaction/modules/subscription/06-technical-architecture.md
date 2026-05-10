@@ -60,16 +60,28 @@ Hard limits are applied based on the user's current plan:
 ### 4.3 Google Account Hold Mapping
 - **Correct Mapping**: `SUBSCRIPTION_ON_HOLD` (code 5) maps to `INACTIVE`. This ensures users lose access immediately when Google's grace period expires, adhering to Play Store policies.
 
+### 4.4 Sandbox / Test-Purchase Gate
+- **Production Servers**: reject Apple sandbox JWS (`environment === 'sandbox'`) and Google `testPurchase: true` payloads. Enforced inside `apple.verify.ts` and `google.verify.ts` based on `NODE_ENV`.
+- **Reason**: prevents license-tester or sandbox transactions from minting real PREMIUM/ENTERPRISE entitlement against a production database.
+
+### 4.5 Buyer-Account Binding
+- **Apple `appAccountToken` / Google `obfuscatedExternalAccountId`**: the mobile client sets these at purchase time to a deterministic UUIDv5 derived from `userId` (see [iap-account.ts](../../../src/app/modules/subscription/helpers/iap-account.ts)).
+- **Server enforcement**: when a token is present, it MUST equal `uuidv5(userId, IAP_NAMESPACE)`. A mismatch returns `409 Conflict` — the receipt belongs to a different account.
+- **Soft rollout**: missing tokens log a warning but verify still succeeds, allowing mobile to enable the binding without forcing a hard cutover.
+
 ---
 
 ## 5. Integration Guide
 
 ### 5.1 Protecting Routes (`subscriptionGate`)
-The middleware can be applied to any route to enforce plan hierarchy (e.g., Enterprise users can access Premium features):
+The middleware (located at `src/app/middlewares/subscriptionGate.ts`) can be applied to any route to enforce plan hierarchy (e.g., Enterprise users can access Premium features). `SUPER_ADMIN` users bypass all gates.
+
 ```typescript
-router.post('/exclusive-feature', 
-  auth(USER_ROLES.USER), 
-  subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM), 
+import subscriptionGate from '../../middlewares/subscriptionGate';
+
+router.post('/exclusive-feature',
+  auth(USER_ROLES.USER),
+  subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM),
   Controller.action
 );
 ```

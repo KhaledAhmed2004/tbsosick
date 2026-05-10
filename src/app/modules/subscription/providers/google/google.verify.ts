@@ -85,6 +85,16 @@ export const verifyGoogleSubscription = async (
   const testPurchase = Boolean((data as any).testPurchase);
   const environment: GoogleEnvironment = testPurchase ? 'sandbox' : 'production';
 
+  // Production servers must reject test purchases. Google's `testPurchase`
+  // field marks license-tester / internal-testing transactions; allowing
+  // them in production would let testers mint real entitlement.
+  if (config.node_env === 'production' && testPurchase) {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Test purchases are not accepted in production'
+    );
+  }
+
   // ✅ Google Policy: purchases must be acknowledged within 72 hours or
   // Google automatically refunds the user. We acknowledge here (after confirming
   // the subscription is valid) using the Publisher API. We do NOT block the
@@ -109,6 +119,10 @@ export const verifyGoogleSubscription = async (
     );
   }
 
+  const obfuscatedExternalAccountId =
+    (data as any).externalAccountIdentifiers?.obfuscatedExternalAccountId ||
+    undefined;
+
   return {
     purchaseToken,
     productId: resolvedProductId,
@@ -121,5 +135,6 @@ export const verifyGoogleSubscription = async (
     linkedPurchaseToken: data.linkedPurchaseToken || undefined,
     testPurchase,
     environment,
+    obfuscatedExternalAccountId,
   };
 };

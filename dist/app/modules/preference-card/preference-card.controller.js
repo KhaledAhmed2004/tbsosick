@@ -30,15 +30,13 @@ const createCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
 // Unified list/search method (Step 4 & 7)
 const getCards = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const { visibility } = req.query;
-    let result;
-    if (visibility === 'private') {
-        result = yield preference_card_service_1.PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(user.id, req.query);
+    const query = Object.assign({}, req.query);
+    // Normalize parameters to uppercase for database compatibility
+    if (typeof query.verificationStatus === 'string') {
+        query.verificationStatus = query.verificationStatus.toUpperCase();
     }
-    else {
-        // Default to public - now handles unified visibility (Public + My Private)
-        result = yield preference_card_service_1.PreferenceCardService.listPublicPreferenceCardsFromDB(user.id, req.query);
-    }
+    // Default to public - now handles unified visibility (Public + My Private)
+    const result = yield preference_card_service_1.PreferenceCardService.listPublicPreferenceCardsFromDB(user.id, query);
     const [favoriteCardIds] = yield Promise.all([
         preference_card_service_1.PreferenceCardService.getFavoriteCardIdsForUserFromDB(user.id),
     ]);
@@ -62,14 +60,19 @@ const getCards = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
-        message: `${visibility === 'private' ? 'Private' : 'Public'} preference cards fetched successfully`,
+        message: `${query.visibility === 'PRIVATE' ? 'Private' : 'Public'} preference cards fetched successfully`,
         meta: result.meta,
         data: summarized,
     });
 }));
 const listPrivateCards = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
-    const result = yield preference_card_service_1.PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(user.id, req.query);
+    const query = Object.assign({}, req.query);
+    // Normalize parameters to uppercase for database compatibility
+    if (typeof query.visibility === 'string') {
+        query.visibility = query.visibility.toUpperCase();
+    }
+    const result = yield preference_card_service_1.PreferenceCardService.listPrivatePreferenceCardsForUserFromDB(user.id, query);
     const [favoriteCardIds] = yield Promise.all([
         preference_card_service_1.PreferenceCardService.getFavoriteCardIdsForUserFromDB(user.id),
     ]);
@@ -166,30 +169,9 @@ const getStats = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'Card statistics retrieved successfully',
         data: {
-            publicCards: result.AllCardsCount,
+            publicCards: result.publicCardsCount,
             myCards: result.myCardsCount,
         },
-    });
-}));
-const getSpecialties = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const user = req.user;
-    const result = yield preference_card_service_1.PreferenceCardService.getDistinctSpecialtiesFromDB(user.id);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: 'Specialties retrieved successfully',
-        data: result,
-    });
-}));
-const updateVerificationStatus = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const user = req.user;
-    const { verificationStatus } = req.body;
-    const result = yield preference_card_service_1.PreferenceCardService.updateVerificationStatusInDB(req.params.cardId, user.role, verificationStatus);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_codes_1.StatusCodes.OK,
-        message: `Preference card status updated to ${verificationStatus}`,
-        data: result,
     });
 }));
 exports.PreferenceCardController = {
@@ -203,6 +185,4 @@ exports.PreferenceCardController = {
     favoriteCard,
     unfavoriteCard,
     getStats,
-    getSpecialties,
-    updateVerificationStatus,
 };

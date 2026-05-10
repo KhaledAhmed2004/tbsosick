@@ -123,6 +123,7 @@ const buildUpdatesForNotification = (
       if (decodedTransaction.transactionId) {
         updates.appleLatestTransactionId = decodedTransaction.transactionId;
       }
+      updates.gracePeriodEndsAt = null;
       return updates;
     }
 

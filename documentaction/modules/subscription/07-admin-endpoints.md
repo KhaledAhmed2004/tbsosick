@@ -44,10 +44,24 @@ Auth: Bearer {{adminToken}}
 ---
 
 ## 3. View Audit Events (History)
-Returns the full append-only history of a user's subscription (upgrades, renewals, cancellations).
+Returns the paginated append-only history of a user's subscription (upgrades, renewals, cancellations).
 
 ```http
-GET /subscriptions/admin/events/:userId
+GET /subscriptions/admin/events/:userId?page=1&limit=20
+Auth: Bearer {{adminToken}}
+```
+
+**Query Parameters:**
+- `page`: Page number (default: 1)
+- `limit`: Items per page (default: 10, max: 50)
+
+---
+
+## 3b. Get Subscription By ID
+Returns a single subscription document by its Mongo `_id`.
+
+```http
+GET /subscriptions/admin/:subscriptionId
 Auth: Bearer {{adminToken}}
 ```
 

@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.chooseFreePlanController = exports.googleWebhookController = exports.verifyGooglePurchaseController = exports.appleWebhookController = exports.verifyApplePurchaseController = exports.getMySubscriptionController = void 0;
+exports.adminResetPlanController = exports.adminGrantPlanController = exports.getSubscriptionEventsController = exports.getSubscriptionByIdController = exports.getPendingWebhooksController = exports.getSubscriptionAnalyticsController = exports.getAllSubscriptionsController = exports.chooseFreePlanController = exports.googleWebhookController = exports.verifyGooglePurchaseController = exports.appleWebhookController = exports.verifyApplePurchaseController = exports.getMySubscriptionController = void 0;
 const http_status_1 = __importDefault(require("http-status"));
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
@@ -60,13 +60,8 @@ exports.appleWebhookController = (0, catchAsync_1.default)((req, res) => __await
     if (!signedPayload) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'signedPayload missing from webhook body');
     }
-    const result = yield subscription_service_1.default.processAppleWebhook(signedPayload);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_1.default.OK,
-        message: 'Apple webhook processed',
-        data: result,
-    });
+    yield subscription_service_1.default.processAppleWebhook(signedPayload);
+    res.sendStatus(http_status_1.default.OK);
 }));
 exports.verifyGooglePurchaseController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.user;
@@ -88,13 +83,8 @@ exports.googleWebhookController = (0, catchAsync_1.default)((req, res) => __awai
         ? req.body
         : Buffer.from(JSON.stringify(req.body));
     const authorizationHeader = req.header('authorization');
-    const result = yield subscription_service_1.default.processGoogleWebhook(rawBody, authorizationHeader);
-    (0, sendResponse_1.default)(res, {
-        success: true,
-        statusCode: http_status_1.default.OK,
-        message: 'Google webhook processed',
-        data: result,
-    });
+    yield subscription_service_1.default.processGoogleWebhook(rawBody, authorizationHeader);
+    res.sendStatus(http_status_1.default.OK);
 }));
 exports.chooseFreePlanController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.user;
@@ -106,6 +96,75 @@ exports.chooseFreePlanController = (0, catchAsync_1.default)((req, res) => __awa
         data: result,
     });
 }));
+// --- Admin Controllers ---
+exports.getAllSubscriptionsController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield subscription_service_1.default.getAllSubscriptions(req.query);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Subscriptions retrieved successfully',
+        meta: result.meta,
+        data: result.data,
+    });
+}));
+exports.getSubscriptionAnalyticsController = (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield subscription_service_1.default.getSubscriptionAnalytics();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Subscription analytics retrieved successfully',
+        data: result,
+    });
+}));
+exports.getPendingWebhooksController = (0, catchAsync_1.default)((_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield subscription_service_1.default.getPendingWebhooks();
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Pending webhooks retrieved successfully',
+        data: result,
+    });
+}));
+exports.getSubscriptionByIdController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield subscription_service_1.default.getSubscriptionById(req.params.subscriptionId);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Subscription retrieved successfully',
+        data: result,
+    });
+}));
+exports.getSubscriptionEventsController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const result = yield subscription_service_1.default.getSubscriptionEvents(req.params.userId, req.query);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Subscription events retrieved successfully',
+        meta: result.meta,
+        data: result.data,
+    });
+}));
+exports.adminGrantPlanController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId, plan } = req.body;
+    const result = yield subscription_service_1.default.adminGrantPlan(userId, plan);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: `${plan} plan granted successfully`,
+        data: result,
+    });
+}));
+exports.adminResetPlanController = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId } = req.params;
+    const result = yield subscription_service_1.default.adminResetPlan(userId);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_1.default.OK,
+        message: 'Subscription reset to FREE successfully',
+        data: result,
+    });
+}));
+// --- End Admin Controllers ---
 const SubscriptionController = {
     getMySubscriptionController: exports.getMySubscriptionController,
     verifyApplePurchaseController: exports.verifyApplePurchaseController,
@@ -113,5 +172,12 @@ const SubscriptionController = {
     verifyGooglePurchaseController: exports.verifyGooglePurchaseController,
     googleWebhookController: exports.googleWebhookController,
     chooseFreePlanController: exports.chooseFreePlanController,
+    getAllSubscriptionsController: exports.getAllSubscriptionsController,
+    getSubscriptionAnalyticsController: exports.getSubscriptionAnalyticsController,
+    getPendingWebhooksController: exports.getPendingWebhooksController,
+    getSubscriptionByIdController: exports.getSubscriptionByIdController,
+    getSubscriptionEventsController: exports.getSubscriptionEventsController,
+    adminGrantPlanController: exports.adminGrantPlanController,
+    adminResetPlanController: exports.adminResetPlanController,
 };
 exports.default = SubscriptionController;

@@ -25,6 +25,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventService = void 0;
 const http_status_codes_1 = require("http-status-codes");
+const mongoose_1 = require("mongoose");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const event_model_1 = __importDefault(require("./event.model"));
 const NotificationBuilder_1 = require("../../builder/NotificationBuilder");
@@ -152,6 +153,7 @@ const transformEventResponse = (event, isListView = false) => {
             time,
             durationInHours: event.durationInHours,
             eventType: event.eventType,
+            location: event.location,
         };
     }
     // Handle populated preferenceCard mapping for detailed view
@@ -183,17 +185,48 @@ const createEventInDB = (userId, payload) => __awaiter(void 0, void 0, void 0, f
 });
 const listEventsForUserFromDB = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
     const filter = { userId };
-    if (query.from || query.to) {
+    const from = query.date || query.from;
+    const to = query.date || query.to;
+    if (from || to) {
         filter.startsAt = {};
-        if (query.from) {
-            filter.startsAt.$gte = new Date(`${query.from}T00:00:00.000Z`);
+        if (from) {
+            filter.startsAt.$gte = new Date(`${from}T00:00:00.000Z`);
         }
-        if (query.to) {
-            filter.startsAt.$lte = new Date(`${query.to}T23:59:59.999Z`);
+        if (to) {
+            filter.startsAt.$lte = new Date(`${to}T23:59:59.999Z`);
         }
     }
     const events = yield event_model_1.default.find(filter).sort({ startsAt: 1 }).lean();
     return events.map(event => transformEventResponse(event, true));
+});
+/**
+ * Returns an array of unique dates (YYYY-MM-DD) that have events.
+ * Used for calendar dots to keep the payload extremely lightweight.
+ */
+const getCalendarHighlightsFromDB = (userId, query) => __awaiter(void 0, void 0, void 0, function* () {
+    const filter = {
+        userId: new mongoose_1.Types.ObjectId(userId),
+        startsAt: {
+            $gte: new Date(`${query.from}T00:00:00.000Z`),
+            $lte: new Date(`${query.to}T23:59:59.999Z`),
+        },
+    };
+    const highlights = yield event_model_1.default.aggregate([
+        { $match: filter },
+        {
+            $group: {
+                _id: { $dateToString: { format: '%Y-%m-%d', date: '$startsAt' } },
+                count: { $sum: 1 },
+            },
+        },
+        { $sort: { _id: 1 } },
+    ]);
+    // Return a map of dates to counts: { "2026-05-06": 2 }
+    const result = {};
+    highlights.forEach(h => {
+        result[h._id] = h.count;
+    });
+    return result;
 });
 const getEventByIdFromDB = (id, requester) => __awaiter(void 0, void 0, void 0, function* () {
     const event = yield event_model_1.default.findById(id)
@@ -259,6 +292,7 @@ const deleteEventFromDB = (id, requester) => __awaiter(void 0, void 0, void 0, f
 exports.EventService = {
     createEventInDB,
     listEventsForUserFromDB,
+    getCalendarHighlightsFromDB,
     getEventByIdFromDB,
     updateEventInDB,
     deleteEventFromDB,

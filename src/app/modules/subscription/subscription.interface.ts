@@ -39,7 +39,7 @@ export type ISubscription = {
 
   platform?: SubscriptionPlatformType;
   environment?: SubscriptionEnvironmentType;
-  productId?: string;
+  productId?: string | null;
   autoRenewing?: boolean;
 
   // Apple-specific

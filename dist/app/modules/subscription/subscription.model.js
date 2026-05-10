@@ -83,31 +83,80 @@ subscriptionSchema.statics.findByUser = function (userId) {
  */
 subscriptionSchema.statics.upsertForUser = function (userId, payload) {
     return __awaiter(this, void 0, void 0, function* () {
-        const before = yield this.findOne({ userId }).lean();
-        const next = yield this.findOneAndUpdate({ userId }, { $set: Object.assign(Object.assign({}, payload), { userId }) }, { new: true, upsert: true });
+        var _a, _b;
+        // Atomic write returning the BEFORE state (null on insert). We compute the
+        // AFTER state deterministically from before+payload instead of issuing a
+        // second findOne — that pattern leaves a window where a concurrent write
+        // could leak into the diff.
+        const before = yield this.findOneAndUpdate({ userId }, { $set: Object.assign(Object.assign({}, payload), { userId }) }, { new: false, upsert: true, setDefaultsOnInsert: true });
+        // Insert path: refetch once to get the new _id; before-state is empty so
+        // no diff race exists. Update path: simulate the merge that $set just did.
+        const next = before
+            ? Object.assign(before.toObject(), payload)
+            : (yield this.findOne({ userId }));
+        if (!next) {
+            throw new Error('Failed to retrieve subscription after upsert');
+        }
         // Diff and log only the meaningful transitions.
         const beforePlan = before === null || before === void 0 ? void 0 : before.plan;
         const afterPlan = next.plan;
         const beforeStatus = before === null || before === void 0 ? void 0 : before.status;
         const afterStatus = next.status;
-        const events = [];
+        const beforeEnd = before === null || before === void 0 ? void 0 : before.currentPeriodEnd;
+        const afterEnd = next.currentPeriodEnd;
+        const eventTypes = [];
         if (!before) {
-            events.push({ eventType: 'CREATED' });
+            eventTypes.push('CREATED');
         }
         else {
+            // 1. Detect Plan Changes (Upgrade/Downgrade)
             if (beforePlan !== afterPlan) {
-                events.push({ eventType: 'PLAN_CHANGED' });
+                const rankBefore = (_a = subscription_interface_1.PLAN_RANK[beforePlan]) !== null && _a !== void 0 ? _a : 0;
+                const rankAfter = (_b = subscription_interface_1.PLAN_RANK[afterPlan]) !== null && _b !== void 0 ? _b : 0;
+                if (rankAfter > rankBefore) {
+                    eventTypes.push('UPGRADED');
+                }
+                else if (rankAfter < rankBefore) {
+                    eventTypes.push('DOWNGRADED');
+                }
+                else {
+                    eventTypes.push('PLAN_CHANGED');
+                }
             }
+            // 2. Detect Renewals (Period extended without plan change)
+            if (beforePlan === afterPlan &&
+                beforeEnd &&
+                afterEnd &&
+                afterEnd.getTime() > beforeEnd.getTime() &&
+                afterStatus === subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE) {
+                eventTypes.push('RENEWED');
+            }
+            // 3. Detect Status Transitions
             if (beforeStatus !== afterStatus) {
-                events.push({ eventType: 'STATUS_CHANGED' });
+                if (afterStatus === subscription_interface_1.SUBSCRIPTION_STATUS.CANCELED) {
+                    eventTypes.push('CANCELED');
+                }
+                else if (afterStatus === subscription_interface_1.SUBSCRIPTION_STATUS.INACTIVE) {
+                    eventTypes.push('EXPIRED');
+                }
+                else if (afterStatus === subscription_interface_1.SUBSCRIPTION_STATUS.PAST_DUE) {
+                    eventTypes.push('GRACE_STARTED');
+                }
+                else if (beforeStatus === subscription_interface_1.SUBSCRIPTION_STATUS.PAST_DUE &&
+                    afterStatus === subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE) {
+                    eventTypes.push('GRACE_RESOLVED');
+                }
+                else {
+                    eventTypes.push('STATUS_CHANGED');
+                }
             }
         }
-        for (const evt of events) {
+        for (const type of eventTypes) {
             try {
                 yield subscription_event_model_1.SubscriptionEvent.create({
                     userId,
                     subscriptionId: next._id,
-                    eventType: evt.eventType,
+                    eventType: type,
                     previousPlan: beforePlan,
                     nextPlan: afterPlan,
                     previousStatus: beforeStatus,
@@ -122,7 +171,6 @@ subscriptionSchema.statics.upsertForUser = function (userId, payload) {
                 });
             }
             catch (err) {
-                // Audit writes must never fail the primary subscription update.
                 console.error('Failed to write SubscriptionEvent:', err);
             }
         }

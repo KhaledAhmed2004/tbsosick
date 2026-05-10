@@ -18,8 +18,8 @@
 | 04 | POST | `/subscriptions/choose/free` | Bearer | [04-set-free-plan.md](./04-set-free-plan.md) | [App Profile](../../app-screens/06-profile.md) — Downgrade flow |
 | 05 | POST | `/subscriptions/.../webhook` | Public | [05-platform-webhooks.md](./05-platform-webhooks.md) | Apple/Google Store Notifications |
 | 06 | N/A | `Internal Architecture` | Docs | [06-technical-architecture.md](./06-technical-architecture.md) | System Design & Reliability |
-| 07 | GET/POST | `/admin/subscriptions/...` | Admin | [07-admin-endpoints.md](./07-admin-endpoints.md) | Admin Dashboard |
-| 08 | N/A | `subscriptionGate` | Middleware | [entitlement.ts (Helper)](file:///src/app/modules/subscription/helpers/entitlement.ts) | Feature Gating across modules |
+| 07 | GET/POST | `/subscriptions/admin/...` | Admin | [07-admin-endpoints.md](./07-admin-endpoints.md) | Admin Dashboard |
+| 08 | N/A | `subscriptionGate` | Middleware | [subscriptionGate.ts](../../../src/app/middlewares/subscriptionGate.ts) | Feature Gating across modules |
 
 ---
 

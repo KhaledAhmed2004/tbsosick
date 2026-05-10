@@ -34,6 +34,11 @@ const passwordResetRateLimit = (0, rateLimit_1.rateLimitMiddleware)({
 router.post('/login', loginRateLimit, (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createLoginZodSchema), auth_controller_1.AuthController.loginUser);
 // Social login (Google / Apple ID token verification)
 router.post('/social-login', socialLoginRateLimit, (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createSocialLoginZodSchema), auth_controller_1.AuthController.socialLogin);
+// Apple Sign In Callback (for Android fallback/Web OAuth flow)
+// Apple uses POST to the redirect URI
+router.post('/apple/callback', auth_controller_1.AuthController.appleCallback);
+// Also allow GET for manual testing/debugging
+router.get('/apple/callback', auth_controller_1.AuthController.appleCallback);
 // User logout — invalidate active sessions/tokens
 router.post('/logout', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER), auth_controller_1.AuthController.logoutUser);
 // Password reset request — send OTP via email
@@ -44,8 +49,8 @@ router.post('/verify-otp', passwordResetRateLimit, (0, validateRequest_1.default
 router.post('/reset-password', passwordResetRateLimit, (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createResetPasswordZodSchema), auth_controller_1.AuthController.resetPassword);
 // Change password — authenticated user provides old/new password
 router.post('/change-password', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER), (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createChangePasswordZodSchema), auth_controller_1.AuthController.changePassword);
-// Resend verification email
-router.post('/resend-verify-email', auth_controller_1.AuthController.resendVerifyEmail);
+// Resend verification OTP
+router.post('/resend-otp', auth_controller_1.AuthController.resendVerifyEmail);
 // Refresh token — renew access token
 router.post('/refresh-token', (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createRefreshTokenZodSchema), auth_controller_1.AuthController.refreshToken);
 exports.AuthRoutes = router;

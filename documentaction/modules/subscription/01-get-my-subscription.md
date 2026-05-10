@@ -13,9 +13,10 @@ Auth: Bearer {{accessToken}}
 - **Service**: [subscription.service.ts](file:///src/app/modules/subscription/subscription.service.ts) — `getMySubscription`
 
 ### Business Logic (`getMySubscription`)
-- Prothome User-er `userId` diye existing subscription check kora hoy.
-- Jodi database-e kono record na thake, tobe automatic ekta `FREE` plan logic upsert kora hoy (idempotent creation).
-- Ete kore client-side e sobshomoy ekta valid plan object pawa nishchit kora hoy (never returns 404 for valid users).
+- Prothome User-er `userId` diye existing subscription document fetch kora hoy (`metadata` field excluded — server-internal).
+- Jodi database-e kono record na thake, tobe **read-only** synthetic FREE entitlement object return kora hoy — kono row insert hoy na. Industry rule: GET handlers never mutate state.
+- Subscription row lazy-ly create hoy first paid action-er somoy (`/apple/verify`, `/google/verify`, ba `/choose/free`) — `getMySubscription` ekhon purely read-only.
+- Client-side e sobshomoy ekta valid plan object pawa nishchit kora hoy (never returns 404).
 
 ## Responses
 

@@ -32,7 +32,16 @@ const getUserEntitlement = (userId) => __awaiter(void 0, void 0, void 0, functio
             isEnterprise: false,
         };
     }
-    const isActive = ACTIVE_STATUSES.has(sub.status);
+    // Temporal consistency check: if the period end is in the past but status
+    // is still ACTIVE, a lifecycle webhook (EXPIRED / GRACE_PERIOD_EXPIRED) was
+    // missed — server downtime, Apple/Google outage, etc. We treat the
+    // subscription as effectively expired to prevent indefinite free access.
+    // PAST_DUE is intentionally exempt: grace period expiry has its own
+    // GRACE_PERIOD_EXPIRED event and the user retains access during retries.
+    const isExpiredByTime = sub.status === subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE &&
+        sub.currentPeriodEnd != null &&
+        sub.currentPeriodEnd < new Date();
+    const isActive = !isExpiredByTime && ACTIVE_STATUSES.has(sub.status);
     const hasPaidPlan = sub.plan !== subscription_interface_1.SUBSCRIPTION_PLAN.FREE;
     return {
         plan: sub.plan,

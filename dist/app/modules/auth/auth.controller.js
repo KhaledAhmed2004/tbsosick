@@ -65,7 +65,7 @@ const loginUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'User logged in successfully.',
-        data: result.tokens,
+        data: Object.assign(Object.assign({}, result.tokens), { isOnboardingCompleted: result.isOnboardingCompleted }),
     });
 }));
 const logoutUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -97,7 +97,14 @@ const forgetPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
     });
 }));
 const resetPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const token = req.headers.authorization;
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        throw new ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Reset token is required');
+    }
+    // Handle both raw token and Bearer token formats
+    const token = authHeader.startsWith('Bearer ')
+        ? authHeader.split(' ')[1]
+        : authHeader;
     const resetData = __rest(req.body, []);
     const result = yield auth_service_1.AuthService.resetPasswordToDB(token, resetData);
     (0, sendResponse_1.default)(res, {
@@ -166,8 +173,52 @@ const socialLogin = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'User logged in successfully.',
-        data: result.tokens,
+        data: Object.assign(Object.assign({}, result.tokens), { isOnboardingCompleted: result.isOnboardingCompleted }),
     });
+}));
+/**
+ * Apple Sign In Callback for Android fallback (Web OAuth flow)
+ *
+ * This endpoint receives a POST request from Apple after a user completes
+ * the sign-in flow in the browser (on Android). It must return an HTML
+ * page that performs a redirect back to the app using an Intent.
+ *
+ * @see https://pub.dev/packages/sign_in_with_apple#android
+ */
+const appleCallback = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // Apple sends data in req.body via POST. Manual testing might use req.query via GET.
+    const { code, id_token, state, user } = Object.assign(Object.assign({}, req.query), req.body);
+    // The sign_in_with_apple package expects the redirect to follow this pattern:
+    // intent://callback?code=${code}&id_token=${id_token}&state=${state}&user=${user}#Intent;package=${android_package_name};scheme=signinwithapple;end;
+    const androidPackageName = 'com.tbsosick.smrtscrub';
+    const redirectUrl = `intent://callback?code=${code}&id_token=${id_token}&state=${state}${user ? `&user=${encodeURIComponent(user)}` : ''}#Intent;package=${androidPackageName};scheme=signinwithapple;end;`;
+    res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>Redirecting to App...</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f7; color: #333; }
+          .loader { border: 4px solid #f3f3f3; border-top: 4px solid #000; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          h1 { font-size: 1.2rem; margin: 0; }
+          p { color: #666; font-size: 0.9rem; margin-top: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="loader"></div>
+        <h1>Authenticating...</h1>
+        <p>Returning you to the SMRTSCRUB app</p>
+        <script>
+          // Small delay to ensure the UI is visible before redirecting
+          setTimeout(() => {
+            window.location.href = "${redirectUrl}";
+          }, 500);
+        </script>
+      </body>
+    </html>
+  `);
 }));
 exports.AuthController = {
     verifyEmail,
@@ -179,4 +230,5 @@ exports.AuthController = {
     resendVerifyEmail,
     socialLogin,
     refreshToken,
+    appleCallback,
 };
