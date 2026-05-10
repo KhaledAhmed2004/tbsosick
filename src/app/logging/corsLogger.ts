@@ -31,6 +31,8 @@ export const allowedOrigins: string[] = [
   'http://127.0.0.1:5003',
   'http://localhost:5005',
   'http://127.0.0.1:5005',
+  // Apple Sign In (Android callback origin)
+  'https://appleid.apple.com',
 ];
 
 // Enable with env CORS_DEBUG=true or CORS_DEBUG=1
