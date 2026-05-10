@@ -196,38 +196,89 @@ const appleCallback = catchAsync(async (req: Request, res: Response) => {
   // Apple sends data in req.body via POST. Manual testing might use req.query via GET.
   const { code, id_token, state, user } = { ...req.query, ...req.body } as any;
 
-  // The sign_in_with_apple package expects the redirect to follow this pattern:
-  // intent://callback?code=${code}&id_token=${id_token}&state=${state}&user=${user}#Intent;package=${android_package_name};scheme=signinwithapple;end;
+  // Comprehensive debug logging
+  console.log('🍎 Apple Callback Details:', {
+    method: req.method,
+    url: req.originalUrl,
+    contentType: req.headers['content-type'],
+    receivedKeys: Object.keys(req.body || {}),
+    hasCode: !!code,
+    hasIdToken: !!id_token,
+    state: state || 'MISSING',
+    hasUser: !!user,
+  });
 
-  const androidPackageName = 'com.tbsosick.smrtscrub';
+  // Use the package name from config, fallback to a sensible default
+  const androidPackageName = config.googlePlay.packageName;
+  
+  if (!androidPackageName) {
+    console.warn('⚠️ WARNING: GOOGLE_PLAY_PACKAGE_NAME is not set in .env! Intent redirect may fail.');
+  }
 
-  const redirectUrl = `intent://callback?code=${code}&id_token=${id_token}&state=${state}${
+  // The state is REQUIRED by the Flutter sign_in_with_apple package.
+  // If it's missing from Apple, we have a problem.
+  const finalState = state || '';
+
+  const redirectUrl = `intent://callback?code=${code || ''}&id_token=${id_token || ''}&state=${finalState}${
     user ? `&user=${encodeURIComponent(user)}` : ''
-  }#Intent;package=${androidPackageName};scheme=signinwithapple;end;`;
+  }#Intent;package=${androidPackageName || 'com.tbsosick.smrtscrub'};scheme=signinwithapple;end;`;
+
+  console.log('🍎 Redirecting to App with URL:', redirectUrl);
 
   res.send(`
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Redirecting to App...</title>
+        <title>Authenticating...</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f7; color: #333; }
-          .loader { border: 4px solid #f3f3f3; border-top: 4px solid #000; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin-bottom: 20px; }
+          body { font-family: -apple-system, system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #ffffff; padding: 20px; box-sizing: border-box; }
+          .container { text-align: center; max-width: 400px; width: 100%; }
+          .loader { border: 3px solid #f3f3f3; border-top: 3px solid #000; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; display: inline-block; margin-bottom: 20px; }
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-          h1 { font-size: 1.2rem; margin: 0; }
-          p { color: #666; font-size: 0.9rem; margin-top: 10px; }
+          .button { margin-top: 20px; padding: 14px 28px; background-color: #000; color: #fff; text-decoration: none; border-radius: 12px; display: none; font-weight: bold; font-size: 16px; border: none; cursor: pointer; }
+          h2 { margin: 10px 0; font-size: 22px; }
+          p { color: #666; margin-top: 10px; line-height: 1.5; }
+          .debug-info { margin-top: 30px; font-size: 12px; color: #ccc; word-break: break-all; text-align: left; background: #f9f9f9; padding: 10px; border-radius: 8px; display: none; }
+          .warning { color: #d9534f; font-weight: bold; margin-top: 10px; display: ${!state ? 'block' : 'none'}; }
         </style>
       </head>
       <body>
-        <div class="loader"></div>
-        <h1>Authenticating...</h1>
-        <p>Returning you to the SMRTSCRUB app</p>
+        <div class="container">
+          <div class="loader"></div>
+          <h2>Almost there!</h2>
+          <p>We're taking you back to the app to complete your login.</p>
+          <p id="status-text">Redirecting...</p>
+          
+          <div class="warning">
+            ⚠️ Warning: "state" parameter is missing from Apple. Login might fail.
+          </div>
+
+          <a id="manual-link" href="${redirectUrl}" class="button">Open SMRTSCRUB App</a>
+          
+          <div id="debug-info" class="debug-info">
+            <strong>Debug URL:</strong><br>
+            ${redirectUrl}<br><br>
+            <strong>Package Name:</strong> ${androidPackageName || 'NOT SET'}<br>
+            <strong>State:</strong> ${state || 'UNDEFINED'}
+          </div>
+        </div>
         <script>
-          // Small delay to ensure the UI is visible before redirecting
-          setTimeout(() => {
-            window.location.href = "${redirectUrl}";
-          }, 500);
+          // 1. Try immediate redirect
+          const redirectUrl = "${redirectUrl}";
+          window.location.href = redirectUrl;
+          
+          // 2. Fallback logic
+          setTimeout(function() {
+            document.getElementById('manual-link').style.display = 'inline-block';
+            document.querySelector('.loader').style.display = 'none';
+            document.getElementById('status-text').innerText = "If the app didn't open automatically, please click the button below.";
+            
+            // Show debug info after 3 seconds if still here
+            setTimeout(function() {
+              document.getElementById('debug-info').style.display = 'block';
+            }, 1000);
+          }, 2000);
         </script>
       </body>
     </html>

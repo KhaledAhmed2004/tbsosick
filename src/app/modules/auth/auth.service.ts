@@ -367,6 +367,12 @@ const resendVerifyEmailToDB = async (email: string) => {
   return sendVerificationOTP(email);
 };
 
+// All valid Apple client IDs — Bundle ID for native iOS, Service ID for Android fallback.
+const appleAudience = [
+  config.apple_client_id, // Usually the Service ID for Android
+  config.apple.bundleId,  // Bundle ID for iOS
+].filter(Boolean);
+
 // Social login (Google / Apple ID token verification)
 const socialLoginToDB = async (payload: ISocialLogin) => {
   const { provider, idToken, nonce, deviceToken, platform, appVersion } = payload;
@@ -418,7 +424,7 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
     }
 
     const applePayload = await appleSignin.verifyIdToken(idToken, {
-      audience: config.apple_client_id,
+      audience: appleAudience,
       ignoreExpiration: false,
     });
     if (!applePayload.sub) {
