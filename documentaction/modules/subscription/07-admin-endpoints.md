@@ -14,10 +14,38 @@ Auth: Bearer {{adminToken}}
 
 **Query Parameters:**
 - `page`: Page number (default: 1)
-- `limit`: Items per page (default: 10)
+- `limit`: Items per page (default: 10, max: 50 — clamped by `QueryBuilder`)
 - `plan`: Filter by `FREE`, `PREMIUM`, or `ENTERPRISE`
-- `status`: Filter by `active`, `past_due`, etc.
+- `status`: Filter by `active`, `past_due`, `canceled`, `inactive`, `trialing`
 - `platform`: Filter by `apple`, `google`, or `admin`
+- `searchTerm`, `sort`, `fields`: standard `QueryBuilder` knobs
+
+**Response shape** — `{ data, meta }` (⚠ changed from previous `{ data, total }`):
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Subscriptions retrieved successfully",
+  "meta": {
+    "total": 142,
+    "limit": 10,
+    "page": 1,
+    "totalPages": 15,
+    "hasNext": true,
+    "hasPrev": false
+  },
+  "data": [
+    {
+      "_id": "...",
+      "userId": { "_id": "...", "fullName": "John Doe", "email": "john@example.com" },
+      "plan": "PREMIUM",
+      "status": "active",
+      "platform": "apple",
+      "currentPeriodEnd": "2027-04-07T10:30:00.000Z"
+    }
+  ]
+}
+```
 
 ---
 
@@ -44,7 +72,7 @@ Auth: Bearer {{adminToken}}
 ---
 
 ## 3. View Audit Events (History)
-Returns the paginated append-only history of a user's subscription (upgrades, renewals, cancellations).
+Returns the paginated append-only history of a user's subscription (upgrades, renewals, cancellations). Sort is fixed to newest-first (`occurredAt: -1`); `?sort=` is ignored.
 
 ```http
 GET /subscriptions/admin/events/:userId?page=1&limit=20
@@ -54,6 +82,39 @@ Auth: Bearer {{adminToken}}
 **Query Parameters:**
 - `page`: Page number (default: 1)
 - `limit`: Items per page (default: 10, max: 50)
+
+**Response shape** — `{ data, meta }` (⚠ changed from previous raw `ISubscriptionEvent[]` array):
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Subscription events retrieved successfully",
+  "meta": {
+    "total": 8,
+    "limit": 20,
+    "page": 1,
+    "totalPages": 1,
+    "hasNext": false,
+    "hasPrev": false
+  },
+  "data": [
+    {
+      "_id": "...",
+      "userId": "...",
+      "subscriptionId": "...",
+      "eventType": "UPGRADED",
+      "previousPlan": "FREE",
+      "nextPlan": "PREMIUM",
+      "previousStatus": "active",
+      "nextStatus": "active",
+      "platform": "apple",
+      "productId": "premium_monthly",
+      "externalTransactionId": "2000000123456789",
+      "occurredAt": "2026-04-07T10:30:00.000Z"
+    }
+  ]
+}
+```
 
 ---
 

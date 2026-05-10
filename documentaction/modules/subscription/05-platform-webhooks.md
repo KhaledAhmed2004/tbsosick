@@ -18,3 +18,30 @@
 
 ## Response Requirement
 - **200 OK**: Webhook processing successfully receive hole (even if no-op or duplicate) system plain `200 OK` status pathay without any internal result data.
+
+---
+
+## ⚠️ Deploy / Migration Note — `ProcessedWebhook` Index Cleanup
+
+The idempotency uniqueness was changed from a single-column index on `webhookId` to a compound index on `(provider, webhookId)`. **Mongoose does not auto-drop the old single-column unique index** — it remains in production MongoDB after deploy alongside the new compound, leaving stale metadata.
+
+### One-time cleanup (run once, post-deploy)
+
+PowerShell (mongosh):
+
+```powershell
+mongosh "$env:DATABASE_URL" --eval "db.processedwebhooks.dropIndex('webhookId_1')"
+```
+
+Or interactive shell:
+
+```javascript
+use <your-db-name>
+db.processedwebhooks.dropIndex('webhookId_1')
+db.processedwebhooks.getIndexes()  // verify only `_id_`, `processedAt_1`, and `provider_1_webhookId_1` remain
+```
+
+### Why this is safe
+- The new compound `(provider, webhookId)` already enforces uniqueness for every (provider, id) tuple — duplicate-detection is unaffected during the gap.
+- TTL on `processedAt` (30 days) is preserved.
+- Skipping this step is not a correctness bug — just an operational lint that confuses future schema diffs.

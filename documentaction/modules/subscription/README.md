@@ -10,8 +10,11 @@
 
 ## Endpoints Index
 
+> **New here?** Read [00-flows.md](./00-flows.md) first — it covers end-to-end API flow diagrams, the mental model, and how cross-cutting concerns (idempotency, orphan queue, audit log, fraud guards) plug in.
+
 | # | Method | Endpoint | Auth | Documentation | Used By |
 |---|---|---|---|---|---|
+| 00 | N/A | *Read-this-first* | Docs | [00-flows.md](./00-flows.md) | End-to-end API flow diagrams |
 | 01 | GET | `/subscriptions/me` | Bearer | [01-get-my-subscription.md](./01-get-my-subscription.md) | [App Profile](../../app-screens/06-profile.md) |
 | 02 | POST | `/subscriptions/apple/verify` | Bearer | [02-verify-apple-purchase.md](./02-verify-apple-purchase.md) | [App Profile](../../app-screens/06-profile.md) — Upgrade flow |
 | 03 | POST | `/subscriptions/google/verify` | Bearer | [03-verify-google-purchase.md](./03-verify-google-purchase.md) | [App Profile](../../app-screens/06-profile.md) — Upgrade flow |
