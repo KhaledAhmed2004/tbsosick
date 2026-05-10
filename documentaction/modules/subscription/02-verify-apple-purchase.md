@@ -41,10 +41,27 @@ StoreKit 2 purchase flow-e `Product.PurchaseOption.appAccountToken(_:)` use kort
   "statusCode": 200,
   "message": "Apple subscription verified successfully",
   "data": {
+    "_id": "...",
+    "userId": "...",
     "plan": "PREMIUM",
-    "status": "ACTIVE",
-    "platform": "APPLE",
+    "status": "active",
+    "platform": "apple",
+    "environment": "production",
+    "productId": "premium_monthly",
+    "appleOriginalTransactionId": "2000000123456789",
+    "appleLatestTransactionId": "2000000123456790",
+    "startedAt": "2026-04-28T10:30:00.000Z",
     "currentPeriodEnd": "2027-04-28T10:30:00.000Z"
   }
 }
 ```
+
+## Error Responses
+
+| Status | Trigger |
+|---|---|
+| `400` | Invalid JWS, expired/revoked transaction, bundle ID mismatch, unknown `productId`, **`isUpgraded === true`** (re-verify latest), **sandbox transaction in production** |
+| `401` | Missing/invalid bearer JWT |
+| `409` | Transaction already linked to another user account, **OR `appAccountToken` does not match `uuidv5(userId, IAP_NAMESPACE)`** |
+| `429` | Rate limit exceeded (30 req/min per user) |
+| `500` | Apple credentials misconfigured (root certs, .p8 key, issuer ID) |
