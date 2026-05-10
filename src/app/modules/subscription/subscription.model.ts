@@ -89,17 +89,22 @@ subscriptionSchema.statics.upsertForUser = async function (
   userId: Types.ObjectId,
   payload: Partial<ISubscription>
 ) {
-  // 1. Atomically perform the update and capture the state BEFORE the change.
-  // { new: false } returns the document as it was before the update.
-  // If the document is newly inserted via upsert, `before` will be null.
+  // Atomic write returning the BEFORE state (null on insert). We compute the
+  // AFTER state deterministically from before+payload instead of issuing a
+  // second findOne — that pattern leaves a window where a concurrent write
+  // could leak into the diff.
   const before = await this.findOneAndUpdate(
     { userId },
     { $set: { ...payload, userId } },
     { new: false, upsert: true, setDefaultsOnInsert: true }
   );
 
-  // 2. Fetch the state AFTER the change to return to the caller and log the diff.
-  const next = await this.findOne({ userId });
+  // Insert path: refetch once to get the new _id; before-state is empty so
+  // no diff race exists. Update path: simulate the merge that $set just did.
+  const next: ISubscription = before
+    ? Object.assign(before.toObject() as ISubscription, payload)
+    : ((await this.findOne({ userId })) as ISubscription);
+
   if (!next) {
     throw new Error('Failed to retrieve subscription after upsert');
   }

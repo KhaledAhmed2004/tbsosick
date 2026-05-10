@@ -95,11 +95,11 @@ app.options('*', (0, cors_1.default)({
 // Apple Server Notifications V2 require the raw request body so the JWS
 // signature can be verified against the original bytes. This MUST be
 // registered before the generic express.json() middleware below.
-app.use('/api/v1/subscription/apple/webhook', express_1.default.raw({ type: 'application/json' }));
+app.use('/api/v1/subscriptions/apple/webhook', express_1.default.raw({ type: 'application/json' }));
 // Google Play RTDN webhook (Pub/Sub push) — keep raw bytes so the
 // service can decode the base64 message.data exactly as sent. Must be
 // registered before express.json() below.
-app.use('/api/v1/subscription/google/webhook', express_1.default.raw({ type: 'application/json' }));
+app.use('/api/v1/subscriptions/google/webhook', express_1.default.raw({ type: 'application/json' }));
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
 // Cookie parser (for reading refresh tokens from cookies)

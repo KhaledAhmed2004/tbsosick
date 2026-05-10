@@ -94,16 +94,19 @@ router.get(
   SubscriptionController.getPendingWebhooksController
 );
 
-router.get(
-  '/admin/:id',
-  auth(USER_ROLES.SUPER_ADMIN),
-  SubscriptionController.getSubscriptionByIdController
-);
-
+// Narrower path declared first per project rule: fixed paths before param paths.
 router.get(
   '/admin/events/:userId',
   auth(USER_ROLES.SUPER_ADMIN),
+  validateRequest(SubscriptionValidation.adminEventsSchema),
   SubscriptionController.getSubscriptionEventsController
+);
+
+router.get(
+  '/admin/:subscriptionId',
+  auth(USER_ROLES.SUPER_ADMIN),
+  validateRequest(SubscriptionValidation.adminSubscriptionIdSchema),
+  SubscriptionController.getSubscriptionByIdController
 );
 
 router.post(

@@ -78,6 +78,18 @@ export const verifyAppleTransaction = async (
     );
   }
 
+  const environment = mapEnvironment(decoded.environment);
+
+  // Production servers must reject sandbox transactions. Apple's verifier
+  // accepts both, so the gate is enforced here. In non-production
+  // environments, sandbox is allowed so QA can exercise the flow.
+  if (config.node_env === 'production' && environment === 'sandbox') {
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Sandbox transactions are not accepted in production'
+    );
+  }
+
   return {
     transactionId: decoded.transactionId,
     originalTransactionId: decoded.originalTransactionId,
@@ -90,7 +102,7 @@ export const verifyAppleTransaction = async (
       typeof decoded.revocationReason === 'number'
         ? decoded.revocationReason
         : undefined,
-    environment: mapEnvironment(decoded.environment),
+    environment,
     appAccountToken: decoded.appAccountToken,
     isUpgraded: decoded.isUpgraded,
   };

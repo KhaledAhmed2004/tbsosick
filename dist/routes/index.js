@@ -14,6 +14,7 @@ const admin_route_1 = require("../app/modules/admin/admin.route");
 const supplies_route_1 = require("../app/modules/supplies/supplies.route");
 const sutures_route_1 = require("../app/modules/sutures/sutures.route");
 const legal_route_1 = require("../app/modules/legal/legal.route");
+const specialty_route_1 = require("../app/modules/specialty/specialty.route");
 const router = express_1.default.Router();
 const apiRoutes = [
     {
@@ -29,7 +30,7 @@ const apiRoutes = [
         route: notification_routes_1.NotificationRoutes,
     },
     {
-        path: '/subscription',
+        path: '/subscriptions',
         route: subscription_route_1.SubscriptionRoutes,
     },
     {
@@ -41,7 +42,7 @@ const apiRoutes = [
         route: preference_card_route_1.PreferenceCardRoutes,
     },
     {
-        path: '/dashboard',
+        path: '/admin',
         route: admin_route_1.AdminRoutes,
     },
     {
@@ -55,6 +56,10 @@ const apiRoutes = [
     {
         path: '/legal',
         route: legal_route_1.LegalRoutes,
+    },
+    {
+        path: '/specialties',
+        route: specialty_route_1.SpecialtyRoutes,
     },
 ];
 apiRoutes.forEach(route => router.use(route.path, route.route));

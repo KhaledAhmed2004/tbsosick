@@ -520,7 +520,7 @@ Get the current user's subscription.
 }
 ```
 
-If user has no subscription yet, a FREE/active default is created and returned.
+If user has no subscription yet, a synthetic FREE/active object is **returned without writing** to the database (read-only — GET handlers don't mutate state). The row is materialized lazily on the first paid action (`/apple/verify`, `/google/verify`, `/choose/free`). The server-internal `metadata` field is omitted from this response.
 
 ---
 
@@ -559,11 +559,13 @@ Verify an Apple IAP initial purchase. Called by the Flutter client after StoreKi
 ```
 
 **Error responses:**
-- `400` — Invalid JWS, missing fields, expired transaction, revoked, bundle mismatch, unknown productId
+- `400` — Invalid JWS, missing fields, expired transaction, revoked, bundle mismatch, unknown productId, **sandbox transaction received in production**
 - `401` — Missing/invalid JWT
-- `409` — Transaction already linked to another user account (fraud prevention)
+- `409` — Transaction already linked to another user account (fraud prevention) **or `appAccountToken` doesn't match the authenticated user (receipt-theft defense)**
 - `429` — Rate limit exceeded
 - `500` — Apple credentials not configured (on first call when certs/keys missing)
+
+> **iOS client requirement**: pass `Product.PurchaseOption.appAccountToken(uuidv5(userId, IAP_NAMESPACE))` when starting a StoreKit 2 purchase. The namespace constant is in [helpers/iap-account.ts](helpers/iap-account.ts). When present, the server verifies it matches the authenticated user; mismatch returns 409. Missing token logs a server-side warning but is currently accepted (soft-rollout).
 
 ---
 
@@ -637,11 +639,13 @@ Verify a Google Play subscription purchase. Called by the Android client after `
 ```
 
 **Error responses:**
-- `400` — Google API error, expired subscription, inactive state, unknown productId
+- `400` — Google API error, expired subscription, inactive state, unknown productId, **`testPurchase: true` received in production**
 - `401` — Missing/invalid JWT
-- `409` — Purchase token already linked to another user
+- `409` — Purchase token already linked to another user **or `obfuscatedAccountId` doesn't match the authenticated user (receipt-theft defense)**
 - `429` — Rate limit exceeded
 - `500` — Google credentials not configured
+
+> **Android client requirement**: call `BillingFlowParams.Builder().setObfuscatedAccountId(uuidv5(userId, IAP_NAMESPACE))` when launching the billing flow. The namespace constant is in [helpers/iap-account.ts](helpers/iap-account.ts). When present, the server verifies the value (via `externalAccountIdentifiers.obfuscatedExternalAccountId` on the Google API response) matches the authenticated user; mismatch returns 409. Missing logs a server-side warning but is currently accepted (soft-rollout).
 
 ---
 
@@ -1360,16 +1364,19 @@ npx ts-node scripts/send-apple-test-notification.ts
 | Attack surface | Protection |
 |---|---|
 | **Fake receipt injection** | JWS cryptographic signature verification via `SignedDataVerifier` |
-| **Same receipt used by multiple accounts** | Unique sparse index on `appleOriginalTransactionId` |
+| **Same receipt used by multiple accounts** | Unique sparse index on `appleOriginalTransactionId` / `googlePurchaseToken` |
+| **Receipt theft (stolen JWS / token redeemed by another user)** | `appAccountToken` (Apple) / `obfuscatedExternalAccountId` (Google) compared to `uuidv5(userId, IAP_NAMESPACE)` — see [helpers/iap-account.ts](helpers/iap-account.ts). Mismatch → `409 Conflict`. Missing → soft warning (rollout-friendly) |
+| **Sandbox/test transaction in production** | `NODE_ENV === 'production'` rejects Apple `environment === 'sandbox'` and Google `testPurchase: true` with `400` |
 | **Tampered transaction data** | JWS signature includes all fields; any modification invalidates |
 | **Expired transaction replay** | `expiresDate` check rejects past-expiry transactions |
 | **Revoked transaction replay** | `revocationDate` check rejects revoked transactions |
-| **Cross-bundle receipt injection** | `bundleId` match check against `config.apple.bundleId` |
-| **Duplicate webhook processing** | `notificationUUID` idempotency check in `metadata` |
+| **Cross-bundle receipt injection** | `bundleId` (Apple) / `packageName` (Google) match check |
+| **Duplicate webhook processing** | Write-first idempotency: `notificationUUID` (Apple) / `messageId` (Google) inserted into `ProcessedWebhook` collection; compound unique `(provider, webhookId)` rejects duplicate atomically (TTL 30d) |
 | **Unknown product IDs** | Explicit lookup in `plan.mapper.ts`; unknown IDs rejected 400 |
-| **Rate limiting** | 30 requests/minute on `/apple/verify` |
-| **Missing JWT auth** | `auth()` middleware on verify endpoint |
-| **Webhook spoofing** | JWS signature verification; no auth middleware needed |
+| **Superseded Apple transaction** | `isUpgraded === true` rejected — client must re-verify the latest transaction |
+| **Rate limiting** | 30 requests/minute on `/apple/verify` and `/google/verify` |
+| **Missing JWT auth** | `auth()` middleware on verify endpoints |
+| **Webhook spoofing** | JWS signature (Apple) / Pub/Sub JWT (Google) verification; no app-level auth middleware needed |
 
 ---
 

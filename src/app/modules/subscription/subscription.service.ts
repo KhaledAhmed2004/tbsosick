@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import httpStatus from 'http-status';
 import ApiError from '../../../errors/ApiError';
+import QueryBuilder from '../../builder/QueryBuilder';
 import { Subscription as SubscriptionModel } from './subscription.model';
 import {
   ISubscription,
@@ -22,47 +23,51 @@ import { PendingWebhook } from './pending-webhook.model';
 import { SubscriptionEvent } from './subscription-event.model';
 import { ISubscriptionEvent } from './subscription-event.interface';
 import { ProcessedWebhook } from './processed-webhook.model';
+import { deriveIapAccountToken } from './helpers/iap-account';
+import { logger } from '../../../shared/logger';
+import { User } from '../user/user.model';
 
 // --- Admin Service Methods ---
 
-export const getAllSubscriptions = async (
-  query: Record<string, any>
-): Promise<{ data: ISubscription[]; total: number }> => {
-  const { page = 1, limit = 10, plan, status, platform } = query;
-  const filter: any = {};
-  if (plan) filter.plan = plan;
-  if (status) filter.status = status;
-  if (platform) filter.platform = platform;
+export const getAllSubscriptions = async (query: Record<string, any>) => {
+  const builder = new QueryBuilder(
+    SubscriptionModel.find().populate('userId', 'fullName email'),
+    query
+  )
+    .filter()
+    .sort()
+    .paginate()
+    .fields();
 
-  const [data, total] = await Promise.all([
-    SubscriptionModel.find(filter)
-      .limit(Number(limit))
-      .skip((Number(page) - 1) * Number(limit))
-      .sort({ updatedAt: -1 })
-      .populate('userId', 'fullName email'),
-    SubscriptionModel.countDocuments(filter),
+  const [data, meta] = await Promise.all([
+    builder.modelQuery,
+    builder.getPaginationInfo(),
   ]);
 
-  return { data, total };
+  return { data, meta };
 };
 
 export const getSubscriptionAnalytics = async () => {
-  const planDistribution = await SubscriptionModel.aggregate([
-    { $group: { _id: '$plan', count: { $sum: 1 } } },
+  // Single $facet aggregation — one round-trip instead of three.
+  const [result] = await SubscriptionModel.aggregate([
+    {
+      $facet: {
+        planDistribution: [{ $group: { _id: '$plan', count: { $sum: 1 } } }],
+        platformDistribution: [
+          { $group: { _id: '$platform', count: { $sum: 1 } } },
+        ],
+        activeCount: [
+          { $match: { status: SUBSCRIPTION_STATUS.ACTIVE } },
+          { $count: 'count' },
+        ],
+      },
+    },
   ]);
-
-  const platformDistribution = await SubscriptionModel.aggregate([
-    { $group: { _id: '$platform', count: { $sum: 1 } } },
-  ]);
-
-  const activeCount = await SubscriptionModel.countDocuments({
-    status: SUBSCRIPTION_STATUS.ACTIVE,
-  });
 
   return {
-    planDistribution,
-    platformDistribution,
-    activeCount,
+    planDistribution: result?.planDistribution ?? [],
+    platformDistribution: result?.platformDistribution ?? [],
+    activeCount: result?.activeCount?.[0]?.count ?? 0,
   };
 };
 
@@ -77,28 +82,50 @@ export const getSubscriptionById = async (
 };
 
 export const getSubscriptionEvents = async (
-  userId: string
-): Promise<ISubscriptionEvent[]> => {
-  return SubscriptionEvent.find({ userId: new Types.ObjectId(userId) }).sort({
-    occurredAt: -1,
-  });
+  userId: string,
+  query: Record<string, any> = {}
+) => {
+  const builder = new QueryBuilder(
+    SubscriptionEvent.find({ userId: new Types.ObjectId(userId) }).sort({
+      occurredAt: -1,
+    }),
+    query
+  )
+    .paginate()
+    .fields();
+
+  const [data, meta] = await Promise.all([
+    builder.modelQuery,
+    builder.getPaginationInfo(),
+  ]);
+
+  return { data: data as ISubscriptionEvent[], meta };
+};
+
+const assertUserExists = async (userId: string) => {
+  const exists = await User.exists({ _id: new Types.ObjectId(userId) });
+  if (!exists) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
 };
 
 export const adminGrantPlan = async (
   userId: string,
   plan: SUBSCRIPTION_PLAN
 ): Promise<ISubscription> => {
+  await assertUserExists(userId);
   const uId = new Types.ObjectId(userId);
   return SubscriptionModel.upsertForUser(uId, {
     plan,
     status: SUBSCRIPTION_STATUS.ACTIVE,
     platform: SUBSCRIPTION_PLATFORM.ADMIN,
-    productId: `admin_granted_${plan.toLowerCase()}`,
-    currentPeriodEnd: null, // Admin grants are usually perpetual unless managed manually
+    productId: null,
+    currentPeriodEnd: null, // Admin grants are perpetual unless managed manually
   });
 };
 
 export const adminResetPlan = async (userId: string): Promise<ISubscription> => {
+  await assertUserExists(userId);
   const uId = new Types.ObjectId(userId);
   return SubscriptionModel.upsertForUser(uId, {
     plan: SUBSCRIPTION_PLAN.FREE,
@@ -113,32 +140,24 @@ export const adminResetPlan = async (userId: string): Promise<ISubscription> => 
 // --- End Admin Service Methods ---
 
 
-const ensureSubscriptionDoc = async (
-  userId: string
-): Promise<ISubscription> => {
-  const id = new Types.ObjectId(userId);
-  const doc = await SubscriptionModel.findByUser(id);
-  if (doc) return doc;
-
-  // We use findOneAndUpdate directly here instead of upsertForUser to avoid
-  // writing a 'CREATED' event to the audit log for every first-time profile view.
-  // The zero-state FREE record is not a meaningful subscription event.
-  return (await SubscriptionModel.findOneAndUpdate(
-    { userId: id },
-    {
-      $set: {
-        plan: SUBSCRIPTION_PLAN.FREE,
-        status: SUBSCRIPTION_STATUS.ACTIVE,
-      },
-    },
-    { new: true, upsert: true }
-  )) as ISubscription;
-};
-
+// GET handlers must not mutate state. If no subscription row exists for a
+// user, return a synthetic FREE/ACTIVE entitlement instead of writing one.
+// The row is materialized lazily on the first paid action (verify*) or
+// explicit free-plan opt-in (setFreePlan).
 export const getMySubscription = async (
   userId: string
-): Promise<ISubscription> => {
-  return ensureSubscriptionDoc(userId);
+): Promise<Partial<ISubscription>> => {
+  const id = new Types.ObjectId(userId);
+  const doc = await SubscriptionModel.findOne({ userId: id }).select(
+    '-metadata'
+  );
+  if (doc) return doc;
+
+  return {
+    userId: id,
+    plan: SUBSCRIPTION_PLAN.FREE,
+    status: SUBSCRIPTION_STATUS.ACTIVE,
+  };
 };
 
 export const setFreePlan = async (userId: string): Promise<ISubscription> => {
@@ -182,6 +201,24 @@ export const verifyApplePurchase = async (
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'This transaction has been superseded by an upgrade. Please verify the latest transaction.'
+    );
+  }
+
+  // Receipt-theft defense: when the client sets appAccountToken at purchase
+  // time, it must equal uuidv5(userId, IAP_NAMESPACE). A mismatch means the
+  // signed receipt belongs to a different account. Missing token is logged
+  // but not rejected so mobile can roll out the binding gradually.
+  if (decoded.appAccountToken) {
+    const expected = deriveIapAccountToken(userId);
+    if (decoded.appAccountToken.toLowerCase() !== expected.toLowerCase()) {
+      throw new ApiError(
+        httpStatus.CONFLICT,
+        'Apple appAccountToken does not match the authenticated user'
+      );
+    }
+  } else {
+    logger.warn(
+      `Apple verify: missing appAccountToken for user ${userId} (txn ${decoded.originalTransactionId})`
     );
   }
 
@@ -254,6 +291,22 @@ export const verifyGooglePurchase = async (
 ): Promise<ISubscription> => {
   // 1. Pull the authoritative subscription state from Google.
   const decoded = await verifyGoogleSubscription(purchaseToken, productId);
+
+  // Receipt-theft defense: client-set obfuscatedAccountId must match
+  // uuidv5(userId, IAP_NAMESPACE). Missing is logged; mismatch is hard-rejected.
+  if (decoded.obfuscatedExternalAccountId) {
+    const expected = deriveIapAccountToken(userId);
+    if (decoded.obfuscatedExternalAccountId !== expected) {
+      throw new ApiError(
+        httpStatus.CONFLICT,
+        'Google obfuscatedAccountId does not match the authenticated user'
+      );
+    }
+  } else {
+    logger.warn(
+      `Google verify: missing obfuscatedAccountId for user ${userId} (token ${purchaseToken.slice(0, 12)}...)`
+    );
+  }
 
   // 2. Fraud guard: a purchase token must not be linked to a different user.
   // C1 Fix: Handle linkedPurchaseToken (upgrades/downgrades).

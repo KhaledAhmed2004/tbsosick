@@ -46,6 +46,8 @@ const CacheHelper_1 = require("./app/shared/CacheHelper");
 const bannerGenerator_1 = require("./shared/bannerGenerator");
 const startupSummary_1 = require("./shared/startupSummary");
 const spinnerHelper_1 = require("./shared/spinnerHelper");
+const dns_1 = __importDefault(require("dns"));
+dns_1.default.setServers(['8.8.8.8', '8.8.4.4']);
 // uncaught exception — ensure server closes before exit to avoid EADDRINUSE on respawn
 process.on('uncaughtException', error => {
     logger_1.errorLogger.error('UncaughtException Detected', error);
@@ -99,12 +101,20 @@ function main() {
             }
             catch (dbError) {
                 dbSpinner.fail('MongoDB connection failed');
+                logger_1.errorLogger.error('❌ MongoDB connection error:', dbError);
                 throw dbError;
             }
             // Seed Super Admin after database connection is successful
             const seedSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Verifying super admin account...', color: 'cyan' });
-            yield (0, seedAdmin_1.seedSuperAdmin)();
-            seedSpinner.succeed('Super admin ready');
+            try {
+                yield (0, seedAdmin_1.seedSuperAdmin)();
+                seedSpinner.succeed('Super admin ready');
+            }
+            catch (seedError) {
+                seedSpinner.fail('Super admin verification failed');
+                logger_1.errorLogger.error('❌ Super admin seeding error:', seedError);
+                throw seedError;
+            }
             // Initialize CacheHelper (in-memory)
             const cacheSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Initializing cache system...', color: 'cyan' });
             const cache = CacheHelper_1.CacheHelper.getInstance();
@@ -203,8 +213,10 @@ function main() {
             });
         }
         catch (error) {
-            logger_1.errorLogger.error('❌ Database connection failed');
-            (0, logger_1.notifyCritical)('Database Connection Failed', (error === null || error === void 0 ? void 0 : error.message) || 'Unknown error');
+            logger_1.errorLogger.error('❌ Server startup failed');
+            (0, logger_1.notifyCritical)('Server Startup Failed', (error === null || error === void 0 ? void 0 : error.message) || 'Unknown error');
+            // Exit if startup fails
+            process.exit(1);
         }
         //handle unhandleRejection
         process.on('unhandledRejection', error => {

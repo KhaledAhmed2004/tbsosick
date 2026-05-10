@@ -21,6 +21,8 @@ const apple_client_1 = require("./apple.client");
 const subscription_model_1 = require("../../subscription.model");
 const subscription_interface_1 = require("../../subscription.interface");
 const plan_mapper_1 = require("../../helpers/plan.mapper");
+const processed_webhook_model_1 = require("../../processed-webhook.model");
+const pending_webhook_model_1 = require("../../pending-webhook.model");
 // Apply the Apple webhook state-machine to an existing subscription document.
 // Returns the update delta to persist. All logic is expressed here so the
 // caller only has to persist and log — no business logic at the edges.
@@ -89,12 +91,39 @@ const buildUpdatesForNotification = (notificationType, subtype, decodedTransacti
             // Nothing to persist here.
             return updates;
         }
+        case app_store_server_library_1.NotificationTypeV2.PRICE_INCREASE: {
+            // subtype is PENDING (user not yet consented) or ACCEPTED.
+            // If the user doesn't accept, Apple will cancel at period end —
+            // we mark autoRenewing false now as a pessimistic defensive move.
+            // When/if they accept, DID_RENEW will restore active state.
+            if (subtype !== 'ACCEPTED') {
+                updates.autoRenewing = false;
+            }
+            return updates;
+        }
+        case app_store_server_library_1.NotificationTypeV2.OFFER_REDEEMED: {
+            // User redeemed a promotional offer (free trial, discount).
+            // The transaction contains the new productId (may differ from current).
+            // Update plan + period end to reflect the offer terms.
+            updates.status = subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE;
+            if (decodedTransaction.productId) {
+                updates.plan = (0, plan_mapper_1.mapAppleProductToPlan)(decodedTransaction.productId);
+            }
+            if (decodedTransaction.expiresDate) {
+                updates.currentPeriodEnd = new Date(decodedTransaction.expiresDate);
+            }
+            if (decodedTransaction.transactionId) {
+                updates.appleLatestTransactionId = decodedTransaction.transactionId;
+            }
+            updates.gracePeriodEndsAt = null;
+            return updates;
+        }
         default:
             return updates;
     }
 };
 const handleAppleNotification = (signedPayload) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a;
     if (!signedPayload || typeof signedPayload !== 'string') {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'signedPayload is required');
     }
@@ -152,26 +181,43 @@ const handleAppleNotification = (signedPayload) => __awaiter(void 0, void 0, voi
         appleOriginalTransactionId: originalTransactionId,
     });
     if (!existing) {
-        // Notification arrived before the client's first verify call, or the
-        // subscription belongs to an account we haven't seen yet. Ignore —
-        // the client's /apple/verify call will create the record.
-        logger_1.logger.warn(`Orphan Apple notification ${notificationType} for originalTransactionId=${originalTransactionId}`);
+        // 🟠 5 Fix: Store the orphan webhook in the queue for later re-processing.
+        yield pending_webhook_model_1.PendingWebhook.create({
+            externalPurchaseId: originalTransactionId,
+            provider: 'apple',
+            payload: signedPayload,
+        });
+        logger_1.logger.warn(`Queued orphan Apple notification ${notificationType} for originalTransactionId=${originalTransactionId}`);
         return {
             processed: false,
             notificationType,
             subtype,
-            reason: 'no_matching_subscription',
+            reason: 'queued_as_orphan',
         };
     }
-    // Idempotency: Apple retries notifications on failure; skip duplicates.
-    if (notificationUUID &&
-        ((_b = existing.metadata) === null || _b === void 0 ? void 0 : _b.lastAppleNotificationUUID) === notificationUUID) {
-        return {
-            processed: false,
-            notificationType,
-            subtype,
-            reason: 'duplicate',
-        };
+    // ✅ Idempotency — Write-first pattern eliminates TOCTOU race.
+    // Two concurrent deliveries of the same notificationUUID could both pass
+    // a findOne() check before either writes. We attempt the DB insert first
+    // and rely on the unique index to reject the second atomically.
+    if (notificationUUID) {
+        try {
+            yield processed_webhook_model_1.ProcessedWebhook.create({
+                webhookId: notificationUUID,
+                provider: 'apple',
+            });
+        }
+        catch (err) {
+            if (err.code === 11000) {
+                // Duplicate key → already processed.
+                return {
+                    processed: false,
+                    notificationType,
+                    subtype,
+                    reason: 'duplicate',
+                };
+            }
+            throw err; // unexpected DB error — bubble up
+        }
     }
     const updates = buildUpdatesForNotification(notificationType, subtype, {
         productId: decodedTransaction.productId,
@@ -179,9 +225,7 @@ const handleAppleNotification = (signedPayload) => __awaiter(void 0, void 0, voi
         transactionId: decodedTransaction.transactionId,
     });
     const newMetadata = Object.assign(Object.assign({}, (existing.metadata || {})), { lastAppleNotificationUUID: notificationUUID, lastAppleNotificationType: notificationType, lastAppleNotificationSubtype: subtype, lastAppleNotificationAt: new Date().toISOString() });
-    yield subscription_model_1.Subscription.findByIdAndUpdate(existing._id, {
-        $set: Object.assign(Object.assign({}, updates), { metadata: newMetadata }),
-    });
+    yield subscription_model_1.Subscription.upsertForUser(existing.userId, Object.assign(Object.assign({}, updates), { metadata: newMetadata }));
     logger_1.logger.info(`Apple notification ${notificationType}${subtype ? `/${subtype}` : ''} applied to subscription ${existing._id}`);
     return {
         processed: true,

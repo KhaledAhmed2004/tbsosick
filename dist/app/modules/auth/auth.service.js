@@ -39,6 +39,7 @@ const googleAudience = [
     config_1.default.google.clientIdWeb,
 ].filter(Boolean);
 const loginUserFromDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     const { email, password, deviceToken } = payload;
     // `tokenVersion` is `select: false` on the schema — pull it explicitly
     // here so the issued JWT carries the current rotation counter.
@@ -66,26 +67,24 @@ const loginUserFromDB = (payload) => __awaiter(void 0, void 0, void 0, function*
     }
     // JWT: access token
     const accessToken = jwtHelper_1.jwtHelper.createToken({
-        id: isExistUser._id,
+        id: isExistUser._id.toString(),
         role: isExistUser.role,
         email: isExistUser.email,
-        tokenVersion: isExistUser.tokenVersion,
+        tokenVersion: (_a = isExistUser.tokenVersion) !== null && _a !== void 0 ? _a : 0,
     }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
     // JWT: refresh token
     const refreshToken = jwtHelper_1.jwtHelper.createToken({
-        id: isExistUser._id,
+        id: isExistUser._id.toString(),
         role: isExistUser.role,
         email: isExistUser.email,
-        tokenVersion: isExistUser.tokenVersion,
+        tokenVersion: (_b = isExistUser.tokenVersion) !== null && _b !== void 0 ? _b : 0,
     }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
-    if (isExistUser.isFirstLogin) {
-        yield user_model_1.User.findByIdAndUpdate(isExistUser._id, { isFirstLogin: false });
-    }
+    const isOnboardingCompleted = isExistUser.isOnboardingCompleted;
     // ✅ save device token
     if (deviceToken) {
         yield user_model_1.User.addDeviceToken(isExistUser._id.toString(), deviceToken);
     }
-    return { tokens: { accessToken, refreshToken } };
+    return { tokens: { accessToken, refreshToken }, isOnboardingCompleted };
 });
 // logout
 const logoutUserFromDB = (user, deviceToken) => __awaiter(void 0, void 0, void 0, function* () {
@@ -121,6 +120,7 @@ const forgetPasswordToDB = (email) => __awaiter(void 0, void 0, void 0, function
 });
 //verify email
 const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     const { email, otp } = payload;
     if (!otp) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'OTP is required');
@@ -142,6 +142,7 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
     let tokens;
     if (!isExistUser.verified) {
         // Mark as verified and clear OTP
+        const isOnboardingCompleted = isExistUser.isOnboardingCompleted;
         yield user_model_1.User.findOneAndUpdate({ _id: isExistUser._id }, {
             $set: {
                 verified: true,
@@ -151,19 +152,20 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
         });
         // Auto-login for new users after verification
         const accessToken = jwtHelper_1.jwtHelper.createToken({
-            id: isExistUser._id,
+            id: isExistUser._id.toString(),
             role: isExistUser.role,
             email: isExistUser.email,
-            tokenVersion: isExistUser.tokenVersion,
+            tokenVersion: (_a = isExistUser.tokenVersion) !== null && _a !== void 0 ? _a : 0,
         }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
         const refreshToken = jwtHelper_1.jwtHelper.createToken({
-            id: isExistUser._id,
+            id: isExistUser._id.toString(),
             role: isExistUser.role,
             email: isExistUser.email,
-            tokenVersion: isExistUser.tokenVersion,
+            tokenVersion: (_b = isExistUser.tokenVersion) !== null && _b !== void 0 ? _b : 0,
         }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
         tokens = { accessToken, refreshToken };
         message = 'Email verify successfully';
+        return { data: Object.assign(Object.assign({}, tokens), { isOnboardingCompleted }), message, tokens };
     }
     else {
         // For password reset flow
@@ -190,6 +192,9 @@ const verifyEmailToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
 //reset password
 const resetPasswordToDB = (token, payload) => __awaiter(void 0, void 0, void 0, function* () {
     const { newPassword } = payload;
+    if (!token) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Reset token is required');
+    }
     // Use a transaction or atomic approach:
     // Find valid token and its user in one go
     const isExistToken = yield resetToken_model_1.ResetToken.findOne({
@@ -240,13 +245,19 @@ const changePasswordToDB = (user, payload) => __awaiter(void 0, void 0, void 0, 
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Please give different password from current password');
     }
     const hashPassword = yield bcrypt_1.default.hash(newPassword, Number(config_1.default.bcrypt_salt_rounds));
-    yield user_model_1.User.findOneAndUpdate({ _id: user.id }, { password: hashPassword }, { new: true });
+    // Update user AND increment tokenVersion to invalidate all existing sessions
+    // Also clear the reset flag atomically
+    yield user_model_1.User.findOneAndUpdate({ _id: user.id }, {
+        $set: { password: hashPassword },
+        $inc: { tokenVersion: 1 },
+    }, { new: true });
 });
 const resendVerifyEmailToDB = (email) => __awaiter(void 0, void 0, void 0, function* () {
     return (0, authHelpers_1.sendVerificationOTP)(email);
 });
 // Social login (Google / Apple ID token verification)
 const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     const { provider, idToken, nonce, deviceToken, platform, appVersion } = payload;
     let email;
     let name;
@@ -342,30 +353,29 @@ const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.INTERNAL_SERVER_ERROR, 'Failed to create user');
         }
     }
-    if (user.isFirstLogin) {
-        yield user_model_1.User.findByIdAndUpdate(user._id, { isFirstLogin: false });
-    }
+    const isOnboardingCompleted = user.isOnboardingCompleted;
     // Register device token
     if (deviceToken) {
         yield user_model_1.User.addDeviceToken(user._id.toString(), deviceToken, platform, appVersion);
     }
     // Issue tokens
     const accessToken = jwtHelper_1.jwtHelper.createToken({
-        id: user._id,
+        id: user._id.toString(),
         role: user.role,
         email: user.email,
-        tokenVersion: user.tokenVersion,
+        tokenVersion: (_a = user.tokenVersion) !== null && _a !== void 0 ? _a : 0,
     }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
     const refreshToken = jwtHelper_1.jwtHelper.createToken({
-        id: user._id,
+        id: user._id.toString(),
         role: user.role,
         email: user.email,
-        tokenVersion: user.tokenVersion,
+        tokenVersion: (_b = user.tokenVersion) !== null && _b !== void 0 ? _b : 0,
     }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
-    return { tokens: { accessToken, refreshToken } };
+    return { tokens: { accessToken, refreshToken }, isOnboardingCompleted };
 });
 // Refresh token: verify and issue new tokens with rotation
 const refreshTokenToDB = (token) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     if (!token) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Refresh token is required');
     }
@@ -395,16 +405,16 @@ const refreshTokenToDB = (token) => __awaiter(void 0, void 0, void 0, function* 
     }
     // Issue new tokens with the NEW tokenVersion
     const accessToken = jwtHelper_1.jwtHelper.createToken({
-        id: updatedUser._id,
+        id: updatedUser._id.toString(),
         role: updatedUser.role,
         email: updatedUser.email,
-        tokenVersion: updatedUser.tokenVersion,
+        tokenVersion: (_a = updatedUser.tokenVersion) !== null && _a !== void 0 ? _a : 0,
     }, config_1.default.jwt.jwt_secret, config_1.default.jwt.jwt_expire_in);
     const newRefreshToken = jwtHelper_1.jwtHelper.createToken({
-        id: updatedUser._id,
+        id: updatedUser._id.toString(),
         role: updatedUser.role,
         email: updatedUser.email,
-        tokenVersion: updatedUser.tokenVersion,
+        tokenVersion: (_b = updatedUser.tokenVersion) !== null && _b !== void 0 ? _b : 0,
     }, config_1.default.jwt.jwt_refresh_secret, config_1.default.jwt.jwt_refresh_expire_in);
     return { tokens: { accessToken, refreshToken: newRefreshToken } };
 });

@@ -32,11 +32,25 @@ const getMyEvents = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
     const result = yield event_service_1.EventService.listEventsForUserFromDB(user.id, {
         from: req.query.from,
         to: req.query.to,
+        date: req.query.date,
     });
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,
         message: 'Events fetched successfully',
+        data: result,
+    });
+}));
+const getCalendarHighlights = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = req.user;
+    const result = yield event_service_1.EventService.getCalendarHighlightsFromDB(user.id, {
+        from: req.query.from,
+        to: req.query.to,
+    });
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Calendar highlights fetched successfully',
         data: result,
     });
 }));
@@ -85,6 +99,7 @@ const deleteEvent = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, vo
 exports.EventController = {
     createEvent,
     getMyEvents,
+    getCalendarHighlights,
     getEventById,
     updateEvent,
     deleteEvent,

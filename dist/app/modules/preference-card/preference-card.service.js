@@ -32,8 +32,10 @@ const user_1 = require("../../../enums/user");
 const builder_1 = require("../../builder");
 const supplies_model_1 = require("../supplies/supplies.model");
 const sutures_model_1 = require("../sutures/sutures.model");
-const favorite_model_1 = require("../favorite/favorite.model");
 const PDFBuilder_1 = __importDefault(require("../../builder/PDFBuilder"));
+const quota_1 = require("../subscription/helpers/quota");
+const entitlement_1 = require("../subscription/helpers/entitlement");
+const favorite_model_1 = require("../favorite/favorite.model");
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const MAX_FAVORITES_PER_USER = 100;
 /**
@@ -140,21 +142,14 @@ const assertCardIsPublishable = (card) => {
     }
 };
 const getPreferenceCardCountsFromDB = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const [AllCardsCount, myCardsCount] = yield Promise.all([
+    const [publicCardsCount, myCardsCount] = yield Promise.all([
         preference_card_model_1.PreferenceCardModel.countDocuments({
+            visibility: 'PUBLIC',
             isDeleted: false,
-            $or: [{ visibility: 'PUBLIC' }, { createdBy: userId }],
         }),
         preference_card_model_1.PreferenceCardModel.countDocuments({ createdBy: userId, isDeleted: false }),
     ]);
-    return { AllCardsCount, myCardsCount };
-});
-const getDistinctSpecialtiesFromDB = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const specialties = yield preference_card_model_1.PreferenceCardModel.distinct('surgeon.specialty', {
-        isDeleted: false,
-        $or: [{ visibility: 'PUBLIC' }, { createdBy: userId }],
-    });
-    return specialties.filter(Boolean).sort();
+    return { publicCardsCount, myCardsCount };
 });
 const getFavoriteCardIdsForUserFromDB = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const favorites = yield favorite_model_1.Favorite.find({ userId }).select('cardId -_id').lean();
@@ -236,25 +231,24 @@ const downloadPreferenceCardInDB = (id, userId, role) => __awaiter(void 0, void 
 const generatePreferenceCardPDF = (card) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b, _c, _d, _e;
     const builder = new PDFBuilder_1.default()
-        .setTheme('corporate') // Using corporate for a more professional/beautiful look
+        .setTheme('modern') // Modern is now very clean and professional
         .setTitle(card.cardTitle)
         .setHeader({
         title: card.cardTitle,
-        subtitle: 'Official Preference Card',
+        subtitle: `Surgeon: ${((_a = card.surgeon) === null || _a === void 0 ? void 0 : _a.fullName) || 'N/A'}`,
         showDate: true,
         style: {
-            padding: 24,
+            padding: 32,
         },
     })
         .addText({
-        content: 'Surgeon Information',
+        content: 'Quick Overview',
         style: 'heading',
-        margin: { top: 20, bottom: 10 },
+        margin: { top: 10, bottom: 15 },
     })
         .addTable({
-        headers: ['Field', 'Details'],
+        headers: ['Information', 'Value'],
         rows: [
-            ['Full Name', ((_a = card.surgeon) === null || _a === void 0 ? void 0 : _a.fullName) || 'N/A'],
             ['Specialty', ((_b = card.surgeon) === null || _b === void 0 ? void 0 : _b.specialty) || 'N/A'],
             ['Hand Preference', ((_c = card.surgeon) === null || _c === void 0 ? void 0 : _c.handPreference) || 'N/A'],
             ['Contact', ((_d = card.surgeon) === null || _d === void 0 ? void 0 : _d.contactNumber) || 'N/A'],
@@ -262,73 +256,89 @@ const generatePreferenceCardPDF = (card) => __awaiter(void 0, void 0, void 0, fu
         ],
         striped: true,
     })
-        .addSpacer(20);
+        .addSpacer(30);
     if (card.medication) {
         builder
             .addText({ content: 'Medication', style: 'subheading' })
             .addText({
             content: card.medication,
             style: 'body',
-            margin: { bottom: 15 },
+            margin: { bottom: 20 },
         })
             .addDivider();
     }
     if (card.supplies && card.supplies.length > 0) {
-        builder.addText({ content: 'Supplies', style: 'subheading' }).addTable({
+        builder
+            .addText({
+            content: 'Supplies Inventory',
+            style: 'heading',
+            margin: { top: 20 },
+        })
+            .addTable({
             headers: ['Item Name', 'Quantity'],
             rows: card.supplies.map((s) => [s.name, s.quantity]),
             striped: true,
-        });
-        builder.addSpacer(20);
+        })
+            .addSpacer(20);
     }
     if (card.sutures && card.sutures.length > 0) {
-        builder.addText({ content: 'Sutures', style: 'subheading' }).addTable({
+        builder
+            .addText({
+            content: 'Sutures & Needles',
+            style: 'heading',
+            margin: { top: 20 },
+        })
+            .addTable({
             headers: ['Item Name', 'Quantity'],
             rows: card.sutures.map((s) => [s.name, s.quantity]),
             striped: true,
-        });
-        builder.addSpacer(20);
+        })
+            .addSpacer(20);
     }
     const sections = [
-        { label: 'Instruments', value: card.instruments },
-        { label: 'Positioning Equipment', value: card.positioningEquipment },
-        { label: 'Prepping', value: card.prepping },
-        { label: 'Workflow', value: card.workflow },
-        { label: 'Key Notes', value: card.keyNotes },
+        { title: 'Instruments', content: card.instruments },
+        { title: 'Positioning & Equipment', content: card.positioningEquipment },
+        { title: 'Prepping & Draping', content: card.prepping },
+        { title: 'Surgical Workflow', content: card.workflow },
+        { title: 'Key Notes & Preferences', content: card.keyNotes },
     ];
-    for (const section of sections) {
-        if (section.value) {
+    sections.forEach(section => {
+        if (section.content) {
             builder
-                .addText({ content: section.label, style: 'subheading' })
                 .addText({
-                content: section.value,
+                content: section.title,
+                style: 'subheading',
+                margin: { top: 15 },
+            })
+                .addText({
+                content: section.content,
                 style: 'body',
                 margin: { bottom: 15 },
-            })
-                .addDivider();
+            });
         }
-    }
-    // Add Photo Library if exists
+    });
+    // 7. Add Photo Library if exists
     if (card.photoLibrary && card.photoLibrary.length > 0) {
         builder.addText({
             content: 'Photo Library',
             style: 'heading',
-            margin: { top: 20, bottom: 10 },
+            margin: { top: 20, bottom: 15 },
         });
-        for (const photo of card.photoLibrary) {
-            if (photo.url) {
+        card.photoLibrary.forEach((photoUrl) => {
+            if (photoUrl) {
                 builder
                     .addImage({
-                    src: photo.url,
+                    src: photoUrl,
                     width: 500, // Large enough to see details
+                    align: 'center',
                 })
-                    .addSpacer(10);
+                    .addSpacer(15);
             }
-        }
+        });
     }
     builder.setFooter({
+        text: 'Generated by TBSosick Preference Card System',
         showPageNumbers: true,
-        text: '© Preference Card System - Secure Document',
     });
     return builder.toBuffer();
 });
@@ -347,6 +357,11 @@ const normaliseClientRefField = (items, targetField) => {
     });
 };
 const createPreferenceCardInDB = (userId, data) => __awaiter(void 0, void 0, void 0, function* () {
+    // 1. Quota Check (D11 in overview.md)
+    const quota = yield (0, quota_1.checkCardCreationQuota)(userId);
+    if (!quota.allowed) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, `You have reached the creation limit for your current plan (${quota.limit} cards). Please upgrade to unlock more space.`);
+    }
     if (data.supplies && Array.isArray(data.supplies)) {
         const normalised = normaliseClientRefField(data.supplies, 'supply');
         data.supplies = yield resolveMixedItemsWithQuantity(normalised, 'supply', supplies_model_1.SupplyModel);
@@ -362,7 +377,11 @@ const createPreferenceCardInDB = (userId, data) => __awaiter(void 0, void 0, voi
         assertCardIsPublishable(dataToSave);
     }
     const card = yield preference_card_model_1.PreferenceCardModel.create(dataToSave);
-    return card;
+    const populated = yield card.populate([
+        { path: 'supplies.supply', select: 'name -_id' },
+        { path: 'sutures.suture', select: 'name -_id' },
+    ]);
+    return flattenCard(populated);
 });
 const listPreferenceCardsForUserFromDB = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const docs = yield preference_card_model_1.PreferenceCardModel.find({
@@ -428,6 +447,17 @@ const updatePreferenceCardInDB = (id, userId, role, payload) => __awaiter(void 0
         role !== user_1.USER_ROLES.SUPER_ADMIN) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to update this card');
     }
+    // Admin-only fields: verificationStatus
+    if (payload.verificationStatus && role !== user_1.USER_ROLES.SUPER_ADMIN) {
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to verify/reject this card');
+    }
+    // Roadmap §8: Verification eligibility (only Enterprise creators)
+    if (payload.verificationStatus === 'VERIFIED') {
+        const creatorEntitlement = yield (0, entitlement_1.getUserEntitlement)(existingCard.createdBy.toString());
+        if (!creatorEntitlement.isEnterprise) {
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Only cards created by Enterprise users are eligible for verification.');
+        }
+    }
     // Resolve mixed supplies/sutures if present
     if (payload.supplies && Array.isArray(payload.supplies)) {
         const normalised = normaliseClientRefField(payload.supplies, 'supply');
@@ -437,21 +467,26 @@ const updatePreferenceCardInDB = (id, userId, role, payload) => __awaiter(void 0
         const normalised = normaliseClientRefField(payload.sutures, 'suture');
         payload.sutures = yield resolveMixedItemsWithQuantity(normalised, 'suture', sutures_model_1.SutureModel);
     }
-    // If the update flips the card to `visibility: 'PUBLIC'`, pre-check the
-    // merged shape so half-filled drafts can never be published.
-    if (payload.visibility === 'PUBLIC') {
+    // If the update flips the card to `visibility: 'PUBLIC'` or admin verifies it,
+    // pre-check the merged shape so half-filled drafts can never be published/verified.
+    if (payload.visibility === 'PUBLIC' || payload.verificationStatus === 'VERIFIED') {
         const full = yield preference_card_model_1.PreferenceCardModel.findById(id).lean();
         if (full) {
             assertCardIsPublishable(Object.assign(Object.assign({}, full), payload));
         }
-        payload.published = true;
+        if (payload.visibility === 'PUBLIC') {
+            payload.published = true;
+        }
     }
     else if (payload.visibility === 'PRIVATE') {
         payload.published = false;
     }
     // Update the document in one step
-    const updatedCard = yield preference_card_model_1.PreferenceCardModel.findOneAndUpdate({ _id: id }, { $set: payload }, { new: true });
-    return updatedCard;
+    const updatedCard = yield preference_card_model_1.PreferenceCardModel.findOneAndUpdate({ _id: id }, { $set: payload }, { new: true }).populate([
+        { path: 'supplies.supply', select: 'name -_id' },
+        { path: 'sutures.suture', select: 'name -_id' },
+    ]);
+    return flattenCard(updatedCard);
 });
 const deletePreferenceCardFromDB = (id, userId, role) => __awaiter(void 0, void 0, void 0, function* () {
     const doc = yield preference_card_model_1.PreferenceCardModel.findById(id);
@@ -462,17 +497,6 @@ const deletePreferenceCardFromDB = (id, userId, role) => __awaiter(void 0, void 
     }
     yield preference_card_model_1.PreferenceCardModel.findByIdAndDelete(id);
     return { deleted: true };
-});
-const updateVerificationStatusInDB = (id, role, status) => __awaiter(void 0, void 0, void 0, function* () {
-    const doc = yield preference_card_model_1.PreferenceCardModel.findById(id);
-    if (!doc)
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Preference card not found');
-    if (role !== user_1.USER_ROLES.SUPER_ADMIN) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not authorized to verify/reject this card');
-    }
-    doc.verificationStatus = status;
-    yield doc.save();
-    return { verificationStatus: doc.verificationStatus };
 });
 /**
  * Public preference card list — hottest read endpoint (home screen).
@@ -520,9 +544,8 @@ const listPublicPreferenceCardsFromDB = (userId, query) => __awaiter(void 0, voi
     }
     // Specialty facet filter. Uses exact match now that `surgeon.specialty`
     // is indexed — callers pass the canonical string from `/specialties`.
-    const specialtyValue = rawQuery.specialty || rawQuery.surgeonSpecialty;
-    if (specialtyValue) {
-        match['surgeon.specialty'] = String(specialtyValue);
+    if (rawQuery.specialty) {
+        match['surgeon.specialty'] = String(rawQuery.specialty);
     }
     // Text search — leverages `card_text_idx` and `score` sorting.
     const searchTerm = typeof rawQuery.searchTerm === 'string'
@@ -742,7 +765,6 @@ const unfavoritePreferenceCardInDB = (cardId, userId, role) => __awaiter(void 0,
 });
 exports.PreferenceCardService = {
     getPreferenceCardCountsFromDB,
-    getDistinctSpecialtiesFromDB,
     getFavoriteCardIdsForUserFromDB,
     downloadPreferenceCardInDB,
     createPreferenceCardInDB,
@@ -751,7 +773,6 @@ exports.PreferenceCardService = {
     getPreferenceCardByIdFromDB,
     updatePreferenceCardInDB,
     deletePreferenceCardFromDB,
-    updateVerificationStatusInDB,
     listPublicPreferenceCardsFromDB,
     listFavoritePreferenceCardsForUserFromDB,
     favoritePreferenceCardInDB,

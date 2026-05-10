@@ -6,7 +6,7 @@ const zod_1 = require("zod");
 const surgeonSchema = zod_1.z.object({
     fullName: zod_1.z.string().min(3),
     handPreference: zod_1.z.string().min(1),
-    specialty: zod_1.z.string().min(1),
+    specialty: zod_1.z.string().min(1), // Accepts name
     contactNumber: zod_1.z.string().min(1),
     musicPreference: zod_1.z.string().min(1),
 });
@@ -40,6 +40,7 @@ const createPreferenceCardSchema = zod_1.z.object({
         keyNotes: zod_1.z.string().optional(),
         photoLibrary: zod_1.z.array(zod_1.z.string()).max(10).optional(),
         visibility: zod_1.z.enum(['PUBLIC', 'PRIVATE']).optional(),
+        verificationStatus: zod_1.z.enum(['VERIFIED', 'UNVERIFIED']).optional(),
     }),
 });
 // Update Preference Card (partial update)
@@ -90,13 +91,14 @@ const paramIdSchema = zod_1.z.object({
 const searchCardsSchema = zod_1.z.object({
     query: zod_1.z.object({
         searchTerm: zod_1.z.string().trim().max(100).optional(),
-        visibility: zod_1.z.enum(['public', 'private']).default('public'),
-        page: zod_1.z.coerce.number().int().positive().default(1),
-        limit: zod_1.z.coerce.number().int().min(1).max(50).default(10),
-        sort: zod_1.z
-            .string()
-            .regex(/^-?(createdAt|cardTitle)$/)
+        specialty: zod_1.z.string().optional(),
+        verificationStatus: zod_1.z
+            .preprocess(val => (typeof val === 'string' ? val.toLowerCase() : val), zod_1.z.enum(['verified', 'unverified']))
             .optional(),
+        page: zod_1.z.preprocess(val => Number(val), zod_1.z.number().int().min(1)).default(1),
+        limit: zod_1.z
+            .preprocess(val => Number(val), zod_1.z.number().int().min(1).max(50))
+            .default(10),
     }),
 });
 // Publish Preference Card Schema
@@ -109,15 +111,6 @@ const downloadPreferenceCardSchema = zod_1.z.object({
         cardId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
     }),
 });
-// Update Verification Status Schema (Admin)
-const updateVerificationStatusSchema = zod_1.z.object({
-    params: zod_1.z.object({
-        cardId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid cardId format'),
-    }),
-    body: zod_1.z.object({
-        verificationStatus: zod_1.z.enum(['VERIFIED', 'UNVERIFIED']),
-    }),
-});
 exports.PreferenceCardValidation = {
     createPreferenceCardSchema,
     updatePreferenceCardSchema,
@@ -125,5 +118,4 @@ exports.PreferenceCardValidation = {
     searchCardsSchema,
     publishPreferenceCardSchema,
     downloadPreferenceCardSchema,
-    updateVerificationStatusSchema,
 };

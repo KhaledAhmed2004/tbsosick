@@ -54,6 +54,13 @@ const verifyAppleTransaction = (signedTransactionInfo) => __awaiter(void 0, void
     if (decoded.expiresDate && Date.now() > decoded.expiresDate) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Transaction has already expired');
     }
+    const environment = mapEnvironment(decoded.environment);
+    // Production servers must reject sandbox transactions. Apple's verifier
+    // accepts both, so the gate is enforced here. In non-production
+    // environments, sandbox is allowed so QA can exercise the flow.
+    if (config_1.default.node_env === 'production' && environment === 'sandbox') {
+        throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Sandbox transactions are not accepted in production');
+    }
     return {
         transactionId: decoded.transactionId,
         originalTransactionId: decoded.originalTransactionId,
@@ -65,7 +72,7 @@ const verifyAppleTransaction = (signedTransactionInfo) => __awaiter(void 0, void
         revocationReason: typeof decoded.revocationReason === 'number'
             ? decoded.revocationReason
             : undefined,
-        environment: mapEnvironment(decoded.environment),
+        environment,
         appAccountToken: decoded.appAccountToken,
         isUpgraded: decoded.isUpgraded,
     };

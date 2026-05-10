@@ -44,4 +44,18 @@ export const SubscriptionValidation = {
       userId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid userId format'),
     }),
   }),
+
+  adminSubscriptionIdSchema: z.object({
+    params: z.object({
+      subscriptionId: z
+        .string()
+        .regex(/^[0-9a-fA-F]{24}$/, 'Invalid subscriptionId format'),
+    }),
+  }),
+
+  adminEventsSchema: z.object({
+    params: z.object({
+      userId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid userId format'),
+    }),
+  }),
 };

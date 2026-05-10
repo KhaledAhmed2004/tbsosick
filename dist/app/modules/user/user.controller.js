@@ -28,15 +28,36 @@ const http_status_codes_1 = require("http-status-codes");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const user_service_1 = require("./user.service");
+const user_1 = require("../../../enums/user");
 const preference_card_service_1 = require("../preference-card/preference-card.service");
+const jwtHelper_1 = require("../../../helpers/jwtHelper");
+const config_1 = __importDefault(require("../../../config"));
 const createUser = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const userData = __rest(req.body, []);
-    const result = yield user_service_1.UserService.createUserToDB(userData);
+    // Check if requester is an admin (optional auth for this specific endpoint)
+    let isAdmin = false;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.split(' ')[1];
+        try {
+            const verifiedUser = jwtHelper_1.jwtHelper.verifyToken(token, config_1.default.jwt.jwt_secret);
+            if (verifiedUser && verifiedUser.role === user_1.USER_ROLES.SUPER_ADMIN) {
+                isAdmin = true;
+            }
+        }
+        catch (err) {
+            // Ignore token errors; fallback to public registration flow
+        }
+    }
+    const result = yield user_service_1.UserService.createUserToDB(userData, isAdmin);
+    // Convert to object and sanitize response (remove password)
+    const responseData = result.toObject();
+    delete responseData.password;
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.CREATED,
         message: 'User created successfully',
-        data: result,
+        data: responseData,
     });
 }));
 const getUserProfile = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -185,6 +206,16 @@ const getUsersStats = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, 
         data: result,
     });
 }));
+const completeOnboarding = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = req.user;
+    const result = yield user_service_1.UserService.completeOnboardingToDB(user);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: 'Onboarding marked as completed',
+        data: result,
+    });
+}));
 exports.UserController = {
     createUser,
     getUserProfile,
@@ -198,4 +229,5 @@ exports.UserController = {
     getUserById,
     getUserDetailsById,
     getUsersStats,
+    completeOnboarding,
 };

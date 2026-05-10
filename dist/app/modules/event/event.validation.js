@@ -39,7 +39,18 @@ const updateEventZodSchema = zod_1.z.object({
         })
             .optional() }, legacyDateTimeFields)),
 });
+const getHighlightsZodSchema = zod_1.z.object({
+    query: zod_1.z.object({
+        from: zod_1.z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid format (YYYY-MM-DD)'),
+        to: zod_1.z
+            .string()
+            .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid format (YYYY-MM-DD)'),
+    }),
+});
 exports.EventValidation = {
     createEventZodSchema,
     updateEventZodSchema,
+    getHighlightsZodSchema,
 };

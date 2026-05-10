@@ -131,7 +131,8 @@ export const getAllSubscriptionsController = catchAsync(
       success: true,
       statusCode: httpStatus.OK,
       message: 'Subscriptions retrieved successfully',
-      data: result,
+      meta: result.meta,
+      data: result.data,
     });
   }
 );
@@ -162,7 +163,9 @@ export const getPendingWebhooksController = catchAsync(
 
 export const getSubscriptionByIdController = catchAsync(
   async (req: Request, res: Response) => {
-    const result = await SubscriptionService.getSubscriptionById(req.params.id);
+    const result = await SubscriptionService.getSubscriptionById(
+      req.params.subscriptionId
+    );
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.OK,
@@ -174,12 +177,16 @@ export const getSubscriptionByIdController = catchAsync(
 
 export const getSubscriptionEventsController = catchAsync(
   async (req: Request, res: Response) => {
-    const result = await SubscriptionService.getSubscriptionEvents(req.params.userId);
+    const result = await SubscriptionService.getSubscriptionEvents(
+      req.params.userId,
+      req.query
+    );
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.OK,
       message: 'Subscription events retrieved successfully',
-      data: result,
+      meta: result.meta,
+      data: result.data,
     });
   }
 );

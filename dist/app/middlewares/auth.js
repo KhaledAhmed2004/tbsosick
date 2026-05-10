@@ -19,11 +19,12 @@ const ApiError_1 = __importDefault(require("../../errors/ApiError"));
 const jwtHelper_1 = require("../../helpers/jwtHelper");
 const user_model_1 = require("../modules/user/user.model");
 const auth = (...allowedRoles) => (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const authHeader = req.headers.authorization;
         // 1️⃣ No token provided — require authentication for all protected routes
         if (!authHeader) {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Authorization token is required');
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Unauthorized access');
         }
         // 2️⃣ Validate Bearer format
         if (!authHeader.startsWith('Bearer ')) {
@@ -32,7 +33,7 @@ const auth = (...allowedRoles) => (req, res, next) => __awaiter(void 0, void 0, 
         // 3️⃣ Extract token and ensure it's not empty
         const token = authHeader.split(' ')[1];
         if (!token || token.trim() === '') {
-            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Valid token is required');
+            throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Unauthorized access');
         }
         // 4️⃣ Verify JWT token
         const verifiedUser = jwtHelper_1.jwtHelper.verifyToken(token, config_1.default.jwt.jwt_secret);
@@ -59,8 +60,11 @@ const auth = (...allowedRoles) => (req, res, next) => __awaiter(void 0, void 0, 
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Account is no longer active');
         }
         const jwtTokenVersion = verifiedUser.tokenVersion;
+        // Handle the case where tokenVersion might be missing in DB (legacy users)
+        // or missing in the lean object. Treat missing as 0 to match schema default.
+        const dbTokenVersion = (_a = dbUser.tokenVersion) !== null && _a !== void 0 ? _a : 0;
         if (typeof jwtTokenVersion === 'number' &&
-            dbUser.tokenVersion !== jwtTokenVersion) {
+            dbTokenVersion !== jwtTokenVersion) {
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.UNAUTHORIZED, 'Session invalidated — please log in again');
         }
         // 6️⃣ Attach verified user to request

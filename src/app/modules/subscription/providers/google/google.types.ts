@@ -27,6 +27,9 @@ export type DecodedGoogleSubscription = {
   linkedPurchaseToken?: string; // set on upgrade/downgrade
   testPurchase?: boolean;
   environment: GoogleEnvironment;
+  // externalAccountIdentifiers.obfuscatedExternalAccountId — set client-side
+  // at purchase time to bind the transaction to a specific user account.
+  obfuscatedExternalAccountId?: string;
 };
 
 export type GoogleWebhookResult = {
