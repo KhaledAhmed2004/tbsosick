@@ -98,10 +98,15 @@ if (!quota.allowed) {
 
 ## 6. Administrative Controls (Admin APIs)
 
-The system provides a suite of `SUPER_ADMIN` only endpoints for manual management:
-- **`GET /subscriptions/admin`**: List all user subscriptions with filters.
-- **`GET /subscriptions/admin/analytics`**: Real-time plan and platform distribution.
-- **`GET /subscriptions/admin/events/:userId`**: View a user's full audit history.
-- **`POST /subscriptions/admin/grant`**: Manually grant Premium/Enterprise plans.
-- **`POST /subscriptions/admin/reset/:userId`**: Force reset any subscription to Free.
+The system provides a suite of `SUPER_ADMIN` only endpoints for manual management. **All seven** admin endpoints are documented in detail in [07-admin-endpoints.md](./07-admin-endpoints.md):
+
+- **`GET /subscriptions/admin`**: List all user subscriptions with filters + pagination (returns `{ data, meta }`).
+- **`GET /subscriptions/admin/analytics`**: Real-time plan and platform distribution via single `$facet` aggregation.
+- **`GET /subscriptions/admin/pending-webhooks`**: Inspect orphan webhooks queued for replay (most-recent 100).
+- **`GET /subscriptions/admin/events/:userId`**: Paginated audit history of a user's subscription transitions.
+- **`GET /subscriptions/admin/:subscriptionId`**: Fetch a single subscription document by Mongo `_id`.
+- **`POST /subscriptions/admin/grant`**: Manually grant `PREMIUM`/`ENTERPRISE` plans (rejects `404` if `userId` does not exist).
+- **`POST /subscriptions/admin/reset/:userId`**: Force reset any subscription to `FREE` (also rejects `404` if user not found).
+
+All admin write operations (grant, reset) flow through `upsertForUser`, so audit events are emitted automatically — no separate logging needed.
 

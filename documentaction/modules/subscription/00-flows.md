@@ -300,12 +300,14 @@ User explicitly opts out of paid plans (downgrade button in profile settings).
        │                                  │ ────────────────────────────────► │
        │                                  │                                   │
        │                                  │ 3. Active-store-subscription guard:
-       │                                  │    if existing is APPLE/GOOGLE    │
+       │                                  │    if existing.platform !== ADMIN │
        │                                  │    AND status ∈ {active, trialing,│
        │                                  │      past_due}                    │
        │                                  │    AND currentPeriodEnd > now     │
        │                                  │    → throw 409 ("cancel via store"
        │                                  │       first)                      │
+       │                                  │    (admin-set subs skip the guard │
+       │                                  │     — they're not store-linked)   │
        │                                  │                                   │
        │                                  │ 4. upsertForUser({                │
        │                                  │     plan: FREE,                   │

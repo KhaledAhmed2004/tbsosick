@@ -129,7 +129,7 @@ Auth: Bearer {{adminToken}}
 ---
 
 ## 4. Manual Plan Grant
-Manually promote a user to `PREMIUM` or `ENTERPRISE` (useful for invoice-based payments or customer support).
+Manually promote a user to `PREMIUM` or `ENTERPRISE` (useful for invoice-based payments or customer support). The local row is marked `platform: "admin"` and `currentPeriodEnd: null` (perpetual until manually managed).
 
 ```http
 POST /subscriptions/admin/grant
@@ -142,22 +142,97 @@ Content-Type: application/json
 }
 ```
 
+**Validation:**
+- `userId`: 24-char hex Mongo `_id`
+- `plan`: `"PREMIUM"` or `"ENTERPRISE"` (FREE is rejected — use `/admin/reset/:userId` instead)
+
+**Success (200):**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "ENTERPRISE plan granted successfully",
+  "data": {
+    "_id": "...",
+    "userId": "644b...",
+    "plan": "ENTERPRISE",
+    "status": "active",
+    "platform": "admin",
+    "currentPeriodEnd": null
+  }
+}
+```
+
+**Errors:**
+- `400` — Invalid `userId` format or unsupported plan
+- `401` — Missing/invalid admin JWT
+- `403` — Caller is not `SUPER_ADMIN`
+- **`404` — `userId` does not match any user record** (validated via `assertUserExists` before upsert)
+
 ---
 
 ## 5. Force Reset (Revoke)
-Resets a user's subscription to the `FREE` plan immediately.
+Resets a user's subscription to the `FREE` plan immediately and stamps `canceledAt: <now>`. Local row is marked `platform: "admin"`. **This does NOT cancel any active store-side billing** — for users with live Apple/Google subscriptions, the store remains the source of truth and a webhook will reconcile state.
 
 ```http
 POST /subscriptions/admin/reset/:userId
 Auth: Bearer {{adminToken}}
 ```
 
+**Validation:**
+- `userId` (path param): 24-char hex Mongo `_id`
+
+**Success (200):**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Subscription reset to FREE successfully",
+  "data": {
+    "_id": "...",
+    "userId": "...",
+    "plan": "FREE",
+    "status": "active",
+    "platform": "admin",
+    "canceledAt": "2026-05-11T10:30:00.000Z"
+  }
+}
+```
+
+**Errors:**
+- `400` — Invalid `userId` format
+- `401` — Missing/invalid admin JWT
+- `403` — Caller is not `SUPER_ADMIN`
+- **`404` — `userId` does not match any user record**
+
 ---
 
 ## 6. Monitor Pending Webhooks
-View "orphan" webhooks that arrived before a user record existed.
+View "orphan" webhooks that arrived before a user record existed. Returns the most recent 100 entries from the `pending_webhooks` collection (TTL 7 days).
 
 ```http
 GET /subscriptions/admin/pending-webhooks
 Auth: Bearer {{adminToken}}
 ```
+
+**Success (200):**
+```json
+{
+  "success": true,
+  "statusCode": 200,
+  "message": "Pending webhooks retrieved successfully",
+  "data": [
+    {
+      "_id": "...",
+      "externalPurchaseId": "2000000123456789",
+      "provider": "apple",
+      "payload": "<JWS string or raw Pub/Sub bytes>",
+      "receivedAt": "2026-05-11T10:30:00.000Z"
+    }
+  ]
+}
+```
+
+**Errors:**
+- `401` — Missing/invalid admin JWT
+- `403` — Caller is not `SUPER_ADMIN`
