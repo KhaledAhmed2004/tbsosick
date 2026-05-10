@@ -754,7 +754,17 @@ POST /api/v1/auth/social-login
 Content-Type: application/json
 ```
 
-### 2. Request Body Schema
+### 2. Apple Callback Endpoint (MANDATORY for Android)
+
+Android-er Apple login-er jonno ei callback endpoint-ti dorkar. `sign_in_with_apple` package-er `webAuthenticationOptions`-e eita `redirectUri` hishebe use korte hobe.
+
+```
+POST /api/v1/auth/apple/callback
+```
+
+**Purpose:** Apple theke POST request rিসিভ kore ekta HTML page return kore ja auto-redirect kore app-e back niye jay.
+
+### 3. Request Body Schema (Social Login)
 
 ```json
 {
@@ -1058,7 +1068,7 @@ Future<void> signInWithApple() async {
     webAuthenticationOptions: Platform.isAndroid
         ? WebAuthenticationOptions(
             clientId: 'com.tbsosick.smrtscrub.service',  // Services ID (Android only)
-            redirectUri: Uri.parse('https://your-backend.com/api/v1/auth/apple/callback'),
+            redirectUri: Uri.parse('https://www.smrtscrub.com/api/v1/auth/apple/callback'),
           )
         : null,
   );

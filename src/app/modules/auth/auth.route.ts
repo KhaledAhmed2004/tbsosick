@@ -44,6 +44,12 @@ router.post(
   AuthController.socialLogin,
 );
 
+// Apple Sign In Callback (for Android fallback/Web OAuth flow)
+// Apple uses POST to the redirect URI
+router.post('/apple/callback', AuthController.appleCallback);
+// Also allow GET for manual testing/debugging
+router.get('/apple/callback', AuthController.appleCallback);
+
 // User logout — invalidate active sessions/tokens
 router.post(
   '/logout',
