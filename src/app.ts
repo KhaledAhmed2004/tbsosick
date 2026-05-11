@@ -30,6 +30,9 @@ app.use(Morgan.errorHandler);
 
 // Client Hints: request OS/device info from browsers without frontend changes
 app.use((req, res, next) => {
+  // Skip ngrok browser warning for all requests
+  res.setHeader('ngrok-skip-browser-warning', 'true');
+
   // Ask for high-entropy client hints (Chrome/Edge)
   res.setHeader(
     'Accept-CH',
