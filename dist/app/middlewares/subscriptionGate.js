@@ -36,8 +36,17 @@ const subscriptionGate = (requiredPlan) => {
             }
             const entitlement = yield (0, entitlement_1.getUserEntitlement)(user.id);
             // 1. Basic status check (block inactive/expired/revoked)
-            if (!entitlement.isActive) {
-                throw new ApiError_1.default(http_status_codes_1.StatusCodes.PAYMENT_REQUIRED, 'Your subscription is inactive. Please subscribe to access this feature.');
+            // We only block inactive status if the user is trying to access a PAID feature.
+            // If they are accessing a FREE feature, we let them through (they'll be treated as FREE).
+            if (!entitlement.isActive && requiredPlan !== subscription_interface_1.SUBSCRIPTION_PLAN.FREE) {
+                const isExpired = entitlement.status === subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE &&
+                    entitlement.currentPeriodEnd &&
+                    entitlement.currentPeriodEnd < new Date();
+                let message = 'Your subscription is inactive. Please subscribe to access this feature.';
+                if (isExpired) {
+                    message = 'Your subscription has expired. Please renew to continue using premium features.';
+                }
+                throw new ApiError_1.default(http_status_codes_1.StatusCodes.PAYMENT_REQUIRED, message);
             }
             // 2. Plan hierarchy check
             // Hierarchy: FREE < PREMIUM < ENTERPRISE

@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import config from '../../../config';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
+import ApiError from '../../../errors/ApiError';
 import { AuthService } from './auth.service';
 import { JwtPayload } from 'jsonwebtoken';
 

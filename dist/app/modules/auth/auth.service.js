@@ -255,6 +255,11 @@ const changePasswordToDB = (user, payload) => __awaiter(void 0, void 0, void 0, 
 const resendVerifyEmailToDB = (email) => __awaiter(void 0, void 0, void 0, function* () {
     return (0, authHelpers_1.sendVerificationOTP)(email);
 });
+// All valid Apple client IDs — Bundle ID for native iOS, Service ID for Android fallback.
+const appleAudience = [
+    config_1.default.apple_client_id, // Usually the Service ID for Android
+    config_1.default.apple.bundleId, // Bundle ID for iOS
+].filter(Boolean);
 // Social login (Google / Apple ID token verification)
 const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
@@ -293,7 +298,7 @@ const socialLoginToDB = (payload) => __awaiter(void 0, void 0, void 0, function*
             throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Nonce is required for Apple sign-in');
         }
         const applePayload = yield apple_signin_auth_1.default.verifyIdToken(idToken, {
-            audience: config_1.default.apple_client_id,
+            audience: appleAudience,
             ignoreExpiration: false,
         });
         if (!applePayload.sub) {

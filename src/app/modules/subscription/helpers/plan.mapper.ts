@@ -13,13 +13,26 @@ import {
 // Play Console, add the exact product identifier here.
 const PRODUCT_ID_TO_PLAN: Record<string, SubscriptionPlanType> = {
   // Apple & Google share the same product identifiers by convention.
-  // PREMIUM — $5.99/mo, $3.99/mo billed yearly
+  // Parent Subscription ID (Google)
+  smrtscrub_subscription: SUBSCRIPTION_PLAN.PREMIUM,
+
+  // Plan IDs (Base Plan IDs / Product IDs)
+  'premium-monthly': SUBSCRIPTION_PLAN.PREMIUM,
+  'premium-yearly': SUBSCRIPTION_PLAN.PREMIUM,
+  'enterprise-monthly': SUBSCRIPTION_PLAN.ENTERPRISE,
+  'enterprise-yearly': SUBSCRIPTION_PLAN.ENTERPRISE,
+
+  // Legacy/Alternative Underscore IDs
   premium_monthly: SUBSCRIPTION_PLAN.PREMIUM,
   premium_yearly: SUBSCRIPTION_PLAN.PREMIUM,
-
-  // ENTERPRISE — $9.99/mo, $5.99/mo billed yearly
   enterprise_monthly: SUBSCRIPTION_PLAN.ENTERPRISE,
   enterprise_yearly: SUBSCRIPTION_PLAN.ENTERPRISE,
+
+  // Full Bundle IDs (Used by some mobile configurations)
+  'com.tbsosick.premium_monthly': SUBSCRIPTION_PLAN.PREMIUM,
+  'com.tbsosick.premium_yearly': SUBSCRIPTION_PLAN.PREMIUM,
+  'com.tbsosick.enterprise_monthly': SUBSCRIPTION_PLAN.ENTERPRISE,
+  'com.tbsosick.enterprise_yearly': SUBSCRIPTION_PLAN.ENTERPRISE,
 };
 
 export const mapAppleProductToPlan = (

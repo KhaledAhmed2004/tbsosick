@@ -332,8 +332,7 @@ class PDFBuilder {
       PDFBuilder.browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-web-security'],
-        ignoreHTTPSErrors: true,
-      });
+      } as any);
     }
     return PDFBuilder.browser;
   }

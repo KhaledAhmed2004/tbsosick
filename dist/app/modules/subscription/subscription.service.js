@@ -24,6 +24,7 @@ const apple_webhook_1 = require("./providers/apple/apple.webhook");
 const google_verify_1 = require("./providers/google/google.verify");
 const google_webhook_1 = require("./providers/google/google.webhook");
 const plan_mapper_1 = require("./helpers/plan.mapper");
+const entitlement_1 = require("./helpers/entitlement");
 const pending_webhook_model_1 = require("./pending-webhook.model");
 const subscription_event_model_1 = require("./subscription-event.model");
 const iap_account_1 = require("./helpers/iap-account");
@@ -120,19 +121,38 @@ const adminResetPlan = (userId) => __awaiter(void 0, void 0, void 0, function* (
 });
 exports.adminResetPlan = adminResetPlan;
 // --- End Admin Service Methods ---
-// GET handlers must not mutate state. If no subscription row exists for a
-// user, return a synthetic FREE/ACTIVE entitlement instead of writing one.
-// The row is materialized lazily on the first paid action (verify*) or
-// explicit free-plan opt-in (setFreePlan).
+// GET handlers must not mutate state except for self-healing lazy cleanup.
+// If no subscription row exists for a user, return a synthetic FREE/ACTIVE
+// entitlement instead of writing one.
 const getMySubscription = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     const id = new mongoose_1.Types.ObjectId(userId);
-    const doc = yield subscription_model_1.Subscription.findOne({ userId: id }).select('-metadata');
-    if (doc)
-        return doc;
+    const entitlement = yield (0, entitlement_1.getUserEntitlement)(userId);
+    // Lazy Cleanup: if the user has a row in the DB that is technically
+    // expired but still marked as 'active', we update it now to 'inactive'
+    // and 'FREE'. This fixes state drift if webhooks were missed.
+    // We check entitlement.isActive which already includes our 24h safety buffer.
+    const doc = yield subscription_model_1.Subscription.findOne({ userId: id });
+    if (doc &&
+        doc.status === subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE &&
+        !entitlement.isActive) {
+        logger_1.logger.info(`Lazy cleaning expired subscription for user ${userId} (expired at ${doc.currentPeriodEnd})`);
+        yield subscription_model_1.Subscription.upsertForUser(id, {
+            status: subscription_interface_1.SUBSCRIPTION_STATUS.INACTIVE,
+            plan: subscription_interface_1.SUBSCRIPTION_PLAN.FREE,
+            gracePeriodEndsAt: null,
+        });
+    }
+    // Return the entitlement-corrected view.
     return {
         userId: id,
-        plan: subscription_interface_1.SUBSCRIPTION_PLAN.FREE,
-        status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
+        plan: entitlement.plan,
+        status: entitlement.status,
+        platform: doc === null || doc === void 0 ? void 0 : doc.platform,
+        productId: doc === null || doc === void 0 ? void 0 : doc.productId,
+        currentPeriodEnd: entitlement.currentPeriodEnd,
+        gracePeriodEndsAt: entitlement.gracePeriodEndsAt,
+        createdAt: doc === null || doc === void 0 ? void 0 : doc.createdAt,
+        updatedAt: doc === null || doc === void 0 ? void 0 : doc.updatedAt,
     };
 });
 exports.getMySubscription = getMySubscription;

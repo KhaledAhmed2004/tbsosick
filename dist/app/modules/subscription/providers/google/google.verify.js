@@ -21,7 +21,7 @@ const google_client_1 = require("./google.client");
 // Pulls the latest subscription state for a purchase token from the Google
 // Play Developer API and normalizes it into our internal shape.
 const verifyGoogleSubscription = (purchaseToken, productId) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a, _b, _c;
     if (!purchaseToken || typeof purchaseToken !== 'string') {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'purchaseToken is required and must be a string');
     }
@@ -50,12 +50,19 @@ const verifyGoogleSubscription = (purchaseToken, productId) => __awaiter(void 0,
     // Google's v2 API places the actual productId per line item.
     const lineItems = data.lineItems || [];
     const firstLine = lineItems[0];
-    const resolvedProductId = productId || (firstLine === null || firstLine === void 0 ? void 0 : firstLine.productId) || (firstLine === null || firstLine === void 0 ? void 0 : firstLine.product_id) || '';
+    // Resolve the productId.
+    // In Google Play Billing v5+, the specific plan is identified by 'basePlanId'.
+    // We prefer basePlanId for tier mapping, falling back to the parent productId.
+    const resolvedProductId = ((_a = firstLine === null || firstLine === void 0 ? void 0 : firstLine.offerDetails) === null || _a === void 0 ? void 0 : _a.basePlanId) ||
+        productId ||
+        (firstLine === null || firstLine === void 0 ? void 0 : firstLine.productId) ||
+        (firstLine === null || firstLine === void 0 ? void 0 : firstLine.product_id) ||
+        '';
     if (!resolvedProductId) {
         throw new ApiError_1.default(http_status_1.default.BAD_REQUEST, 'Decoded Google subscription is missing productId');
     }
     const expiryTime = (firstLine === null || firstLine === void 0 ? void 0 : firstLine.expiryTime) || undefined;
-    const autoRenewing = Boolean((_a = firstLine === null || firstLine === void 0 ? void 0 : firstLine.autoRenewingPlan) === null || _a === void 0 ? void 0 : _a.autoRenewEnabled);
+    const autoRenewing = Boolean((_b = firstLine === null || firstLine === void 0 ? void 0 : firstLine.autoRenewingPlan) === null || _b === void 0 ? void 0 : _b.autoRenewEnabled);
     // Reject if already expired (defensive — caller may also re-check).
     if (expiryTime && Date.now() > new Date(expiryTime).getTime()) {
         if (subscriptionState !== 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD' &&
@@ -94,7 +101,7 @@ const verifyGoogleSubscription = (purchaseToken, productId) => __awaiter(void 0,
         logger_1.logger.warn(`[Google IAP] Purchase acknowledgement failed for token ${purchaseToken.slice(0, 12)}...: ${msg}. ` +
             'Will need manual re-acknowledgement within 72h to prevent auto-refund.');
     }
-    const obfuscatedExternalAccountId = ((_b = data.externalAccountIdentifiers) === null || _b === void 0 ? void 0 : _b.obfuscatedExternalAccountId) ||
+    const obfuscatedExternalAccountId = ((_c = data.externalAccountIdentifiers) === null || _c === void 0 ? void 0 : _c.obfuscatedExternalAccountId) ||
         undefined;
     return {
         purchaseToken,

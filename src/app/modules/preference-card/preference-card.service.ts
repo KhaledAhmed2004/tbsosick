@@ -1,4 +1,5 @@
 import { Model, Types } from 'mongoose';
+import escapeRegex from 'escape-string-regexp';
 import {
   PreferenceCardDownloadModel,
   PreferenceCardModel,
@@ -455,9 +456,12 @@ const listPrivatePreferenceCardsForUserFromDB = async (
     }),
     query || {},
   )
-    // Text index on cardTitle + medication + surgeon.fullName + surgeon.specialty
-    // handles the full search path — see `card_text_idx` in the model.
-    .textSearch()
+    .search([
+      'cardTitle',
+      'medication',
+      'surgeon.fullName',
+      'surgeon.specialty',
+    ])
     .filter()
     .sort()
     .paginate()
@@ -668,19 +672,34 @@ const listPublicPreferenceCardsFromDB = async (
     match['surgeon.specialty'] = String(rawQuery.specialty);
   }
 
-  // Text search — leverages `card_text_idx` and `score` sorting.
+  // Search term logic: switch from $text (full words only) to $regex (partial matches)
   const searchTerm =
     typeof rawQuery.searchTerm === 'string'
       ? rawQuery.searchTerm.trim()
       : '';
+
   if (searchTerm.length > 0) {
-    match.$text = { $search: searchTerm };
+    const sanitizedTerm = escapeRegex(searchTerm);
+    const searchRegex = { $regex: sanitizedTerm, $options: 'i' };
+
+    // Move visibility $or into $and to allow adding search $or
+    const visibilityOr = match.$or;
+    delete match.$or;
+
+    match.$and = [
+      { $or: visibilityOr },
+      {
+        $or: [
+          { cardTitle: searchRegex },
+          { medication: searchRegex },
+          { 'surgeon.fullName': searchRegex },
+          { 'surgeon.specialty': searchRegex },
+        ],
+      },
+    ];
   }
 
-  const sortStage: Record<string, any> =
-    searchTerm.length > 0
-      ? { score: { $meta: 'textScore' } }
-      : { createdAt: -1 };
+  const sortStage: Record<string, any> = { createdAt: -1 };
 
   const [result] = await PreferenceCardModel.aggregate<{
     data: any[];
@@ -817,9 +836,12 @@ const listFavoritePreferenceCardsForUserFromDB = async (
     }),
     query || {},
   )
-    // Text index on cardTitle + medication + surgeon.fullName + surgeon.specialty
-    // handles the full search path — see `card_text_idx` in the model.
-    .textSearch()
+    .search([
+      'cardTitle',
+      'medication',
+      'surgeon.fullName',
+      'surgeon.specialty',
+    ])
     .filter()
     .sort()
     .paginate()

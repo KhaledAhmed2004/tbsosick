@@ -5,6 +5,28 @@
 
 ---
 
+## Quick Setup Guide (Google Play) — গুগল প্লে সেটআপ গাইড
+
+গুগল প্লে ভেরিফিকেশন কাজ করানোর জন্য নিচের ধাপগুলো অনুসরণ করুন:
+
+### 1. Google Cloud Console (JSON Key তৈরি)
+1. [Google Cloud Console](https://console.cloud.google.com/)-এ গিয়ে সঠিক প্রজেক্টটি সিলেক্ট করুন।
+2. **IAM & Admin > Service Accounts**-এ যান।
+3. **CREATE SERVICE ACCOUNT**-এ ক্লিক করে একটি নাম দিন (যেমন: `play-billing-service`) এবং **DONE** দিন।
+4. তৈরি করা সার্ভিস অ্যাকাউন্টের **Actions (three dots) > Manage keys**-এ যান।
+5. **ADD KEY > Create new key > JSON** সিলেক্ট করে **CREATE** ক্লিক করুন।
+6. ডাউনলোড হওয়া ফাইলটি প্রজেক্টের `secrets/google-service-account.json` নামে সেভ করুন।
+
+### 2. Google Play Console (Permission দেওয়া)
+1. ডাউনলোড করা JSON ফাইলটি ওপেন করে `client_email` টি কপি করুন।
+2. [Google Play Console](https://play.google.com/console/)-এ গিয়ে **Users and permissions > Invite new users**-এ যান।
+3. কপি করা ইমেইলটি দিন এবং **Account permissions** ট্যাবে নিচের দুটি পারমিশন অবশ্যই টিক দিন:
+   * **View financial data, orders, and cancellation survey responses**
+   * **Manage orders and subscriptions**
+4. **Invite user**-এ ক্লিক করুন। (পারমিশন আপডেট হতে ৫-১০ মিনিট সময় লাগতে পারে)।
+
+---
+
 ## Overview — কী এটা?
 
 Ei module ti user subscriptions manage kore — **direct Apple StoreKit 2** ar **direct Google Play Billing** integration use kore, kono third-party middleman chara.
@@ -44,6 +66,39 @@ Dui platform er state machine same `Subscription` doc e converge kore — same `
 | Access gating helpers (`getUserEntitlement`) | ✅ Complete |
 | Enterprise tier via store purchase | ✅ Complete |
 | Upgrade/Downgrade migration | ✅ Complete (Token migration) |
+| Environment-aware Expiry Buffers | ✅ Complete (24h Prod / 2m Sandbox) |
+| Self-healing Lazy Cleanup | ✅ Complete (State drift correction) |
+
+---
+
+## Robustness & Error Handling
+
+### 1. The "State Drift" Problem
+In a webhook-based system, the database `status` (e.g., `active`) can sometimes get out of sync with the `currentPeriodEnd` timestamp if:
+- A renewal/expiry webhook is delayed or missed.
+- Sandbox testing cycles (15-30 minutes) move faster than the processing queue.
+
+This leads to a state where a user is "Premium" in the DB but "Expired" by time, causing them to be blocked from features while still seeing "Premium" in their profile (preventing re-purchase).
+
+### 2. Solutions Implemented
+
+#### A. Environment-aware Expiry Buffers
+To prevent "false-positive" 402 lockouts due to clock skew or minor webhook delays, we use a safety buffer:
+- **Production**: **24-hour buffer**. Users keep access for 24 hours after `currentPeriodEnd` to allow for billing retries and webhook delivery.
+- **Sandbox**: **2-minute buffer**. Shortened specifically for developers to allow rapid testing cycles without waiting 24 hours for a test account to expire.
+
+#### B. Lazy Cleanup (Self-Healing)
+The `getMySubscription` (Profile) API now performs **Lazy Cleanup**. If it detects a user has an `active` status but is technically expired (beyond the buffer), it will:
+1. Automatically update the DB status to `inactive`.
+2. Revert the plan to `FREE`.
+3. Return the corrected `FREE` state to the app.
+
+This ensures the user can immediately see the "Subscribe" button again without manual admin intervention.
+
+#### C. Specific Error Messaging
+The `subscriptionGate` middleware distinguishes between:
+- **Inactive**: User never subscribed or was revoked (`402 Payment Required`).
+- **Expired**: User was active but their time ran out (`402` with a message to "Renew").
 
 ---
 

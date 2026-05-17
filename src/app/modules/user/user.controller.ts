@@ -33,7 +33,7 @@ const createUser = catchAsync(async (req: Request, res: Response) => {
   const result = await UserService.createUserToDB(userData, isAdmin);
 
   // Convert to object and sanitize response (remove password)
-  const responseData = result.toObject();
+  const responseData = (result as any).toObject();
   delete responseData.password;
 
   sendResponse(res, {

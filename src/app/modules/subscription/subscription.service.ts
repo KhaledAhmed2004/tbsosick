@@ -19,6 +19,7 @@ import {
   mapAppleProductToPlan,
   mapGoogleProductToPlan,
 } from './helpers/plan.mapper';
+import { getUserEntitlement } from './helpers/entitlement';
 import { PendingWebhook } from './pending-webhook.model';
 import { SubscriptionEvent } from './subscription-event.model';
 import { ISubscriptionEvent } from './subscription-event.interface';
@@ -140,23 +141,47 @@ export const adminResetPlan = async (userId: string): Promise<ISubscription> => 
 // --- End Admin Service Methods ---
 
 
-// GET handlers must not mutate state. If no subscription row exists for a
-// user, return a synthetic FREE/ACTIVE entitlement instead of writing one.
-// The row is materialized lazily on the first paid action (verify*) or
-// explicit free-plan opt-in (setFreePlan).
+// GET handlers must not mutate state except for self-healing lazy cleanup.
+// If no subscription row exists for a user, return a synthetic FREE/ACTIVE
+// entitlement instead of writing one.
 export const getMySubscription = async (
   userId: string
 ): Promise<Partial<ISubscription>> => {
   const id = new Types.ObjectId(userId);
-  const doc = await SubscriptionModel.findOne({ userId: id }).select(
-    '-metadata'
-  );
-  if (doc) return doc;
+  const entitlement = await getUserEntitlement(userId);
 
+  // Lazy Cleanup: if the user has a row in the DB that is technically
+  // expired but still marked as 'active', we update it now to 'inactive'
+  // and 'FREE'. This fixes state drift if webhooks were missed.
+  // We check entitlement.isActive which already includes our 24h safety buffer.
+  const doc = await SubscriptionModel.findOne({ userId: id });
+
+  if (
+    doc &&
+    doc.status === SUBSCRIPTION_STATUS.ACTIVE &&
+    !entitlement.isActive
+  ) {
+    logger.info(
+      `Lazy cleaning expired subscription for user ${userId} (expired at ${doc.currentPeriodEnd})`
+    );
+    await SubscriptionModel.upsertForUser(id, {
+      status: SUBSCRIPTION_STATUS.INACTIVE,
+      plan: SUBSCRIPTION_PLAN.FREE,
+      gracePeriodEndsAt: null,
+    });
+  }
+
+  // Return the entitlement-corrected view.
   return {
     userId: id,
-    plan: SUBSCRIPTION_PLAN.FREE,
-    status: SUBSCRIPTION_STATUS.ACTIVE,
+    plan: entitlement.plan,
+    status: entitlement.status,
+    platform: doc?.platform,
+    productId: doc?.productId,
+    currentPeriodEnd: entitlement.currentPeriodEnd,
+    gracePeriodEndsAt: entitlement.gracePeriodEndsAt,
+    createdAt: doc?.createdAt,
+    updatedAt: doc?.updatedAt,
   };
 };
 

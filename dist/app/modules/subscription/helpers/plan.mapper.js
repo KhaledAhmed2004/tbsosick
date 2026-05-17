@@ -12,10 +12,16 @@ const subscription_interface_1 = require("../subscription.interface");
 // Play Console, add the exact product identifier here.
 const PRODUCT_ID_TO_PLAN = {
     // Apple & Google share the same product identifiers by convention.
-    // PREMIUM — $5.99/mo, $3.99/mo billed yearly
+    // Parent Subscription ID (Google)
+    smrtscrub_subscription: subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM,
+    // Plan IDs (Base Plan IDs / Product IDs)
+    'premium-monthly': subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM,
+    'premium-yearly': subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM,
+    'enterprise-monthly': subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
+    'enterprise-yearly': subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
+    // Legacy/Alternative Underscore IDs
     premium_monthly: subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM,
     premium_yearly: subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM,
-    // ENTERPRISE — $9.99/mo, $5.99/mo billed yearly
     enterprise_monthly: subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
     enterprise_yearly: subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
 };

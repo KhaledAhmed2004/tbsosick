@@ -4,6 +4,7 @@ import auth from '../../middlewares/auth';
 import validateRequest from '../../middlewares/validateRequest';
 import { USER_ROLES } from '../../../enums/user';
 import { PreferenceCardController } from './preference-card.controller';
+import { PreferenceCardModel } from './preference-card.model';
 import { PreferenceCardValidation } from './preference-card.validation';
 import { fileHandler } from '../../middlewares/fileHandler';
 import { rateLimitMiddleware } from '../../middlewares/rateLimit';
@@ -64,7 +65,11 @@ const parseBody = (req: Request, res: Response, next: NextFunction) => {
  * We gate this specifically when the user requests the public list.
  */
 const libraryGate = async (req: Request, res: Response, next: NextFunction) => {
-  if (req.query.visibility === 'PUBLIC') {
+  // Roadmap §8: Library access (visibility=PUBLIC) is a paid feature.
+  // If visibility is not provided, the controller defaults to PUBLIC,
+  // so we must gate that case as well.
+  const visibility = req.query.visibility || 'PUBLIC';
+  if (visibility === 'PUBLIC') {
     return subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM)(req, res, next);
   }
   next();
@@ -140,7 +145,24 @@ router.delete(
 router.post(
   '/:cardId/download',
   auth(USER_ROLES.USER, USER_ROLES.SUPER_ADMIN),
-  subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM),
+  async (req: Request, res: Response, next: NextFunction) => {
+    // Roadmap §8: Download is a paid feature for public cards.
+    // If the user is the owner, they can download for FREE.
+    const userId = req.user?.id;
+    const cardId = req.params.cardId;
+
+    try {
+      const card = await PreferenceCardModel.findById(cardId).lean();
+      const isOwner = card?.createdBy?.toString() === userId;
+
+      if (isOwner) {
+        return subscriptionGate(SUBSCRIPTION_PLAN.FREE)(req, res, next);
+      }
+      return subscriptionGate(SUBSCRIPTION_PLAN.PREMIUM)(req, res, next);
+    } catch (error) {
+      next(error);
+    }
+  },
   rateLimitMiddleware({
     windowMs: 60_000,
     max: 20,

@@ -19,6 +19,7 @@ const auth_1 = __importDefault(require("../../middlewares/auth"));
 const validateRequest_1 = __importDefault(require("../../middlewares/validateRequest"));
 const user_1 = require("../../../enums/user");
 const preference_card_controller_1 = require("./preference-card.controller");
+const preference_card_model_1 = require("./preference-card.model");
 const preference_card_validation_1 = require("./preference-card.validation");
 const fileHandler_1 = require("../../middlewares/fileHandler");
 const rateLimit_1 = require("../../middlewares/rateLimit");
@@ -77,7 +78,11 @@ const parseBody = (req, res, next) => {
  * We gate this specifically when the user requests the public list.
  */
 const libraryGate = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    if (req.query.visibility === 'PUBLIC') {
+    // Roadmap §8: Library access (visibility=PUBLIC) is a paid feature.
+    // If visibility is not provided, the controller defaults to PUBLIC,
+    // so we must gate that case as well.
+    const visibility = req.query.visibility || 'PUBLIC';
+    if (visibility === 'PUBLIC') {
         return (0, subscriptionGate_1.default)(subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM)(req, res, next);
     }
     next();
@@ -101,7 +106,24 @@ router.patch('/:cardId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER
 // Delete card by ID
 router.delete('/:cardId', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, validateRequest_1.default)(preference_card_validation_1.PreferenceCardValidation.paramIdSchema), preference_card_controller_1.PreferenceCardController.deleteCard);
 // Download preference card
-router.post('/:cardId/download', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (0, subscriptionGate_1.default)(subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM), (0, rateLimit_1.rateLimitMiddleware)({
+router.post('/:cardId/download', (0, auth_1.default)(user_1.USER_ROLES.USER, user_1.USER_ROLES.SUPER_ADMIN), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    // Roadmap §8: Download is a paid feature for public cards.
+    // If the user is the owner, they can download for FREE.
+    const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+    const cardId = req.params.cardId;
+    try {
+        const card = yield preference_card_model_1.PreferenceCardModel.findById(cardId).lean();
+        const isOwner = ((_b = card === null || card === void 0 ? void 0 : card.createdBy) === null || _b === void 0 ? void 0 : _b.toString()) === userId;
+        if (isOwner) {
+            return (0, subscriptionGate_1.default)(subscription_interface_1.SUBSCRIPTION_PLAN.FREE)(req, res, next);
+        }
+        return (0, subscriptionGate_1.default)(subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM)(req, res, next);
+    }
+    catch (error) {
+        next(error);
+    }
+}), (0, rateLimit_1.rateLimitMiddleware)({
     windowMs: 60000,
     max: 20,
     routeName: 'download-preference-card',

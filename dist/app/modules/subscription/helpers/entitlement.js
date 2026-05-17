@@ -36,15 +36,20 @@ const getUserEntitlement = (userId) => __awaiter(void 0, void 0, void 0, functio
     // is still ACTIVE, a lifecycle webhook (EXPIRED / GRACE_PERIOD_EXPIRED) was
     // missed — server downtime, Apple/Google outage, etc. We treat the
     // subscription as effectively expired to prevent indefinite free access.
-    // PAST_DUE is intentionally exempt: grace period expiry has its own
-    // GRACE_PERIOD_EXPIRED event and the user retains access during retries.
+    //
+    // Buffer: We add a buffer to account for clock skew and webhook latency.
+    // Production gets 24 hours; Sandbox gets 2 minutes to allow for rapid testing cycles.
+    const isSandbox = sub.environment === 'sandbox';
+    const expiryBufferMs = isSandbox ? 2 * 60 * 1000 : 24 * 60 * 60 * 1000;
     const isExpiredByTime = sub.status === subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE &&
         sub.currentPeriodEnd != null &&
-        sub.currentPeriodEnd < new Date();
+        sub.currentPeriodEnd.getTime() + expiryBufferMs < Date.now();
     const isActive = !isExpiredByTime && ACTIVE_STATUSES.has(sub.status);
     const hasPaidPlan = sub.plan !== subscription_interface_1.SUBSCRIPTION_PLAN.FREE;
     return {
-        plan: sub.plan,
+        // If the subscription is inactive (expired/canceled), treat the user as FREE
+        // for all intent and purposes (quota, gating logic, etc.)
+        plan: isActive ? sub.plan : subscription_interface_1.SUBSCRIPTION_PLAN.FREE,
         status: sub.status,
         isActive,
         isPremium: isActive && hasPaidPlan,

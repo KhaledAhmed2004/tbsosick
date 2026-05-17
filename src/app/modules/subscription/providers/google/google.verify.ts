@@ -55,8 +55,16 @@ export const verifyGoogleSubscription = async (
   // Google's v2 API places the actual productId per line item.
   const lineItems = data.lineItems || [];
   const firstLine = lineItems[0];
+
+  // Resolve the productId.
+  // In Google Play Billing v5+, the specific plan is identified by 'basePlanId'.
+  // We prefer basePlanId for tier mapping, falling back to the parent productId.
   const resolvedProductId =
-    productId || firstLine?.productId || (firstLine as any)?.product_id || '';
+    (firstLine as any)?.offerDetails?.basePlanId ||
+    productId ||
+    firstLine?.productId ||
+    (firstLine as any)?.product_id ||
+    '';
 
   if (!resolvedProductId) {
     throw new ApiError(
