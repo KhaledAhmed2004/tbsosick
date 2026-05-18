@@ -26,7 +26,10 @@ const NotificationSchema = new Schema<INotification>(
     deletedAt: { type: Date, default: null },
 
     icon: { type: String },
-    expiresAt: { type: Date },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
   },
   { timestamps: true },
 );

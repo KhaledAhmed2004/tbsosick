@@ -18,6 +18,9 @@ const createLoginZodSchema = z.object({
     password: z
       .string({ required_error: 'Password is required' })
       .min(1, 'Password is required'),
+    deviceToken: z.string().optional(),
+    platform: z.enum(['ios', 'android', 'web']).optional(),
+    appVersion: z.string().optional(),
   }),
 });
 
@@ -86,6 +89,12 @@ const createRefreshTokenZodSchema = z.object({
     .optional(),
 });
 
+const logoutZodSchema = z.object({
+  body: z.object({
+    deviceToken: z.string({ required_error: 'Device token is required' }),
+  }),
+});
+
 export const AuthValidation = {
   createVerifyEmailZodSchema,
   createForgetPasswordZodSchema,
@@ -94,4 +103,5 @@ export const AuthValidation = {
   createChangePasswordZodSchema,
   createRefreshTokenZodSchema,
   createSocialLoginZodSchema,
+  logoutZodSchema,
 };

@@ -38,20 +38,20 @@ catch (e) {
 class NotificationScheduler {
     static start() {
         if (this.cronJob || this.intervalId) {
-            console.warn('Notification scheduler already started');
+            logger_1.logger.warn('Notification scheduler already started');
             return;
         }
         if (cron) {
             this.cronJob = cron.schedule('* * * * *', () => __awaiter(this, void 0, void 0, function* () {
                 yield this.processScheduled();
             }));
-            console.log('Notification scheduler started with node-cron');
+            logger_1.logger.info('Notification scheduler started with node-cron');
         }
         else {
             this.intervalId = setInterval(() => __awaiter(this, void 0, void 0, function* () {
                 yield this.processScheduled();
             }), 60000);
-            console.log('Notification scheduler started with setInterval');
+            logger_1.logger.info('Notification scheduler started with setInterval');
         }
         logger_1.logger.info('Notification scheduler started');
     }
@@ -74,11 +74,15 @@ class NotificationScheduler {
             let processedCount = 0;
             try {
                 const now = new Date();
-                const query = { scheduledFor: { $lte: now }, status: 'pending' };
-                const dueNotifications = yield ScheduledNotification_model_1.default.find(query)
-                    .limit(100)
-                    .sort({ scheduledFor: 1 });
-                for (const scheduled of dueNotifications) {
+                let processed = true;
+                // Claim and process one document at a time atomically.
+                // Loop until no more due documents remain in this tick.
+                while (processed) {
+                    const scheduled = yield ScheduledNotification_model_1.default.findOneAndUpdate({ scheduledFor: { $lte: now }, status: 'pending' }, { $set: { status: 'processing' } }, { new: true, sort: { scheduledFor: 1 } });
+                    if (!scheduled) {
+                        processed = false;
+                        break;
+                    }
                     try {
                         yield this.processSingle(scheduled);
                         processedCount++;
@@ -99,8 +103,6 @@ class NotificationScheduler {
     }
     static processSingle(scheduled) {
         return __awaiter(this, void 0, void 0, function* () {
-            scheduled.status = 'processing';
-            yield scheduled.save();
             try {
                 let builder = new NotificationBuilder_1.NotificationBuilder();
                 builder = builder.toMany(scheduled.recipients.map(id => id.toString()));

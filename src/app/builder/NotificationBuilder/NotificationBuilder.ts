@@ -24,6 +24,7 @@
 
 import { Types } from 'mongoose';
 import { User } from '../../modules/user/user.model';
+import { logger } from '../../../shared/logger';
 import * as templates from './templates';
 import { sendPush } from './channels/push.channel';
 import { sendSocket } from './channels/socket.channel';
@@ -37,14 +38,8 @@ import ScheduledNotification from './scheduler/ScheduledNotification.model';
 // `src/app/modules/notification/notification.interface.ts` — that list is
 // enforced at the schema level, so any value here that isn't in the enum
 // will be rejected at insert time.
-export type NotificationType =
-  | 'PREFERENCE_CARD_CREATED'
-  | 'EVENT_SCHEDULED'
-  | 'GENERAL'
-  | 'ADMIN'
-  | 'SYSTEM'
-  | 'MESSAGE'
-  | 'REMINDER';
+import { NotificationType } from '../../modules/notification/notification.interface';
+export type { NotificationType };
 
 export interface INotificationTemplate {
   name: string;
@@ -511,7 +506,7 @@ export class NotificationBuilder {
         result.sent.push = pushResult.sent;
         result.failed.push = pushResult.failed;
       } catch (error) {
-        console.error('Push channel error:', error);
+        logger.error('Push channel error:', { error });
         result.failed.push = users.map((u: any) => u._id.toString());
       }
     }
@@ -526,7 +521,7 @@ export class NotificationBuilder {
         result.sent.socket = socketResult.sent;
         result.failed.socket = socketResult.failed;
       } catch (error) {
-        console.error('Socket channel error:', error);
+        logger.error('Socket channel error:', { error });
         result.failed.socket = users.map((u: any) => u._id.toString());
       }
     }
@@ -543,7 +538,7 @@ export class NotificationBuilder {
         result.sent.email = emailResult.sent;
         result.failed.email = emailResult.failed;
       } catch (error) {
-        console.error('Email channel error:', error);
+        logger.error('Email channel error:', { error });
         result.failed.email = users.map((u: any) => u._id.toString());
       }
     }
@@ -561,7 +556,7 @@ export class NotificationBuilder {
         result.sent.database = dbResult.sent;
         result.failed.database = dbResult.failed;
       } catch (error) {
-        console.error('Database channel error:', error);
+        logger.error('Database channel error:', { error });
         result.failed.database = users.map((u: any) => u._id.toString());
       }
     }

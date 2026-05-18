@@ -40,7 +40,7 @@ router.post('/apple/callback', auth_controller_1.AuthController.appleCallback);
 // Also allow GET for manual testing/debugging
 router.get('/apple/callback', auth_controller_1.AuthController.appleCallback);
 // User logout — invalidate active sessions/tokens
-router.post('/logout', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER), auth_controller_1.AuthController.logoutUser);
+router.post('/logout', (0, auth_1.default)(user_1.USER_ROLES.SUPER_ADMIN, user_1.USER_ROLES.USER), (0, validateRequest_1.default)(auth_validation_1.AuthValidation.logoutZodSchema), auth_controller_1.AuthController.logoutUser);
 // Password reset request — send OTP via email
 router.post('/forgot-password', passwordResetRateLimit, (0, validateRequest_1.default)(auth_validation_1.AuthValidation.createForgetPasswordZodSchema), auth_controller_1.AuthController.forgetPassword);
 // OTP verification — verify via code

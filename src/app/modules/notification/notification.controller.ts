@@ -3,12 +3,10 @@ import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { NotificationService } from './notification.service';
-import { JwtPayload } from 'jsonwebtoken';
 
 const listMyNotifications = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as JwtPayload;
   const result = await NotificationService.listForUser(
-    (user as any).id,
+    req.user.id!,
     req.query as any,
   );
   sendResponse(res, {
@@ -21,8 +19,7 @@ const listMyNotifications = catchAsync(async (req: Request, res: Response) => {
 });
 
 const markAllRead = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as JwtPayload;
-  const result = await NotificationService.markAllRead((user as any).id);
+  const result = await NotificationService.markAllRead(req.user.id!);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
@@ -32,11 +29,10 @@ const markAllRead = catchAsync(async (req: Request, res: Response) => {
 });
 
 const markRead = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as JwtPayload;
   const read = req.body?.read ?? true;
   const result = await NotificationService.markRead(
     req.params.notificationId,
-    (user as any).id,
+    req.user.id!,
     read,
   );
   sendResponse(res, {
@@ -49,23 +45,8 @@ const markRead = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-const deleteNotification = catchAsync(async (req: Request, res: Response) => {
-  const user = req.user as JwtPayload;
-  await NotificationService.deleteById(
-    req.params.notificationId,
-    (user as any).id,
-  );
-  sendResponse(res, {
-    success: true,
-    statusCode: StatusCodes.OK,
-    message: 'Notification deleted',
-    data: null,
-  });
-});
-
 export const NotificationController = {
   listMyNotifications,
   markAllRead,
   markRead,
-  deleteNotification,
 };

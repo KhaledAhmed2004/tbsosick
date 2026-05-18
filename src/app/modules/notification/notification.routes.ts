@@ -13,7 +13,7 @@ const router = express.Router();
 
 // Notification list + unread count
 router.get(
-  '/',
+  '/me',
   auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
   validateRequest(listNotificationsSchema),
   NotificationController.listMyNotifications
@@ -34,14 +34,4 @@ router.patch(
   NotificationController.markAllRead
 );
 
-// Delete notification
-router.delete(
-  '/:notificationId',
-  auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
-  validateRequest(paramIdSchema),
-  NotificationController.deleteNotification
-);
-
 export const NotificationRoutes = router;
-
-

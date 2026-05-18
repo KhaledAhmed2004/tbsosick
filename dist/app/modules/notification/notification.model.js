@@ -23,7 +23,10 @@ const NotificationSchema = new mongoose_1.Schema({
     readAt: { type: Date, default: null },
     deletedAt: { type: Date, default: null },
     icon: { type: String },
-    expiresAt: { type: Date },
+    expiresAt: {
+        type: Date,
+        default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    },
 }, { timestamps: true });
 // Covers list (sort by createdAt desc, filter by deletedAt:null) and unread count
 NotificationSchema.index({ userId: 1, deletedAt: 1, createdAt: -1, _id: -1 });

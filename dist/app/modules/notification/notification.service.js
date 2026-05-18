@@ -16,7 +16,6 @@ exports.NotificationService = void 0;
 const notification_model_1 = require("./notification.model");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const http_status_codes_1 = require("http-status-codes");
-const notificationsHelper_1 = require("./notificationsHelper");
 const mongoose_1 = require("mongoose");
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
@@ -74,68 +73,14 @@ const markAllRead = (userId) => __awaiter(void 0, void 0, void 0, function* () {
     return { updated: result.modifiedCount };
 });
 const markRead = (id_1, userId_1, ...args_1) => __awaiter(void 0, [id_1, userId_1, ...args_1], void 0, function* (id, userId, read = true) {
-    var _a;
-    const doc = yield notification_model_1.NotificationModel.findById(id);
-    if (!doc || doc.deletedAt) {
+    const doc = yield notification_model_1.NotificationModel.findOneAndUpdate({ _id: id, userId: new mongoose_1.Types.ObjectId(userId), deletedAt: null }, { $set: { isRead: read, readAt: read ? new Date() : null } }, { new: true });
+    if (!doc) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Notification not found');
     }
-    if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed');
-    }
-    doc.isRead = read;
-    doc.readAt = read ? new Date() : null;
-    yield doc.save();
     return { _id: doc._id, isRead: doc.isRead, readAt: doc.readAt };
-});
-const deleteById = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    const doc = yield notification_model_1.NotificationModel.findById(id);
-    if (!doc)
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Notification not found');
-    if (((_a = doc.userId) === null || _a === void 0 ? void 0 : _a.toString()) !== userId) {
-        throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'Not allowed');
-    }
-    // Idempotent: re-deleting an already soft-deleted row is a no-op success.
-    if (!doc.deletedAt) {
-        doc.deletedAt = new Date();
-        yield doc.save();
-    }
-    return null;
-});
-const createForPreferenceCard = (params) => __awaiter(void 0, void 0, void 0, function* () {
-    const subtitle = params.surgeonName && params.procedure
-        ? `${params.surgeonName} — ${params.procedure}`
-        : params.cardTitle;
-    return (0, notificationsHelper_1.sendNotifications)({
-        userId: new mongoose_1.Types.ObjectId(params.userId),
-        type: 'PREFERENCE_CARD_CREATED',
-        title: 'New Card Added',
-        subtitle,
-        link: { label: 'View Card', url: `/cards/${params.cardId}` },
-        resourceType: 'PreferenceCard',
-        resourceId: params.cardId,
-        isRead: false,
-        icon: 'card',
-    });
-});
-const createForEventScheduled = (params) => __awaiter(void 0, void 0, void 0, function* () {
-    return (0, notificationsHelper_1.sendNotifications)({
-        userId: new mongoose_1.Types.ObjectId(params.userId),
-        type: 'EVENT_SCHEDULED',
-        title: 'Event Scheduled',
-        subtitle: `${params.title}${params.whenText ? ' on ' + params.whenText : ''}`,
-        link: { label: 'View Event', url: `/events/${params.eventId}` },
-        resourceType: 'Event',
-        resourceId: params.eventId,
-        isRead: false,
-        icon: 'calendar',
-    });
 });
 exports.NotificationService = {
     listForUser,
     markAllRead,
     markRead,
-    deleteById,
-    createForPreferenceCard,
-    createForEventScheduled,
 };

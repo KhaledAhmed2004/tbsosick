@@ -1,7 +1,6 @@
 import { NotificationModel } from './notification.model';
 import ApiError from '../../../errors/ApiError';
 import { StatusCodes } from 'http-status-codes';
-import { sendNotifications } from './notificationsHelper';
 import { Types } from 'mongoose';
 
 const DEFAULT_LIMIT = 20;
@@ -87,83 +86,19 @@ const markAllRead = async (userId: string) => {
 };
 
 const markRead = async (id: string, userId: string, read = true) => {
-  const doc = await NotificationModel.findById(id);
-  if (!doc || doc.deletedAt) {
+  const doc = await NotificationModel.findOneAndUpdate(
+    { _id: id, userId: new Types.ObjectId(userId), deletedAt: null },
+    { $set: { isRead: read, readAt: read ? new Date() : null } },
+    { new: true },
+  );
+  if (!doc) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
   }
-  if (doc.userId?.toString() !== userId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Not allowed');
-  }
-
-  doc.isRead = read;
-  doc.readAt = read ? new Date() : null;
-  await doc.save();
   return { _id: doc._id, isRead: doc.isRead, readAt: doc.readAt };
-};
-
-const deleteById = async (id: string, userId: string) => {
-  const doc = await NotificationModel.findById(id);
-  if (!doc) throw new ApiError(StatusCodes.NOT_FOUND, 'Notification not found');
-  if (doc.userId?.toString() !== userId) {
-    throw new ApiError(StatusCodes.FORBIDDEN, 'Not allowed');
-  }
-
-  // Idempotent: re-deleting an already soft-deleted row is a no-op success.
-  if (!doc.deletedAt) {
-    doc.deletedAt = new Date();
-    await doc.save();
-  }
-  return null;
-};
-
-const createForPreferenceCard = async (params: {
-  userId: string;
-  cardId: string;
-  cardTitle: string;
-  surgeonName?: string;
-  procedure?: string;
-}) => {
-  const subtitle = params.surgeonName && params.procedure
-    ? `${params.surgeonName} — ${params.procedure}`
-    : params.cardTitle;
-
-  return sendNotifications({
-    userId: new Types.ObjectId(params.userId),
-    type: 'PREFERENCE_CARD_CREATED',
-    title: 'New Card Added',
-    subtitle,
-    link: { label: 'View Card', url: `/cards/${params.cardId}` },
-    resourceType: 'PreferenceCard',
-    resourceId: params.cardId,
-    isRead: false,
-    icon: 'card',
-  });
-};
-
-const createForEventScheduled = async (params: {
-  userId: string;
-  eventId: string;
-  title: string;
-  whenText?: string;
-}) => {
-  return sendNotifications({
-    userId: new Types.ObjectId(params.userId),
-    type: 'EVENT_SCHEDULED',
-    title: 'Event Scheduled',
-    subtitle: `${params.title}${params.whenText ? ' on ' + params.whenText : ''}`,
-    link: { label: 'View Event', url: `/events/${params.eventId}` },
-    resourceType: 'Event',
-    resourceId: params.eventId,
-    isRead: false,
-    icon: 'calendar',
-  });
 };
 
 export const NotificationService = {
   listForUser,
   markAllRead,
   markRead,
-  deleteById,
-  createForPreferenceCard,
-  createForEventScheduled,
 };

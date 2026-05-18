@@ -28,6 +28,7 @@ const http_status_codes_1 = require("http-status-codes");
 const config_1 = __importDefault(require("../../../config"));
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
+const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const auth_service_1 = require("./auth.service");
 const verifyEmail = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -99,7 +100,7 @@ const forgetPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0,
 const resetPassword = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-        throw new ApiError(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Reset token is required');
+        throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Reset token is required');
     }
     // Handle both raw token and Bearer token formats
     const token = authHeader.startsWith('Bearer ')

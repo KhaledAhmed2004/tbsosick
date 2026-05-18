@@ -17,6 +17,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.saveToDatabase = void 0;
 const notification_model_1 = require("../../../modules/notification/notification.model");
+const logger_1 = require("../../../../shared/logger");
 /**
  * Save notifications to MongoDB
  */
@@ -55,7 +56,7 @@ const saveToDatabase = (users, content) => __awaiter(void 0, void 0, void 0, fun
                 .map(u => u._id.toString());
         }
         else {
-            console.error('Database insert error:', error);
+            logger_1.logger.error('Database insert error:', { error });
             result.failed = users.map(u => u._id.toString());
         }
     }

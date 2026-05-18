@@ -29,7 +29,7 @@ export class NotificationScheduler {
 
   static start(): void {
     if (this.cronJob || this.intervalId) {
-      console.warn('Notification scheduler already started');
+      logger.warn('Notification scheduler already started');
       return;
     }
 
@@ -37,12 +37,12 @@ export class NotificationScheduler {
       this.cronJob = cron.schedule('* * * * *', async () => {
         await this.processScheduled();
       });
-      console.log('Notification scheduler started with node-cron');
+      logger.info('Notification scheduler started with node-cron');
     } else {
       this.intervalId = setInterval(async () => {
         await this.processScheduled();
       }, 60000);
-      console.log('Notification scheduler started with setInterval');
+      logger.info('Notification scheduler started with setInterval');
     }
     logger.info('Notification scheduler started');
   }
@@ -66,12 +66,22 @@ export class NotificationScheduler {
 
     try {
       const now = new Date();
-      const query = { scheduledFor: { $lte: now }, status: 'pending' };
-      const dueNotifications = await ScheduledNotification.find(query)
-        .limit(100)
-        .sort({ scheduledFor: 1 });
+      let processed = true;
 
-      for (const scheduled of dueNotifications) {
+      // Claim and process one document at a time atomically.
+      // Loop until no more due documents remain in this tick.
+      while (processed) {
+        const scheduled = await ScheduledNotification.findOneAndUpdate(
+          { scheduledFor: { $lte: now }, status: 'pending' },
+          { $set: { status: 'processing' } },
+          { new: true, sort: { scheduledFor: 1 } },
+        );
+
+        if (!scheduled) {
+          processed = false;
+          break;
+        }
+
         try {
           await this.processSingle(scheduled);
           processedCount++;
@@ -88,8 +98,6 @@ export class NotificationScheduler {
   }
 
   private static async processSingle(scheduled: IScheduledNotification): Promise<void> {
-    scheduled.status = 'processing';
-    await scheduled.save();
 
     try {
       let builder = new NotificationBuilder();

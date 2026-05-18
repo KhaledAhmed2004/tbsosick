@@ -22,6 +22,9 @@ const createUserZodSchema = z.object({
       password: z.string().optional(),
       profilePicture: z.string().optional(),
       googleId: z.string().optional(),
+      deviceToken: z.string().optional(),
+      platform: z.enum(['ios', 'android', 'web']).optional(),
+      appVersion: z.string().optional(),
     })
     .strict()
     .superRefine((data, ctx) => {

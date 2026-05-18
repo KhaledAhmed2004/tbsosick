@@ -25,6 +25,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PreferenceCardService = void 0;
 const mongoose_1 = require("mongoose");
+const escape_string_regexp_1 = __importDefault(require("escape-string-regexp"));
 const preference_card_model_1 = require("./preference-card.model");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const http_status_codes_1 = require("http-status-codes");
@@ -36,6 +37,7 @@ const PDFBuilder_1 = __importDefault(require("../../builder/PDFBuilder"));
 const quota_1 = require("../subscription/helpers/quota");
 const entitlement_1 = require("../subscription/helpers/entitlement");
 const favorite_model_1 = require("../favorite/favorite.model");
+const NotificationBuilder_1 = require("../../builder/NotificationBuilder");
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const MAX_FAVORITES_PER_USER = 100;
 /**
@@ -357,6 +359,7 @@ const normaliseClientRefField = (items, targetField) => {
     });
 };
 const createPreferenceCardInDB = (userId, data) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     // 1. Quota Check (D11 in overview.md)
     const quota = yield (0, quota_1.checkCardCreationQuota)(userId);
     if (!quota.allowed) {
@@ -381,6 +384,20 @@ const createPreferenceCardInDB = (userId, data) => __awaiter(void 0, void 0, voi
         { path: 'supplies.supply', select: 'name -_id' },
         { path: 'sutures.suture', select: 'name -_id' },
     ]);
+    const cardId = card._id.toString();
+    const surgeonName = (_a = card.surgeon) === null || _a === void 0 ? void 0 : _a.fullName;
+    yield new NotificationBuilder_1.NotificationBuilder()
+        .toRole(user_1.USER_ROLES.USER)
+        .except([userId])
+        .setTitle('New Card Added')
+        .setText(surgeonName ? `${surgeonName} — ${card.cardTitle}` : card.cardTitle)
+        .setType('PREFERENCE_CARD_CREATED')
+        .setResource('PreferenceCard', cardId)
+        .setData({ icon: 'card', url: `/cards/${cardId}` })
+        .viaPush()
+        .viaSocket()
+        .viaDatabase()
+        .send();
     return flattenCard(populated);
 });
 const listPreferenceCardsForUserFromDB = (userId) => __awaiter(void 0, void 0, void 0, function* () {
@@ -401,9 +418,12 @@ const listPrivatePreferenceCardsForUserFromDB = (userId, query) => __awaiter(voi
         createdBy: userId,
         isDeleted: false,
     }), query || {})
-        // Text index on cardTitle + medication + surgeon.fullName + surgeon.specialty
-        // handles the full search path — see `card_text_idx` in the model.
-        .textSearch()
+        .search([
+        'cardTitle',
+        'medication',
+        'surgeon.fullName',
+        'surgeon.specialty',
+    ])
         .filter()
         .sort()
         .paginate()
@@ -547,16 +567,29 @@ const listPublicPreferenceCardsFromDB = (userId, query) => __awaiter(void 0, voi
     if (rawQuery.specialty) {
         match['surgeon.specialty'] = String(rawQuery.specialty);
     }
-    // Text search — leverages `card_text_idx` and `score` sorting.
+    // Search term logic: switch from $text (full words only) to $regex (partial matches)
     const searchTerm = typeof rawQuery.searchTerm === 'string'
         ? rawQuery.searchTerm.trim()
         : '';
     if (searchTerm.length > 0) {
-        match.$text = { $search: searchTerm };
+        const sanitizedTerm = (0, escape_string_regexp_1.default)(searchTerm);
+        const searchRegex = { $regex: sanitizedTerm, $options: 'i' };
+        // Move visibility $or into $and to allow adding search $or
+        const visibilityOr = match.$or;
+        delete match.$or;
+        match.$and = [
+            { $or: visibilityOr },
+            {
+                $or: [
+                    { cardTitle: searchRegex },
+                    { medication: searchRegex },
+                    { 'surgeon.fullName': searchRegex },
+                    { 'surgeon.specialty': searchRegex },
+                ],
+            },
+        ];
     }
-    const sortStage = searchTerm.length > 0
-        ? { score: { $meta: 'textScore' } }
-        : { createdAt: -1 };
+    const sortStage = { createdAt: -1 };
     const [result] = yield preference_card_model_1.PreferenceCardModel.aggregate([
         { $match: match },
         { $sort: sortStage },
@@ -678,9 +711,12 @@ const listFavoritePreferenceCardsForUserFromDB = (userId, query) => __awaiter(vo
     const qb = new builder_1.QueryBuilder(preference_card_model_1.PreferenceCardModel.find({
         _id: { $in: cardIds },
     }), query || {})
-        // Text index on cardTitle + medication + surgeon.fullName + surgeon.specialty
-        // handles the full search path — see `card_text_idx` in the model.
-        .textSearch()
+        .search([
+        'cardTitle',
+        'medication',
+        'surgeon.fullName',
+        'surgeon.specialty',
+    ])
         .filter()
         .sort()
         .paginate()

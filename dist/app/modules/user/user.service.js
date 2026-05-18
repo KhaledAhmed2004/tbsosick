@@ -8,6 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -25,10 +36,15 @@ const QueryBuilder_1 = __importDefault(require("../../builder/QueryBuilder"));
 const AggregationBuilder_1 = __importDefault(require("../../builder/AggregationBuilder"));
 const createUserToDB = (payload_1, ...args_1) => __awaiter(void 0, [payload_1, ...args_1], void 0, function* (payload, isAdmin = false) {
     // If created by admin, auto-verify. Otherwise, start unverified.
-    const userData = Object.assign(Object.assign({}, payload), { verified: isAdmin ? true : false });
+    const { deviceToken, platform, appVersion } = payload, userDataWithoutTokens = __rest(payload, ["deviceToken", "platform", "appVersion"]);
+    const userData = Object.assign(Object.assign({}, userDataWithoutTokens), { verified: isAdmin ? true : false });
     const createUser = yield user_model_1.User.create(userData);
     if (!createUser) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.BAD_REQUEST, 'Failed to create user');
+    }
+    // ✅ Register device token if provided during signup
+    if (deviceToken) {
+        yield user_model_1.User.addDeviceToken(createUser._id.toString(), deviceToken, platform, appVersion);
     }
     // Only send OTP for public registrations (non-admins)
     if (!isAdmin) {

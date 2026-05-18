@@ -7,6 +7,7 @@
 
 import { Notification } from '../../../modules/notification/notification.model';
 import { Types } from 'mongoose';
+import { logger } from '../../../../shared/logger';
 
 type NotificationType = string;
 
@@ -74,7 +75,7 @@ export const saveToDatabase = async (
         .filter(u => !insertedIds.has(u._id.toString()))
         .map(u => u._id.toString());
     } else {
-      console.error('Database insert error:', error);
+      logger.error('Database insert error:', { error });
       result.failed = users.map(u => u._id.toString());
     }
   }

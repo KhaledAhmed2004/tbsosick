@@ -6,6 +6,8 @@
  */
 
 import { pushNotificationHelper } from '../../../modules/notification/pushNotificationHelper';
+import { logger } from '../../../../shared/logger';
+import { User } from '../../../modules/user/user.model';
 
 interface IDeviceTokenEntry {
   token: string;
@@ -57,7 +59,7 @@ export const sendPush = async (
   }
 
   if (tokensWithUsers.length === 0) {
-    // No device tokens, mark all as "sent" (nothing to send)
+    logger.warn(`[Push Channel] Skipping push dispatch: None of the ${users.length} target users have any registered device tokens in the database.`);
     return { sent: users.length, failed: [] };
   }
 
@@ -86,8 +88,43 @@ export const sendPush = async (
   }
 
   try {
-    // Use existing helper
-    await pushNotificationHelper.sendPushNotifications(message);
+    // Use existing helper and get responses
+    const fcmRes = await pushNotificationHelper.sendPushNotifications(message);
+    logger.info(`[Push Channel] Successfully sent push message to ${tokens.length} device tokens.`);
+
+    // Automatically clean up dead/unregistered tokens from the database
+    if (fcmRes && fcmRes.failureCount > 0) {
+      const deadTokensByUser: Record<string, string[]> = {};
+      fcmRes.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          const errorCode = resp.error?.code;
+          if (
+            errorCode === 'messaging/registration-token-not-registered' ||
+            errorCode === 'messaging/invalid-registration-token'
+          ) {
+            const entry = tokensWithUsers[idx];
+            if (entry) {
+              if (!deadTokensByUser[entry.userId]) {
+                deadTokensByUser[entry.userId] = [];
+              }
+              deadTokensByUser[entry.userId].push(entry.token);
+            }
+          }
+        }
+      });
+
+      const cleanupPromises = Object.entries(deadTokensByUser).map(async ([uId, deadTokens]) => {
+        try {
+          await User.findByIdAndUpdate(uId, {
+            $pull: { deviceTokens: { token: { $in: deadTokens } } }
+          });
+          logger.warn(`[Push Channel] Garbage Collection: Cleaned up ${deadTokens.length} dead/unregistered tokens for User ${uId} from database.`);
+        } catch (cleanupErr) {
+          logger.error(`[Push Channel] Garbage Collection Failed for User ${uId}:`, cleanupErr);
+        }
+      });
+      await Promise.all(cleanupPromises);
+    }
 
     // Count unique users with tokens as sent
     const usersWithTokens = new Set(tokensWithUsers.map(t => t.userId));
@@ -100,7 +137,7 @@ export const sendPush = async (
     result.sent += usersWithoutTokens.length;
 
   } catch (error) {
-    console.error('Push notification error:', error);
+    logger.error('Push notification error:', { error });
     // Mark users with tokens as failed
     const usersWithTokens = new Set(tokensWithUsers.map(t => t.userId));
     result.failed = Array.from(usersWithTokens);

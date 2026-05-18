@@ -24,6 +24,11 @@ const PRODUCT_ID_TO_PLAN = {
     premium_yearly: subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM,
     enterprise_monthly: subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
     enterprise_yearly: subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
+    // Full Bundle IDs (Used by some mobile configurations)
+    'com.tbsosick.premium_monthly': subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM,
+    'com.tbsosick.premium_yearly': subscription_interface_1.SUBSCRIPTION_PLAN.PREMIUM,
+    'com.tbsosick.enterprise_monthly': subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
+    'com.tbsosick.enterprise_yearly': subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
 };
 const mapAppleProductToPlan = (productId) => {
     var _a;

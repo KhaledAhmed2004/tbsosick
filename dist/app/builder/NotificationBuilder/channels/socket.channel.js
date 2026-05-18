@@ -16,6 +16,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendSocket = void 0;
+const logger_1 = require("../../../../shared/logger");
 /**
  * Send real-time notifications via Socket.IO
  */
@@ -25,7 +26,7 @@ const sendSocket = (users, content) => __awaiter(void 0, void 0, void 0, functio
     // @ts-ignore - global.io is set in socketHelper.ts
     const io = global.io;
     if (!io) {
-        console.warn('Socket.IO not initialized, skipping socket notifications');
+        logger_1.logger.warn('Socket.IO not initialized, skipping socket notifications');
         return { sent: 0, failed: users.map(u => u._id.toString()) };
     }
     const timestamp = new Date().toISOString();
@@ -34,13 +35,10 @@ const sendSocket = (users, content) => __awaiter(void 0, void 0, void 0, functio
             const userId = user._id.toString();
             // Emit to user's private room (user::{userId})
             io.to(`user::${userId}`).emit(content.event, Object.assign(Object.assign({}, content.data), { timestamp }));
-            // Also emit using legacy format for backward compatibility
-            // This matches the existing pattern: get-notification::{userId}
-            io.emit(`get-notification::${userId}`, Object.assign(Object.assign({}, content.data), { timestamp }));
             result.sent++;
         }
         catch (error) {
-            console.error(`Socket emit error for user ${user._id}:`, error);
+            logger_1.logger.error(`Socket emit error for user ${user._id}:`, error);
             result.failed.push(user._id.toString());
         }
     }

@@ -5,6 +5,9 @@
  * Uses the global io instance from socketHelper.
  */
 
+import { logger } from '../../../../shared/logger';
+
+
 interface IUser {
   _id: any;
 }
@@ -33,7 +36,7 @@ export const sendSocket = async (
   const io = global.io;
 
   if (!io) {
-    console.warn('Socket.IO not initialized, skipping socket notifications');
+    logger.warn('Socket.IO not initialized, skipping socket notifications');
     return { sent: 0, failed: users.map(u => u._id.toString()) };
   }
 
@@ -49,16 +52,9 @@ export const sendSocket = async (
         timestamp,
       });
 
-      // Also emit using legacy format for backward compatibility
-      // This matches the existing pattern: get-notification::{userId}
-      io.emit(`get-notification::${userId}`, {
-        ...content.data,
-        timestamp,
-      });
-
       result.sent++;
     } catch (error) {
-      console.error(`Socket emit error for user ${user._id}:`, error);
+      logger.error(`Socket emit error for user ${user._id}:`, error);
       result.failed.push(user._id.toString());
     }
   }

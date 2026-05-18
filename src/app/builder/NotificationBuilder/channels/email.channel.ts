@@ -6,6 +6,7 @@
  */
 
 import { EmailBuilder } from '../../EmailBuilder';
+import { logger } from '../../../../shared/logger';
 
 interface IUser {
   _id: any;
@@ -62,7 +63,7 @@ export const sendEmail = async (
         builder.useTemplate(content.template, variables);
       } catch (templateError) {
         // Template doesn't exist in EmailBuilder, create simple email
-        console.warn(
+        logger.warn(
           `EmailBuilder template "${content.template}" not found, using fallback`
         );
 
@@ -85,7 +86,7 @@ export const sendEmail = async (
 
       result.sent++;
     } catch (error) {
-      console.error(`Email send error for user ${user._id}:`, error);
+      logger.error(`Email send error for user ${user._id}:`, { error });
       result.failed.push(user._id.toString());
     }
   }

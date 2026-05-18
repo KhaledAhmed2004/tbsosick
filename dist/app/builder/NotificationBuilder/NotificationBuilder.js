@@ -61,6 +61,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.NotificationBuilder = void 0;
 const mongoose_1 = require("mongoose");
 const user_model_1 = require("../../modules/user/user.model");
+const logger_1 = require("../../../shared/logger");
 const templates = __importStar(require("./templates"));
 const push_channel_1 = require("./channels/push.channel");
 const socket_channel_1 = require("./channels/socket.channel");
@@ -394,7 +395,7 @@ class NotificationBuilder {
                     result.failed.push = pushResult.failed;
                 }
                 catch (error) {
-                    console.error('Push channel error:', error);
+                    logger_1.logger.error('Push channel error:', { error });
                     result.failed.push = users.map((u) => u._id.toString());
                 }
             }
@@ -409,7 +410,7 @@ class NotificationBuilder {
                     result.failed.socket = socketResult.failed;
                 }
                 catch (error) {
-                    console.error('Socket channel error:', error);
+                    logger_1.logger.error('Socket channel error:', { error });
                     result.failed.socket = users.map((u) => u._id.toString());
                 }
             }
@@ -426,7 +427,7 @@ class NotificationBuilder {
                     result.failed.email = emailResult.failed;
                 }
                 catch (error) {
-                    console.error('Email channel error:', error);
+                    logger_1.logger.error('Email channel error:', { error });
                     result.failed.email = users.map((u) => u._id.toString());
                 }
             }
@@ -444,7 +445,7 @@ class NotificationBuilder {
                     result.failed.database = dbResult.failed;
                 }
                 catch (error) {
-                    console.error('Database channel error:', error);
+                    logger_1.logger.error('Database channel error:', { error });
                     result.failed.database = users.map((u) => u._id.toString());
                 }
             }

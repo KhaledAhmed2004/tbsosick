@@ -16,18 +16,29 @@ import AggregationBuilder from '../../builder/AggregationBuilder';
 import { IUser } from './user.interface';
 
 const createUserToDB = async (
-  payload: Partial<IUser>,
+  payload: Partial<IUser> & { deviceToken?: string; platform?: 'ios' | 'android' | 'web'; appVersion?: string },
   isAdmin = false
 ): Promise<IUser> => {
   // If created by admin, auto-verify. Otherwise, start unverified.
+  const { deviceToken, platform, appVersion, ...userDataWithoutTokens } = payload;
   const userData = {
-    ...payload,
+    ...userDataWithoutTokens,
     verified: isAdmin ? true : false,
   };
 
   const createUser = await User.create(userData);
   if (!createUser) {
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Failed to create user');
+  }
+
+  // ✅ Register device token if provided during signup
+  if (deviceToken) {
+    await User.addDeviceToken(
+      createUser._id.toString(),
+      deviceToken,
+      platform,
+      appVersion,
+    );
   }
 
   // Only send OTP for public registrations (non-admins)

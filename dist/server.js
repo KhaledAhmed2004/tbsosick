@@ -47,6 +47,7 @@ const bannerGenerator_1 = require("./shared/bannerGenerator");
 const startupSummary_1 = require("./shared/startupSummary");
 const spinnerHelper_1 = require("./shared/spinnerHelper");
 const dns_1 = __importDefault(require("dns"));
+const scheduler_1 = require("./app/builder/NotificationBuilder/scheduler");
 dns_1.default.setServers(['8.8.8.8', '8.8.4.4']);
 // uncaught exception — ensure server closes before exit to avoid EADDRINUSE on respawn
 process.on('uncaughtException', error => {
@@ -115,6 +116,9 @@ function main() {
                 logger_1.errorLogger.error('❌ Super admin seeding error:', seedError);
                 throw seedError;
             }
+            const schedulerSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Starting notification scheduler...', color: 'cyan' });
+            scheduler_1.NotificationScheduler.start();
+            schedulerSpinner.succeed('Notification scheduler running');
             // Initialize CacheHelper (in-memory)
             const cacheSpinner = (0, spinnerHelper_1.createSpinner)({ text: 'Initializing cache system...', color: 'cyan' });
             const cache = CacheHelper_1.CacheHelper.getInstance();

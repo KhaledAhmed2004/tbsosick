@@ -10,6 +10,7 @@ import { generateDefaultBanner } from './shared/bannerGenerator';
 import { generateStartupSummary, type StartupStatus } from './shared/startupSummary';
 import { createSpinner } from './shared/spinnerHelper';
 import dns from 'dns';
+import { NotificationScheduler } from './app/builder/NotificationBuilder/scheduler';
 
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
@@ -85,6 +86,10 @@ async function main() {
       errorLogger.error('❌ Super admin seeding error:', seedError);
       throw seedError;
     }
+
+    const schedulerSpinner = createSpinner({ text: 'Starting notification scheduler...', color: 'cyan' });
+    NotificationScheduler.start();
+    schedulerSpinner.succeed('Notification scheduler running');
 
     // Initialize CacheHelper (in-memory)
     const cacheSpinner = createSpinner({ text: 'Initializing cache system...', color: 'cyan' });

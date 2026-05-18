@@ -16,24 +16,49 @@ exports.pushNotificationHelper = void 0;
 const logger_1 = require("../../../shared/logger");
 const config_1 = __importDefault(require("../../../config"));
 const firebase_admin_1 = __importDefault(require("firebase-admin"));
-// Decode Base64 Firebase service account
-const serviceAccountJson = Buffer.from(config_1.default.firebase_api_key_base64, // the Base64 string from .env
-'base64').toString('utf8');
-// Parse it as JSON
-const serviceAccount = JSON.parse(serviceAccountJson);
-// Initialize Firebase SDK
-firebase_admin_1.default.initializeApp({
-    credential: firebase_admin_1.default.credential.cert(serviceAccount),
-});
-// Multiple users
+/**
+ * Lazily initialises Firebase Admin SDK on first use.
+ * Guards against double-initialisation (e.g. hot reload / test suites).
+ * Throws a descriptive error if the key is missing or malformed so the
+ * server startup log is actionable rather than cryptic.
+ */
+const getFirebaseApp = () => {
+    if (firebase_admin_1.default.apps.length > 0) {
+        return firebase_admin_1.default.app();
+    }
+    const raw = config_1.default.firebase_api_key_base64;
+    if (!raw) {
+        throw new Error('[pushNotificationHelper] firebase_api_key_base64 is not set in config. Push notifications are disabled.');
+    }
+    let serviceAccount;
+    try {
+        serviceAccount = JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
+    }
+    catch (_a) {
+        throw new Error('[pushNotificationHelper] firebase_api_key_base64 is not valid Base64-encoded JSON.');
+    }
+    return firebase_admin_1.default.initializeApp({ credential: firebase_admin_1.default.credential.cert(serviceAccount) });
+};
+// Multiple users — multicast
 const sendPushNotifications = (values) => __awaiter(void 0, void 0, void 0, function* () {
-    const res = yield firebase_admin_1.default.messaging().sendEachForMulticast(values);
-    logger_1.logger.info('Notifications sent successfully', res);
+    const app = getFirebaseApp();
+    const res = yield firebase_admin_1.default.messaging(app).sendEachForMulticast(values);
+    logger_1.logger.info(`[Firebase] Push multicast completed: Success=${res.successCount}, Failure=${res.failureCount}`);
+    if (res.failureCount > 0) {
+        res.responses.forEach((resp, idx) => {
+            var _a, _b;
+            if (!resp.success) {
+                logger_1.logger.error(`[Firebase] Token at index ${idx} failed to send: ${(_a = resp.error) === null || _a === void 0 ? void 0 : _a.message} (Code: ${(_b = resp.error) === null || _b === void 0 ? void 0 : _b.code})`);
+            }
+        });
+    }
+    return res;
 });
 // Single user
 const sendPushNotification = (values) => __awaiter(void 0, void 0, void 0, function* () {
-    const res = yield firebase_admin_1.default.messaging().send(values);
-    logger_1.logger.info('Notification sent successfully', res);
+    const app = getFirebaseApp();
+    const res = yield firebase_admin_1.default.messaging(app).send(values);
+    logger_1.logger.info('Push notification sent', { messageId: res });
 });
 exports.pushNotificationHelper = {
     sendPushNotifications,

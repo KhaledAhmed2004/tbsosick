@@ -54,6 +54,7 @@ router.get('/apple/callback', AuthController.appleCallback);
 router.post(
   '/logout',
   auth(USER_ROLES.SUPER_ADMIN, USER_ROLES.USER),
+  validateRequest(AuthValidation.logoutZodSchema),
   AuthController.logoutUser,
 );
 

@@ -17,6 +17,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendPush = void 0;
 const pushNotificationHelper_1 = require("../../../modules/notification/pushNotificationHelper");
+const logger_1 = require("../../../../shared/logger");
+const user_model_1 = require("../../../modules/user/user.model");
 /**
  * Send push notifications to users via Firebase FCM
  */
@@ -36,7 +38,7 @@ const sendPush = (users, content) => __awaiter(void 0, void 0, void 0, function*
         }
     }
     if (tokensWithUsers.length === 0) {
-        // No device tokens, mark all as "sent" (nothing to send)
+        logger_1.logger.warn(`[Push Channel] Skipping push dispatch: None of the ${users.length} target users have any registered device tokens in the database.`);
         return { sent: users.length, failed: [] };
     }
     // Build FCM message
@@ -59,8 +61,41 @@ const sendPush = (users, content) => __awaiter(void 0, void 0, void 0, function*
         message.data = content.data;
     }
     try {
-        // Use existing helper
-        yield pushNotificationHelper_1.pushNotificationHelper.sendPushNotifications(message);
+        // Use existing helper and get responses
+        const fcmRes = yield pushNotificationHelper_1.pushNotificationHelper.sendPushNotifications(message);
+        logger_1.logger.info(`[Push Channel] Successfully sent push message to ${tokens.length} device tokens.`);
+        // Automatically clean up dead/unregistered tokens from the database
+        if (fcmRes && fcmRes.failureCount > 0) {
+            const deadTokensByUser = {};
+            fcmRes.responses.forEach((resp, idx) => {
+                var _a;
+                if (!resp.success) {
+                    const errorCode = (_a = resp.error) === null || _a === void 0 ? void 0 : _a.code;
+                    if (errorCode === 'messaging/registration-token-not-registered' ||
+                        errorCode === 'messaging/invalid-registration-token') {
+                        const entry = tokensWithUsers[idx];
+                        if (entry) {
+                            if (!deadTokensByUser[entry.userId]) {
+                                deadTokensByUser[entry.userId] = [];
+                            }
+                            deadTokensByUser[entry.userId].push(entry.token);
+                        }
+                    }
+                }
+            });
+            const cleanupPromises = Object.entries(deadTokensByUser).map((_a) => __awaiter(void 0, [_a], void 0, function* ([uId, deadTokens]) {
+                try {
+                    yield user_model_1.User.findByIdAndUpdate(uId, {
+                        $pull: { deviceTokens: { token: { $in: deadTokens } } }
+                    });
+                    logger_1.logger.warn(`[Push Channel] Garbage Collection: Cleaned up ${deadTokens.length} dead/unregistered tokens for User ${uId} from database.`);
+                }
+                catch (cleanupErr) {
+                    logger_1.logger.error(`[Push Channel] Garbage Collection Failed for User ${uId}:`, cleanupErr);
+                }
+            }));
+            yield Promise.all(cleanupPromises);
+        }
         // Count unique users with tokens as sent
         const usersWithTokens = new Set(tokensWithUsers.map(t => t.userId));
         result.sent = usersWithTokens.size;
@@ -69,7 +104,7 @@ const sendPush = (users, content) => __awaiter(void 0, void 0, void 0, function*
         result.sent += usersWithoutTokens.length;
     }
     catch (error) {
-        console.error('Push notification error:', error);
+        logger_1.logger.error('Push notification error:', { error });
         // Mark users with tokens as failed
         const usersWithTokens = new Set(tokensWithUsers.map(t => t.userId));
         result.failed = Array.from(usersWithTokens);

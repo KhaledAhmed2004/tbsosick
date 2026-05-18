@@ -17,6 +17,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = void 0;
 const EmailBuilder_1 = require("../../EmailBuilder");
+const logger_1 = require("../../../../shared/logger");
 /**
  * Send email notifications via EmailBuilder
  */
@@ -42,7 +43,7 @@ const sendEmail = (users, content) => __awaiter(void 0, void 0, void 0, function
             }
             catch (templateError) {
                 // Template doesn't exist in EmailBuilder, create simple email
-                console.warn(`EmailBuilder template "${content.template}" not found, using fallback`);
+                logger_1.logger.warn(`EmailBuilder template "${content.template}" not found, using fallback`);
                 builder
                     .setSubject(content.subject)
                     .setVariables(variables)
@@ -60,7 +61,7 @@ const sendEmail = (users, content) => __awaiter(void 0, void 0, void 0, function
             result.sent++;
         }
         catch (error) {
-            console.error(`Email send error for user ${user._id}:`, error);
+            logger_1.logger.error(`Email send error for user ${user._id}:`, { error });
             result.failed.push(user._id.toString());
         }
     }

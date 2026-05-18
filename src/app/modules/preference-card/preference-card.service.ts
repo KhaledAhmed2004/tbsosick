@@ -14,6 +14,7 @@ import PDFBuilder from '../../builder/PDFBuilder';
 import { checkCardCreationQuota } from '../subscription/helpers/quota';
 import { getUserEntitlement } from '../subscription/helpers/entitlement';
 import { Favorite } from '../favorite/favorite.model';
+import { NotificationBuilder } from '../../builder/NotificationBuilder';
 
 const OBJECT_ID_REGEX = /^[0-9a-fA-F]{24}$/;
 const MAX_FAVORITES_PER_USER = 100;
@@ -426,6 +427,22 @@ const createPreferenceCardInDB = async (userId: string, data: any) => {
     { path: 'supplies.supply', select: 'name -_id' },
     { path: 'sutures.suture', select: 'name -_id' },
   ]);
+
+  const cardId = (card._id as any).toString();
+  const surgeonName = card.surgeon?.fullName;
+
+  await new NotificationBuilder()
+    .toRole(USER_ROLES.USER)
+    .except([userId])
+    .setTitle('New Card Added')
+    .setText(surgeonName ? `${surgeonName} — ${card.cardTitle}` : card.cardTitle)
+    .setType('PREFERENCE_CARD_CREATED')
+    .setResource('PreferenceCard', cardId)
+    .setData({ icon: 'card', url: `/cards/${cardId}` })
+    .viaPush()
+    .viaSocket()
+    .viaDatabase()
+    .send();
 
   return flattenCard(populated);
 };
