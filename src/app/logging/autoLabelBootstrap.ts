@@ -180,7 +180,11 @@ const wrapController = (controllerName: string, obj: Record<string, any>) => {
  *   stripe-connect.service.ts → StripeConnectService
  */
 const fileNameToExportName = (fileName: string, suffix: 'Service' | 'Controller'): string => {
-  const baseName = fileName.replace(`.${suffix.toLowerCase()}.ts`, '');
+  // Handle both .ts and .js extensions
+  const baseName = fileName
+    .replace(`.${suffix.toLowerCase()}.ts`, '')
+    .replace(`.${suffix.toLowerCase()}.js`, '');
+    
   const pascalCase = baseName
     .split(/[-_]/)
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
@@ -194,6 +198,8 @@ const fileNameToExportName = (fileName: string, suffix: 'Service' | 'Controller'
  */
 const autoDiscoverAndWrap = (): void => {
   const modulesPath = join(__dirname, '../modules');
+  const isTS = __filename.endsWith('.ts');
+  const ext = isTS ? '.ts' : '.js';
 
   let discoveredServices = 0;
   let discoveredControllers = 0;
@@ -221,8 +227,8 @@ const autoDiscoverAndWrap = (): void => {
         continue; // Skip if can't read directory
       }
 
-      // Auto-discover services (*.service.ts)
-      const serviceFiles = files.filter(f => f.endsWith('.service.ts'));
+      // Auto-discover services (*.service.ts or *.service.js)
+      const serviceFiles = files.filter(f => f.endsWith(`.service${ext}`));
 
       for (const serviceFile of serviceFiles) {
         const servicePath = join(modulePath, serviceFile);
@@ -232,10 +238,6 @@ const autoDiscoverAndWrap = (): void => {
           delete require.cache[require.resolve(servicePath)];
 
           // Dynamic runtime import (require needed for synchronous loading)
-          // Note: We use require() here instead of ES6 import because:
-          // 1. We need synchronous loading (await import() would complicate initialization)
-          // 2. We need runtime path resolution (file paths are dynamic)
-          // 3. We need cache control (delete require.cache for hot reload)
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const serviceModule = require(servicePath);
 
@@ -256,10 +258,9 @@ const autoDiscoverAndWrap = (): void => {
             discoveredServices++;
           }
         } catch (error) {
-          // Graceful error handling for auto-save scenarios
+          // Graceful error handling
           if (error instanceof SyntaxError) {
-            // Silently skip incomplete files during auto-save
-            // Will be re-imported on next save when code is complete
+            // Silently skip
           } else if ((error as any).code === 'MODULE_NOT_FOUND') {
             failedFiles.push(`${serviceFile} (dependency missing)`);
           } else {
@@ -268,8 +269,8 @@ const autoDiscoverAndWrap = (): void => {
         }
       }
 
-      // Auto-discover controllers (*.controller.ts)
-      const controllerFiles = files.filter(f => f.endsWith('.controller.ts'));
+      // Auto-discover controllers (*.controller.ts or *.controller.js)
+      const controllerFiles = files.filter(f => f.endsWith(`.controller${ext}`));
 
       for (const controllerFile of controllerFiles) {
         const controllerPath = join(modulePath, controllerFile);
@@ -278,7 +279,7 @@ const autoDiscoverAndWrap = (): void => {
           // Clear require cache for hot reload support
           delete require.cache[require.resolve(controllerPath)];
 
-          // Dynamic runtime import (same rationale as services above)
+          // Dynamic runtime import
           // eslint-disable-next-line @typescript-eslint/no-var-requires
           const controllerModule = require(controllerPath);
 
@@ -299,10 +300,9 @@ const autoDiscoverAndWrap = (): void => {
             discoveredControllers++;
           }
         } catch (error) {
-          // Graceful error handling for auto-save scenarios
+          // Graceful error handling
           if (error instanceof SyntaxError) {
-            // Silently skip incomplete files during auto-save
-            // Will be re-imported on next save when code is complete
+            // Silently skip
           } else if ((error as any).code === 'MODULE_NOT_FOUND') {
             failedFiles.push(`${controllerFile} (dependency missing)`);
           } else {
@@ -322,7 +322,7 @@ const autoDiscoverAndWrap = (): void => {
     console.log(colors.cyan.bold('║') + `  Total Modules          │ ${colors.green.bold(totalModules.toString()).padEnd(34)}` + colors.cyan.bold('║'));
     console.log(colors.cyan.bold('╚═══════════════════════════════════════════════════════════╝\n'));
 
-    // Show warnings for failed files (only real errors, not syntax errors)
+    // Show warnings for failed files
     if (failedFiles.length > 0) {
       console.log(colors.yellow.bold('╔═══════════════════════════════════════════════════════════╗'));
       console.log(colors.yellow.bold('║') + colors.yellow.bold('              ⚠️  FAILED TO LOAD                         ') + colors.yellow.bold('║'));
@@ -337,7 +337,7 @@ const autoDiscoverAndWrap = (): void => {
     // Validation: Fail startup if no modules discovered
     if (discoveredServices === 0 && discoveredControllers === 0) {
       console.error('\n❌ Auto-discovery failed: No services or controllers found!');
-      console.error('   Expected structure: src/app/modules/*/{{moduleName}}.service.ts');
+      console.error(`   Expected structure: modules/*/{{moduleName}}.service${ext}`);
       process.exit(1);
     }
 

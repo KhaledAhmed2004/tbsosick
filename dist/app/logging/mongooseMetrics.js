@@ -56,9 +56,9 @@ function getCallerLocation() {
         if (!stack)
             return undefined;
         const lines = stack.split('\n');
-        // Find the first line that's NOT in mongooseMetrics.ts or node_modules
+        // Find the first line that's NOT in mongooseMetrics or node_modules
         for (const line of lines) {
-            if (line.includes('mongooseMetrics.ts') ||
+            if (line.includes('mongooseMetrics.') ||
                 line.includes('node_modules') ||
                 line.includes('at Object.') ||
                 line.includes('at Function.') ||

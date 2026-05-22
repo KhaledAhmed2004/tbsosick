@@ -194,7 +194,10 @@ const wrapController = (controllerName, obj) => {
  *   stripe-connect.service.ts → StripeConnectService
  */
 const fileNameToExportName = (fileName, suffix) => {
-    const baseName = fileName.replace(`.${suffix.toLowerCase()}.ts`, '');
+    // Handle both .ts and .js extensions
+    const baseName = fileName
+        .replace(`.${suffix.toLowerCase()}.ts`, '')
+        .replace(`.${suffix.toLowerCase()}.js`, '');
     const pascalCase = baseName
         .split(/[-_]/)
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
@@ -207,6 +210,8 @@ const fileNameToExportName = (fileName, suffix) => {
  */
 const autoDiscoverAndWrap = () => {
     const modulesPath = (0, path_1.join)(__dirname, '../modules');
+    const isTS = __filename.endsWith('.ts');
+    const ext = isTS ? '.ts' : '.js';
     let discoveredServices = 0;
     let discoveredControllers = 0;
     const failedFiles = [];
@@ -231,18 +236,14 @@ const autoDiscoverAndWrap = () => {
             catch (error) {
                 continue; // Skip if can't read directory
             }
-            // Auto-discover services (*.service.ts)
-            const serviceFiles = files.filter(f => f.endsWith('.service.ts'));
+            // Auto-discover services (*.service.ts or *.service.js)
+            const serviceFiles = files.filter(f => f.endsWith(`.service${ext}`));
             for (const serviceFile of serviceFiles) {
                 const servicePath = (0, path_1.join)(modulePath, serviceFile);
                 try {
                     // Clear require cache for hot reload support
                     delete require.cache[require.resolve(servicePath)];
                     // Dynamic runtime import (require needed for synchronous loading)
-                    // Note: We use require() here instead of ES6 import because:
-                    // 1. We need synchronous loading (await import() would complicate initialization)
-                    // 2. We need runtime path resolution (file paths are dynamic)
-                    // 3. We need cache control (delete require.cache for hot reload)
                     // eslint-disable-next-line @typescript-eslint/no-var-requires
                     const serviceModule = require(servicePath);
                     // Try to find the exported service object
@@ -261,10 +262,9 @@ const autoDiscoverAndWrap = () => {
                     }
                 }
                 catch (error) {
-                    // Graceful error handling for auto-save scenarios
+                    // Graceful error handling
                     if (error instanceof SyntaxError) {
-                        // Silently skip incomplete files during auto-save
-                        // Will be re-imported on next save when code is complete
+                        // Silently skip
                     }
                     else if (error.code === 'MODULE_NOT_FOUND') {
                         failedFiles.push(`${serviceFile} (dependency missing)`);
@@ -274,14 +274,14 @@ const autoDiscoverAndWrap = () => {
                     }
                 }
             }
-            // Auto-discover controllers (*.controller.ts)
-            const controllerFiles = files.filter(f => f.endsWith('.controller.ts'));
+            // Auto-discover controllers (*.controller.ts or *.controller.js)
+            const controllerFiles = files.filter(f => f.endsWith(`.controller${ext}`));
             for (const controllerFile of controllerFiles) {
                 const controllerPath = (0, path_1.join)(modulePath, controllerFile);
                 try {
                     // Clear require cache for hot reload support
                     delete require.cache[require.resolve(controllerPath)];
-                    // Dynamic runtime import (same rationale as services above)
+                    // Dynamic runtime import
                     // eslint-disable-next-line @typescript-eslint/no-var-requires
                     const controllerModule = require(controllerPath);
                     // Try to find the exported controller object
@@ -300,10 +300,9 @@ const autoDiscoverAndWrap = () => {
                     }
                 }
                 catch (error) {
-                    // Graceful error handling for auto-save scenarios
+                    // Graceful error handling
                     if (error instanceof SyntaxError) {
-                        // Silently skip incomplete files during auto-save
-                        // Will be re-imported on next save when code is complete
+                        // Silently skip
                     }
                     else if (error.code === 'MODULE_NOT_FOUND') {
                         failedFiles.push(`${controllerFile} (dependency missing)`);
@@ -323,7 +322,7 @@ const autoDiscoverAndWrap = () => {
         console.log(colors_1.default.cyan.bold('║') + `  Controllers Wrapped    │ ${colors_1.default.green.bold(discoveredControllers.toString()).padEnd(34)}` + colors_1.default.cyan.bold('║'));
         console.log(colors_1.default.cyan.bold('║') + `  Total Modules          │ ${colors_1.default.green.bold(totalModules.toString()).padEnd(34)}` + colors_1.default.cyan.bold('║'));
         console.log(colors_1.default.cyan.bold('╚═══════════════════════════════════════════════════════════╝\n'));
-        // Show warnings for failed files (only real errors, not syntax errors)
+        // Show warnings for failed files
         if (failedFiles.length > 0) {
             console.log(colors_1.default.yellow.bold('╔═══════════════════════════════════════════════════════════╗'));
             console.log(colors_1.default.yellow.bold('║') + colors_1.default.yellow.bold('              ⚠️  FAILED TO LOAD                         ') + colors_1.default.yellow.bold('║'));
@@ -337,7 +336,7 @@ const autoDiscoverAndWrap = () => {
         // Validation: Fail startup if no modules discovered
         if (discoveredServices === 0 && discoveredControllers === 0) {
             console.error('\n❌ Auto-discovery failed: No services or controllers found!');
-            console.error('   Expected structure: src/app/modules/*/{{moduleName}}.service.ts');
+            console.error(`   Expected structure: modules/*/{{moduleName}}.service${ext}`);
             process.exit(1);
         }
     }
