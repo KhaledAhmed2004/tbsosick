@@ -8,8 +8,9 @@ const createSpecialtyToDB = async (data: ISpecialty) => {
   return await SpecialtyModel.create(data);
 };
 
-const listSpecialtiesFromDB = async (query: Record<string, any>) => {
-  const qb = new QueryBuilder(SpecialtyModel.find({ isActive: true }), query)
+const listSpecialtiesFromDB = async (query: Record<string, any>, isAdmin = false) => {
+  const baseQuery = isAdmin ? {} : { isActive: true };
+  const qb = new QueryBuilder(SpecialtyModel.find(baseQuery), query)
     .filter()
     .sort()
     .paginate()

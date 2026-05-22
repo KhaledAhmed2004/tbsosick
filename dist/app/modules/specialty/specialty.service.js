@@ -20,8 +20,9 @@ const builder_1 = require("../../builder");
 const createSpecialtyToDB = (data) => __awaiter(void 0, void 0, void 0, function* () {
     return yield specialty_model_1.SpecialtyModel.create(data);
 });
-const listSpecialtiesFromDB = (query) => __awaiter(void 0, void 0, void 0, function* () {
-    const qb = new builder_1.QueryBuilder(specialty_model_1.SpecialtyModel.find({ isActive: true }), query)
+const listSpecialtiesFromDB = (query_1, ...args_1) => __awaiter(void 0, [query_1, ...args_1], void 0, function* (query, isAdmin = false) {
+    const baseQuery = isAdmin ? {} : { isActive: true };
+    const qb = new builder_1.QueryBuilder(specialty_model_1.SpecialtyModel.find(baseQuery), query)
         .filter()
         .sort()
         .paginate()

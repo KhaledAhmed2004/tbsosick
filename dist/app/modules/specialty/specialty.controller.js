@@ -17,6 +17,7 @@ const http_status_codes_1 = require("http-status-codes");
 const catchAsync_1 = __importDefault(require("../../../shared/catchAsync"));
 const sendResponse_1 = __importDefault(require("../../../shared/sendResponse"));
 const specialty_service_1 = require("./specialty.service");
+const user_1 = require("../../../enums/user");
 const createSpecialty = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const result = yield specialty_service_1.SpecialtyService.createSpecialtyToDB(req.body);
     (0, sendResponse_1.default)(res, {
@@ -27,7 +28,9 @@ const createSpecialty = (0, catchAsync_1.default)((req, res) => __awaiter(void 0
     });
 }));
 const listSpecialties = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const result = yield specialty_service_1.SpecialtyService.listSpecialtiesFromDB(req.query);
+    const user = req.user;
+    const isAdmin = user && user.role === user_1.USER_ROLES.SUPER_ADMIN;
+    const result = yield specialty_service_1.SpecialtyService.listSpecialtiesFromDB(req.query, isAdmin);
     (0, sendResponse_1.default)(res, {
         success: true,
         statusCode: http_status_codes_1.StatusCodes.OK,

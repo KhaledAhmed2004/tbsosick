@@ -3,6 +3,8 @@ import { StatusCodes } from 'http-status-codes';
 import catchAsync from '../../../shared/catchAsync';
 import sendResponse from '../../../shared/sendResponse';
 import { SpecialtyService } from './specialty.service';
+import { USER_ROLES } from '../../../enums/user';
+import { JwtPayload } from 'jsonwebtoken';
 
 const createSpecialty = catchAsync(async (req: Request, res: Response) => {
   const result = await SpecialtyService.createSpecialtyToDB(req.body);
@@ -15,7 +17,10 @@ const createSpecialty = catchAsync(async (req: Request, res: Response) => {
 });
 
 const listSpecialties = catchAsync(async (req: Request, res: Response) => {
-  const result = await SpecialtyService.listSpecialtiesFromDB(req.query);
+  const user = req.user as JwtPayload;
+  const isAdmin = user && user.role === USER_ROLES.SUPER_ADMIN;
+
+  const result = await SpecialtyService.listSpecialtiesFromDB(req.query, isAdmin);
   sendResponse(res, {
     success: true,
     statusCode: StatusCodes.OK,
