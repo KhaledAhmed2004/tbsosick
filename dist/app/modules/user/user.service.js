@@ -26,8 +26,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const http_status_codes_1 = require("http-status-codes");
 const user_1 = require("../../../enums/user");
+const mongoose_1 = require("mongoose");
 const preference_card_model_1 = require("../preference-card/preference-card.model");
 const subscription_model_1 = require("../subscription/subscription.model");
+const subscription_interface_1 = require("../subscription/subscription.interface");
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const authHelpers_1 = require("../../../helpers/authHelpers");
 const unlinkFile_1 = __importDefault(require("../../../shared/unlinkFile"));
@@ -53,6 +55,19 @@ const createUserToDB = (payload_1, ...args_1) => __awaiter(void 0, [payload_1, .
         }
         catch (err) {
             console.error('Signup OTP send failed:', err);
+        }
+    }
+    // If created by an admin or if the user is a super admin, automatically grant a lifetime ENTERPRISE subscription
+    if (isAdmin || createUser.role === user_1.USER_ROLES.SUPER_ADMIN) {
+        try {
+            yield subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(createUser._id.toString()), {
+                plan: subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
+                status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
+                startedAt: new Date(),
+            });
+        }
+        catch (err) {
+            console.error('Failed to grant free subscription to admin/admin-created user:', err);
         }
     }
     return createUser;
@@ -312,8 +327,22 @@ const updateUserByAdminInDB = (id, payload) => __awaiter(void 0, void 0, void 0,
         user.profilePicture = payload.profilePicture;
     if (payload.status !== undefined)
         user.status = payload.status;
-    if (payload.role !== undefined)
+    if (payload.role !== undefined) {
         user.role = payload.role;
+        // Auto-grant free ENTERPRISE access if upgraded to SUPER_ADMIN
+        if (payload.role === user_1.USER_ROLES.SUPER_ADMIN) {
+            try {
+                yield subscription_model_1.Subscription.upsertForUser(new mongoose_1.Types.ObjectId(user._id.toString()), {
+                    plan: subscription_interface_1.SUBSCRIPTION_PLAN.ENTERPRISE,
+                    status: subscription_interface_1.SUBSCRIPTION_STATUS.ACTIVE,
+                    startedAt: new Date(),
+                });
+            }
+            catch (err) {
+                console.error('Failed to grant free subscription to upgraded admin:', err);
+            }
+        }
+    }
     yield user.save();
     const plain = user.toObject();
     delete plain.password;

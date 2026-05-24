@@ -56,9 +56,6 @@ const userSchema = new mongoose_1.Schema({
     },
     country: {
         type: String,
-        required: function () {
-            return !this.googleId && !this.appleId;
-        },
         trim: true,
     },
     gender: {
@@ -70,9 +67,6 @@ const userSchema = new mongoose_1.Schema({
     },
     phone: {
         type: String,
-        required: function () {
-            return !this.googleId && !this.appleId;
-        },
         trim: true,
     },
     specialty: {
