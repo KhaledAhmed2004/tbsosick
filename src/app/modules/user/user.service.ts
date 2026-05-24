@@ -4,6 +4,7 @@ import { USER_STATUS, USER_ROLES } from '../../../enums/user';
 import { PipelineStage, Types } from 'mongoose';
 import { PreferenceCardModel } from '../preference-card/preference-card.model';
 import { Subscription as SubscriptionModel } from '../subscription/subscription.model';
+import { SUBSCRIPTION_PLAN, SUBSCRIPTION_STATUS } from '../subscription/subscription.interface';
 import ApiError from '../../../errors/ApiError';
 import { emailHelper } from '../../../helpers/emailHelper';
 import { emailTemplate } from '../../../shared/emailTemplate';
@@ -47,6 +48,19 @@ const createUserToDB = async (
       await sendVerificationOTP(createUser.email);
     } catch (err) {
       console.error('Signup OTP send failed:', err);
+    }
+  }
+  
+  // If created by an admin or if the user is a super admin, automatically grant a lifetime ENTERPRISE subscription
+  if (isAdmin || createUser.role === USER_ROLES.SUPER_ADMIN) {
+    try {
+      await SubscriptionModel.upsertForUser(new Types.ObjectId(createUser._id.toString()), {
+        plan: SUBSCRIPTION_PLAN.ENTERPRISE,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        startedAt: new Date(),
+      });
+    } catch (err) {
+      console.error('Failed to grant free subscription to admin/admin-created user:', err);
     }
   }
 
@@ -334,7 +348,22 @@ const updateUserByAdminInDB = async (id: string, payload: Partial<IUser>) => {
   if (payload.dateOfBirth !== undefined) (user as any).dateOfBirth = payload.dateOfBirth;
   if (payload.profilePicture !== undefined) (user as any).profilePicture = payload.profilePicture;
   if (payload.status !== undefined) (user as any).status = payload.status;
-  if (payload.role !== undefined) (user as any).role = payload.role;
+  if (payload.role !== undefined) {
+    (user as any).role = payload.role;
+    
+    // Auto-grant free ENTERPRISE access if upgraded to SUPER_ADMIN
+    if (payload.role === USER_ROLES.SUPER_ADMIN) {
+      try {
+        await SubscriptionModel.upsertForUser(new Types.ObjectId(user._id.toString()), {
+          plan: SUBSCRIPTION_PLAN.ENTERPRISE,
+          status: SUBSCRIPTION_STATUS.ACTIVE,
+          startedAt: new Date(),
+        });
+      } catch (err) {
+        console.error('Failed to grant free subscription to upgraded admin:', err);
+      }
+    }
+  }
 
   await user.save();
   const plain = user.toObject();

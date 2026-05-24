@@ -48,9 +48,6 @@ const userSchema = new Schema<IUser>(
     },
     country: {
       type: String,
-      required: function (this: IUser) {
-        return !this.googleId && !this.appleId;
-      },
       trim: true,
     },
     gender: {
@@ -62,9 +59,6 @@ const userSchema = new Schema<IUser>(
     },
     phone: {
       type: String,
-      required: function (this: IUser) {
-        return !this.googleId && !this.appleId;
-      },
       trim: true,
     },
     specialty: {

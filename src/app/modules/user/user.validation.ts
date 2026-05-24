@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { USER_ROLES, USER_STATUS } from '../../../enums/user';
 
-const phoneRegex = /^\+?[0-9]{7,15}$/;
+const phoneRegex = /^(?:\+?[0-9]{7,15})?$/;
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-={}\[\]|;:'",.<>/?]).{8,}$/;
 
 const createUserZodSchema = z.object({
@@ -14,10 +14,8 @@ const createUserZodSchema = z.object({
       gender: z.enum(['male', 'female']).optional(),
       dateOfBirth: z.string().optional(),
       location: z.string().optional(),
-      phone: z
-        .string({ required_error: 'Phone is required' })
-        .regex(phoneRegex, 'Phone must be 7-15 digits, optional +'),
-      country: z.string({ required_error: 'Country is required' }).min(1),
+      phone: z.string().optional(),
+      country: z.string().optional(),
       role: z.enum([USER_ROLES.USER]).optional(),
       password: z.string().optional(),
       profilePicture: z.string().optional(),
@@ -52,7 +50,7 @@ const updateUserZodSchema = z.object({
     country: z.string().optional(),
     specialty: z.string().optional(),
     hospital: z.string().optional(),
-    phone: z.string().regex(phoneRegex, 'Phone must be 7-15 digits, optional +').optional(),
+    phone: z.string().optional(),
     password: z
       .string()
       .regex(passwordRegex, 'Password must include upper, lower, number, special and be 8+ chars')
@@ -82,7 +80,7 @@ export const UserValidation = {
     body: z.object({
       name: z.string().optional(),
       email: z.string().email('Invalid email address').optional(),
-      phone: z.string().regex(phoneRegex, 'Phone must be 7-15 digits, optional +').optional(),
+      phone: z.string().optional(),
       location: z.string().optional(),
       country: z.string().optional(),
       specialty: z.string().optional(),
