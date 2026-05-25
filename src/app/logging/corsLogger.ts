@@ -4,6 +4,7 @@ import { logger, errorLogger } from '../../shared/logger';
 export const allowedOrigins: string[] = [
   'http://localhost:3000',
   'https://smrtscrub.app',
+  'https://www.smrtscrub.app',
   'https://api.smrtscrub.app',
   'https://smrtscrub-medical-app.vercel.app',
   'http://localhost:3001',
