@@ -178,18 +178,13 @@ const downloadPreferenceCardInDB = async (
   role?: string,
 ) => {
   // 1. Fetch Card Safely
-  const doc = await PreferenceCardModel.findById(id)
-    .populate('supplies.supply', 'name -_id')
-    .populate('sutures.suture', 'name -_id')
-    .lean();
+  const doc = await PreferenceCardModel.findById(id).lean();
 
   if (!doc) {
     throw new ApiError(StatusCodes.NOT_FOUND, 'Preference card not found');
   }
 
   // 2. Check Card Status (isDeleted or inactive/unverified)
-  // Requirement: Reject if deleted or inactive.
-  // We'll use published: false as "inactive" for public users.
   if (doc.isDeleted) {
     throw new ApiError(StatusCodes.GONE, 'This preference card has been deleted');
   }
@@ -205,37 +200,31 @@ const downloadPreferenceCardInDB = async (
     );
   }
 
-  // 4. Idempotency / Spam Control
-  // userId + cardId + date (YYYY-MM-DD)
+  // 4. Idempotency / Spam Control & Count Increment
   const today = new Date().toISOString().split('T')[0];
 
   try {
-    // Attempt to create a download log. Unique index handles idempotency.
     await PreferenceCardDownloadModel.create({
       userId: new Types.ObjectId(userId),
       cardId: new Types.ObjectId(id),
       downloadDate: today,
     });
 
-    // 5. Atomic Increment (only if log creation succeeded)
     await PreferenceCardModel.findByIdAndUpdate(id, {
       $inc: { downloadCount: 1 },
     });
   } catch (error: any) {
-    // If it's a duplicate key error (code 11000), it means user already downloaded today.
-    // We return success without incrementing.
     if (error.code !== 11000) {
       throw error;
     }
   }
 
-  // 6. Generate PDF
-  const flattenedDoc = flattenCardForPDF(doc);
-  const pdfBuffer = await generatePreferenceCardPDF(flattenedDoc);
-
+  // Skip PDF generation, return success message
   return {
-    buffer: pdfBuffer,
-    fileName: `${flattenedDoc.cardTitle.replace(/\s+/g, '_')}_Preference_Card.pdf`,
+    success: true,
+    message: 'Download counted successfully',
+    cardTitle: doc.cardTitle,
+    downloadCount: doc.downloadCount + 1,
   };
 };
 

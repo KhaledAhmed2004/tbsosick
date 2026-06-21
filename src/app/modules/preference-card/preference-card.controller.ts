@@ -174,15 +174,15 @@ const downloadCard = catchAsync(async (req: Request, res: Response) => {
     (user as any).role,
   );
 
-  // Set headers for PDF download
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader(
-    'Content-Disposition',
-    `attachment; filename="${result.fileName}"`,
-  );
-
-  // Send the PDF buffer directly
-  res.status(StatusCodes.OK).send(result.buffer);
+  sendResponse(res, {
+    success: true,
+    statusCode: StatusCodes.OK,
+    message: result.message,
+    data: {
+      cardTitle: result.cardTitle,
+      downloadCount: result.downloadCount,
+    },
+  });
 });
 
 const favoriteCard = catchAsync(async (req: Request, res: Response) => {
