@@ -74,6 +74,7 @@ const createSocialLoginZodSchema = z.object({
       .string()
       .min(32, 'Nonce must be at least 32 characters')
       .optional(),
+    name: z.string().trim().min(1).optional(),
     deviceToken: z.string().optional(),
     platform: z.enum(['ios', 'android', 'web']).optional(),
     appVersion: z.string().optional(),

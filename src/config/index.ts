@@ -9,12 +9,14 @@ export default {
   port: process.env.PORT,
   bcrypt_salt_rounds: process.env.BCRYPT_SALT_ROUNDS,
   frontend_url: process.env.FRONTEND_URL,
+  backend_url: process.env.BACKEND_URL || `http://${process.env.IP_ADDRESS || 'localhost'}:${process.env.PORT || 5001}`,
 
   // Project branding configuration
   app: {
-    name: process.env.APP_NAME || 'Educoin Backend',
+    name: process.env.APP_NAME || 'SMRT SCRUB',
     tagline: process.env.APP_TAGLINE || 'Enterprise API',
     version: process.env.APP_VERSION || '1.0.0',
+    logo: process.env.APP_LOGO || 'public/smrtScrub.jpeg',
   },
 
   // Banner configuration

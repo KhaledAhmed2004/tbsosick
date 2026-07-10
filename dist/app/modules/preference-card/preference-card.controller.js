@@ -134,11 +134,15 @@ const deleteCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, voi
 const downloadCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;
     const result = yield preference_card_service_1.PreferenceCardService.downloadPreferenceCardInDB(req.params.cardId, user.id, user.role);
-    // Set headers for PDF download
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${result.fileName}"`);
-    // Send the PDF buffer directly
-    res.status(http_status_codes_1.StatusCodes.OK).send(result.buffer);
+    (0, sendResponse_1.default)(res, {
+        success: true,
+        statusCode: http_status_codes_1.StatusCodes.OK,
+        message: result.message,
+        data: {
+            cardTitle: result.cardTitle,
+            downloadCount: result.downloadCount,
+        },
+    });
 }));
 const favoriteCard = (0, catchAsync_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const user = req.user;

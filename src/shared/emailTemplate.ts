@@ -1,3 +1,7 @@
+import { EmailBuilder } from '../app/builder/EmailBuilder/EmailBuilder';
+import config from '../config';
+import path from 'path';
+
 type ICreateAccount = {
   name: string;
   email: string;
@@ -10,41 +14,55 @@ type IResetPassword = {
 };
 
 const createAccount = (values: ICreateAccount) => {
-  const data = {
+  const builder = new EmailBuilder();
+
+  builder
+    .setSubject(`Verify your ${config.app.name} account`)
+    .addComponent('header', {
+      title: `Welcome to ${config.app.name}, ${values.name}!`,
+      subtitle: `Thank you for joining ${config.app.name}!`
+    })
+    .addText('To complete your account setup, please use the verification code below:')
+    .addComponent('otp', { code: values.otp, expiresIn: '3 minutes' })
+    .addDivider()
+    .addText(`This is an automated security notification from ${config.app.name}. If you did not create an account with us, you can safely ignore this email.`, { fontSize: '12px', color: '#6B7280' });
+
+  const { html, subject, attachments } = builder.build();
+
+  return {
     to: values.email,
-    subject: 'Verify your account',
-    html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 50px; padding: 20px; color: #555;">
-    <div style="width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-        <img src="https://i.postimg.cc/6pgNvKhD/logo.png" alt="Logo" style="display: block; margin: 0 auto 20px; width:150px" />
-          <h2 style="color: #277E16; font-size: 24px; margin-bottom: 20px;">Hey! ${values.name}, Your Toothlens Account Credentials</h2>
-        <div style="text-align: center;">
-            <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Your single use code is:</p>
-            <div style="background-color: #277E16; width: 80px; padding: 10px; text-align: center; border-radius: 8px; color: #fff; font-size: 25px; letter-spacing: 2px; margin: 20px auto;">${values.otp}</div>
-            <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">This code is valid for 3 minutes.</p>
-        </div>
-    </div>
-</body>`,
+    subject,
+    html,
+    attachments
   };
-  return data;
 };
 
 const resetPassword = (values: IResetPassword) => {
-  const data = {
+  const builder = new EmailBuilder();
+
+  builder
+    .setSubject(`Reset your ${config.app.name} password`)
+    .addComponent('header', {
+      title: 'Password Reset Request',
+      subtitle: 'We received a request to reset your password'
+    })
+    .addText('Use the following code to reset your password:')
+    .addComponent('otp', { code: values.otp, expiresIn: '3 minutes' })
+    .addComponent('card', {
+      title: 'Didn\'t request this?',
+      content: 'If you didn\'t request a password reset, you can safely ignore this email. Your password will remain unchanged.',
+      variant: 'warning'
+    })
+    .addDivider();
+
+  const { html, subject, attachments } = builder.build();
+
+  return {
     to: values.email,
-    subject: 'Reset your password',
-    html: `<body style="font-family: Arial, sans-serif; background-color: #f9f9f9; margin: 50px; padding: 20px; color: #555;">
-    <div style="width: 100%; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
-        <img src="https://i.postimg.cc/6pgNvKhD/logo.png" alt="Logo" style="display: block; margin: 0 auto 20px; width:150px" />
-        <div style="text-align: center;">
-            <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Your single use code is:</p>
-            <div style="background-color: #277E16; width: 80px; padding: 10px; text-align: center; border-radius: 8px; color: #fff; font-size: 25px; letter-spacing: 2px; margin: 20px auto;">${values.otp}</div>
-            <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">This code is valid for 3 minutes.</p>
-                <p style="color: #b9b4b4; font-size: 16px; line-height: 1.5; margin-bottom: 20px;text-align:left">If you didn't request this code, you can safely ignore this email. Someone else might have typed your email address by mistake.</p>
-        </div>
-    </div>
-</body>`,
+    subject,
+    html,
+    attachments
   };
-  return data;
 };
 
 export const emailTemplate = {

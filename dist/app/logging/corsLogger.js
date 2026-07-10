@@ -6,6 +6,7 @@ const logger_1 = require("../../shared/logger");
 exports.allowedOrigins = [
     'http://localhost:3000',
     'https://smrtscrub.app',
+    'https://www.smrtscrub.app',
     'https://api.smrtscrub.app',
     'https://smrtscrub-medical-app.vercel.app',
     'http://localhost:3001',

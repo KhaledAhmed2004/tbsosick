@@ -21,6 +21,7 @@ export type ISocialLogin = {
   provider: 'google' | 'apple';
   idToken: string;
   nonce?: string;
+  name?: string;
   deviceToken?: string;
   platform?: 'ios' | 'android' | 'web';
   appVersion?: string;

@@ -77,6 +77,13 @@ const loginUserFromDB = async (
     throw new ApiError(StatusCodes.BAD_REQUEST, 'Password is required!');
   }
 
+  if (!isExistUser.password) {
+    throw new ApiError(
+      StatusCodes.UNAUTHORIZED,
+      'This account uses social login. Please continue with your Google or Apple account.'
+    );
+  }
+
   if (!(await User.isMatchPassword(password, isExistUser.password))) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, 'Invalid email or password');
   }
@@ -375,7 +382,7 @@ const appleAudience = [
 
 // Social login (Google / Apple ID token verification)
 const socialLoginToDB = async (payload: ISocialLogin) => {
-  const { provider, idToken, nonce, deviceToken, platform, appVersion } = payload;
+  const { provider, idToken, nonce, name: payloadName, deviceToken, platform, appVersion } = payload;
 
   let email: string | undefined;
   let name: string | undefined;
@@ -412,7 +419,7 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
     }
 
     email = tokenPayload.email;
-    name = tokenPayload.name || email.split('@')[0];
+    name = payloadName || tokenPayload.name || email.split('@')[0];
     providerId = tokenPayload.sub;
   } else {
     // Apple — nonce is mandatory (Apple best practice + plugin supports it)
@@ -446,7 +453,7 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
 
     email = applePayload.email;
     providerId = applePayload.sub;
-    name = email ? email.split('@')[0] : 'Apple User';
+    name = payloadName || applePayload.name || (email ? email.split('@')[0] : 'Apple User');
   }
 
   // Find user strictly by provider ID. Matching on email here would let an
@@ -481,7 +488,7 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
       if (existingByEmail) {
         throw new ApiError(
           StatusCodes.CONFLICT,
-          'An account with this email already exists. Please sign in with your password and link your social account from settings.',
+          'An account with this email already exists. Please continue with the account provider you originally used.',
         );
       }
     }

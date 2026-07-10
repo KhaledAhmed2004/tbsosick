@@ -178,16 +178,11 @@ const flattenCardForPDF = (doc) => {
 };
 const downloadPreferenceCardInDB = (id, userId, role) => __awaiter(void 0, void 0, void 0, function* () {
     // 1. Fetch Card Safely
-    const doc = yield preference_card_model_1.PreferenceCardModel.findById(id)
-        .populate('supplies.supply', 'name -_id')
-        .populate('sutures.suture', 'name -_id')
-        .lean();
+    const doc = yield preference_card_model_1.PreferenceCardModel.findById(id).lean();
     if (!doc) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.NOT_FOUND, 'Preference card not found');
     }
     // 2. Check Card Status (isDeleted or inactive/unverified)
-    // Requirement: Reject if deleted or inactive.
-    // We'll use published: false as "inactive" for public users.
     if (doc.isDeleted) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.GONE, 'This preference card has been deleted');
     }
@@ -197,34 +192,29 @@ const downloadPreferenceCardInDB = (id, userId, role) => __awaiter(void 0, void 
     if (!doc.published && !isOwner && !isSuperAdmin) {
         throw new ApiError_1.default(http_status_codes_1.StatusCodes.FORBIDDEN, 'You do not have permission to download this private card');
     }
-    // 4. Idempotency / Spam Control
-    // userId + cardId + date (YYYY-MM-DD)
+    // 4. Idempotency / Spam Control & Count Increment
     const today = new Date().toISOString().split('T')[0];
     try {
-        // Attempt to create a download log. Unique index handles idempotency.
         yield preference_card_model_1.PreferenceCardDownloadModel.create({
             userId: new mongoose_1.Types.ObjectId(userId),
             cardId: new mongoose_1.Types.ObjectId(id),
             downloadDate: today,
         });
-        // 5. Atomic Increment (only if log creation succeeded)
         yield preference_card_model_1.PreferenceCardModel.findByIdAndUpdate(id, {
             $inc: { downloadCount: 1 },
         });
     }
     catch (error) {
-        // If it's a duplicate key error (code 11000), it means user already downloaded today.
-        // We return success without incrementing.
         if (error.code !== 11000) {
             throw error;
         }
     }
-    // 6. Generate PDF
-    const flattenedDoc = flattenCardForPDF(doc);
-    const pdfBuffer = yield generatePreferenceCardPDF(flattenedDoc);
+    // Skip PDF generation, return success message
     return {
-        buffer: pdfBuffer,
-        fileName: `${flattenedDoc.cardTitle.replace(/\s+/g, '_')}_Preference_Card.pdf`,
+        success: true,
+        message: 'Download counted successfully',
+        cardTitle: doc.cardTitle,
+        downloadCount: doc.downloadCount + 1,
     };
 });
 /**

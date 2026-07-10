@@ -1,23 +1,19 @@
 "use strict";
 /**
- * OTP Verification Email Template
+ * OTP Verification Email Template - Toothlens Branded
  *
- * Sent when user needs to verify their identity with an OTP.
+ * Sent when user needs to verify their account with an OTP.
  *
  * @variables
  * - name: User's name
  * - otp: The OTP code
- * - expiresIn: Expiration time (e.g., "10 minutes")
- * - purpose: What the OTP is for (e.g., "login", "password reset")
  *
  * @example
  * ```typescript
  * const html = new EmailBuilder()
  *   .useTemplate('otp', {
  *     name: 'John',
- *     otp: '123456',
- *     expiresIn: '10 minutes',
- *     purpose: 'account verification'
+ *     otp: '123456'
  *   })
  *   .build();
  * ```
@@ -25,69 +21,31 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.otpTemplate = void 0;
 exports.otpTemplate = {
-    subject: 'Your Verification Code: {{otp}}',
-    render: (variables, theme, components) => {
-        const { name = 'there', otp, expiresIn = '10 minutes', purpose = 'verification', appName = 'Our Platform', } = variables;
-        // Get components from registry
-        const headerComponent = components.get('header');
-        const footerComponent = components.get('footer');
-        const otpComponent = components.get('otp');
-        const cardComponent = components.get('card');
-        const headerHtml = headerComponent
-            ? headerComponent({ title: 'Verification Code', subtitle: `For ${purpose}` }, theme)
-            : '';
-        const otpHtml = otpComponent
-            ? otpComponent({ code: otp, expiresIn }, theme)
-            : `<div style="text-align: center; font-size: 32px; font-weight: bold; color: ${theme.colors.primary}; letter-spacing: 8px; padding: 20px;">${otp}</div>`;
-        const securityNotice = cardComponent
-            ? cardComponent({
-                title: '🔒 Security Notice',
-                content: 'If you didn\'t request this code, please ignore this email. Someone may have entered your email address by mistake.',
-                variant: 'warning',
-            }, theme)
-            : '';
-        const footerHtml = footerComponent
-            ? footerComponent({ showSocial: false, showCompanyInfo: true }, theme)
-            : '';
+    subject: 'Verify your account',
+    render: (variables, theme) => {
+        const { name = 'there', otp, } = variables;
         return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Verification Code</title>
+  <title>Verify your account</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: ${theme.colors.background}; font-family: ${theme.fonts.primary};">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: ${theme.colors.background};">
+<body style="margin: 0; padding: 0; background-color: #f9f9f9; font-family: Arial, sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f9f9f9;">
     <tr>
-      <td align="center" style="padding: ${theme.spacing.lg};">
-        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: ${theme.colors.surface}; border-radius: ${theme.borderRadius}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+      <td align="center" style="padding: 50px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: #fff; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
           <tr>
-            <td style="padding: ${theme.spacing.xl};">
-              ${headerHtml}
-
-              <p style="color: ${theme.colors.text}; font-size: 16px; line-height: 1.6; margin: ${theme.spacing.lg} 0;">
-                Hi <strong>${name}</strong>,
-              </p>
-
-              <p style="color: ${theme.colors.text}; font-size: 16px; line-height: 1.6; margin: ${theme.spacing.md} 0;">
-                You requested a verification code for <strong>${purpose}</strong>. Please use the code below to complete your ${purpose}:
-              </p>
-
-              ${otpHtml}
-
-              <p style="color: ${theme.colors.textMuted}; font-size: 14px; text-align: center; margin: ${theme.spacing.md} 0;">
-                Please do not share this code with anyone.
-              </p>
-
-              ${securityNotice}
-
-              <p style="color: ${theme.colors.text}; font-size: 16px; margin: ${theme.spacing.lg} 0 0 0;">
-                Best regards,<br>
-                <strong>The ${appName} Team</strong>
-              </p>
-
-              ${footerHtml}
+            <td style="padding: 20px;">
+              <div style="text-align: center;">
+                <img src="https://i.postimg.cc/6pgNvKhD/logo.png" alt="Toothlens Logo" style="display: block; margin: 0 auto 20px; width: 150px;" />
+                <h2 style="color: #277E16; font-size: 24px; margin-bottom: 20px;">Hey! ${name}, Your Toothlens Account Credentials</h2>
+                <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">Your single use code is:</p>
+                <div style="background-color: #277E16; width: 80px; padding: 10px; text-align: center; border-radius: 8px; color: #fff; font-size: 25px; letter-spacing: 2px; margin: 20px auto;">${otp}</div>
+                <p style="color: #555; font-size: 16px; line-height: 1.5; margin-bottom: 20px;">This code is valid for 3 minutes.</p>
+              </div>
             </td>
           </tr>
         </table>

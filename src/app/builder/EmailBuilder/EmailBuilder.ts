@@ -26,6 +26,8 @@
  */
 
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
 import config from '../../../config';
 import { defaultTheme } from './themes/default';
 import { darkTheme } from './themes/dark';
@@ -115,10 +117,25 @@ export interface IEmailBuilderOptions {
 
 // ==================== REGISTRIES ====================
 
+// Helper to make logo URL absolute
+const makeThemeLogoAbsolute = (theme: IEmailTheme): IEmailTheme => {
+  if (theme.logo && !theme.logo.url.startsWith('http')) {
+    const baseUrl = config.backend_url;
+    return {
+      ...theme,
+      logo: {
+        ...theme.logo,
+        url: `${baseUrl}${theme.logo.url.startsWith('/') ? '' : '/'}${theme.logo.url}`,
+      },
+    };
+  }
+  return theme;
+};
+
 // Theme registry - stores all available themes
 const themeRegistry: Map<string, IEmailTheme> = new Map([
-  ['default', defaultTheme],
-  ['dark', darkTheme],
+  ['default', makeThemeLogoAbsolute(defaultTheme)],
+  ['dark', makeThemeLogoAbsolute(darkTheme)],
 ]);
 
 // Template registry - stores all available templates
@@ -157,7 +174,7 @@ export class EmailBuilder {
    * Register a custom theme
    */
   static registerTheme(name: string, theme: IEmailTheme): void {
-    themeRegistry.set(name, theme);
+    themeRegistry.set(name, makeThemeLogoAbsolute(theme));
   }
 
   /**
@@ -283,7 +300,7 @@ export class EmailBuilder {
       }
       this.theme = registeredTheme;
     } else {
-      this.theme = theme;
+      this.theme = makeThemeLogoAbsolute(theme);
     }
     return this;
   }
@@ -450,10 +467,33 @@ export class EmailBuilder {
       throw new Error('No content to build. Use useTemplate() or add components/sections.');
     }
 
+    // Process local logo for embedding (CID)
+    const attachments = [...this.attachments];
+    if (this.theme.logo?.url) {
+      const logoPath = this.theme.logo.url;
+      if ((logoPath.startsWith('c:') || logoPath.startsWith('/') || logoPath.includes('\\')) && fs.existsSync(logoPath)) {
+        const logoExt = path.extname(logoPath).substring(1) || 'png';
+        const logoFilename = `logo.${logoExt}`;
+        const cid = 'logo_embedded';
+        
+        // Add logo as inline attachment with CID
+        attachments.push({
+          filename: logoFilename,
+          content: fs.readFileSync(logoPath),
+          contentType: `image/${logoExt}`,
+          encoding: 'base64',
+          cid: cid
+        } as any);
+
+        // Replace logo URL with CID in HTML
+        finalHtml = finalHtml.replace(new RegExp(logoPath.replace(/\\/g, '\\\\'), 'g'), `cid:${cid}`);
+      }
+    }
+
     return {
       html: finalHtml,
       subject: this.subject,
-      attachments: this.attachments,
+      attachments,
     };
   }
 
@@ -528,11 +568,6 @@ export class EmailBuilder {
         <table role="presentation" class="email-container" width="600" cellspacing="0" cellpadding="0" border="0" style="background-color: ${this.theme.colors.surface}; border-radius: ${this.theme.borderRadius}; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
           <tr>
             <td class="mobile-padding" style="padding: ${this.theme.spacing.xl};">
-              ${this.theme.logo ? `
-              <div style="text-align: center; margin-bottom: ${this.theme.spacing.lg};">
-                <img src="${this.theme.logo.url}" alt="${this.theme.logo.alt}" width="${this.theme.logo.width}" height="${this.theme.logo.height}" style="max-width: 100%; height: auto;" />
-              </div>
-              ` : ''}
               ${content}
               ${this.theme.company ? `
               <div style="margin-top: ${this.theme.spacing.xl}; padding-top: ${this.theme.spacing.lg}; border-top: 1px solid ${this.theme.colors.border}; text-align: center; color: ${this.theme.colors.textMuted}; font-size: 12px;">

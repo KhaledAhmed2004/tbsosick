@@ -21,9 +21,8 @@ const apple_signin_auth_1 = __importDefault(require("apple-signin-auth"));
 const config_1 = __importDefault(require("../../../config"));
 const ApiError_1 = __importDefault(require("../../../errors/ApiError"));
 const authHelpers_1 = require("../../../helpers/authHelpers");
-const emailHelper_1 = require("../../../helpers/emailHelper");
 const jwtHelper_1 = require("../../../helpers/jwtHelper");
-const emailTemplate_1 = require("../../../shared/emailTemplate");
+const EmailBuilder_1 = __importDefault(require("../../../app/builder/EmailBuilder/EmailBuilder"));
 const cryptoToken_1 = __importDefault(require("../../../util/cryptoToken"));
 const generateOTP_1 = __importDefault(require("../../../util/generateOTP"));
 const resetToken_model_1 = require("./resetToken/resetToken.model");
@@ -102,15 +101,17 @@ const forgetPasswordToDB = (email) => __awaiter(void 0, void 0, void 0, function
     }
     // Clear any existing reset tokens for this user (invalidate old requests)
     yield resetToken_model_1.ResetToken.deleteMany({ user: isExistUser._id });
-    //send mail
+    //send mail using EmailBuilder
     const otp = (0, generateOTP_1.default)();
-    const value = {
-        otp,
-        email: isExistUser.email,
-    };
     console.log('Sending email to:', isExistUser.email, 'with OTP:', otp);
-    const forgetPassword = emailTemplate_1.emailTemplate.resetPassword(value);
-    emailHelper_1.emailHelper.sendEmail(forgetPassword);
+    const emailBuilder = new EmailBuilder_1.default()
+        .useTemplate('resetPassword', { otp });
+    const { subject, html } = emailBuilder.build();
+    yield EmailBuilder_1.default.send({
+        to: isExistUser.email,
+        subject,
+        html,
+    });
     //save to DB (atomic update for OTP)
     const authentication = {
         oneTimeCode: otp,
