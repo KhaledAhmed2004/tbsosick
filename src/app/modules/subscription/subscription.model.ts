@@ -49,18 +49,21 @@ const subscriptionSchema = new Schema<ISubscription>(
     // Apple purchase from being linked to multiple users (fraud prevention).
     appleOriginalTransactionId: {
       type: String,
-      index: true,
-      sparse: true,
-      unique: true,
+      index: {
+        unique: true,
+        partialFilterExpression: { appleOriginalTransactionId: { $type: 'string' } }
+      },
     },
     appleLatestTransactionId: { type: String },
 
     // Google-specific — populated in the next phase.
-    googlePurchaseToken: {
+    packageName: { type: String },
+    currentPurchaseToken: {
       type: String,
-      index: true,
-      sparse: true,
-      unique: true,
+      index: {
+        unique: true,
+        partialFilterExpression: { currentPurchaseToken: { $type: 'string' } }
+      },
     },
     googleOrderId: { type: String },
 
@@ -70,9 +73,56 @@ const subscriptionSchema = new Schema<ISubscription>(
     gracePeriodEndsAt: { type: Date, default: null },
     canceledAt: { type: Date, default: null },
 
-    metadata: { type: Schema.Types.Mixed },
+    metadata: {
+      type: Schema.Types.Mixed,
+    },
+    transferredFromUserId: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    transferredAt: {
+      type: Date,
+    },
+    lastVerifiedAt: {
+      type: Date,
+    },
   },
   { timestamps: true }
+);
+
+subscriptionSchema.index(
+  {
+    platform: 1,
+    environment: 1,
+    packageName: 1,
+    currentPurchaseToken: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      platform: 'google',
+      currentPurchaseToken: {
+        $type: 'string',
+      },
+    },
+  },
+);
+
+subscriptionSchema.index(
+  {
+    platform: 1,
+    environment: 1,
+    appleOriginalTransactionId: 1,
+  },
+  {
+    unique: true,
+    partialFilterExpression: {
+      platform: 'apple',
+      appleOriginalTransactionId: {
+        $type: 'string',
+      },
+    },
+  },
 );
 
 subscriptionSchema.statics.findByUser = async function (userId: Types.ObjectId) {
@@ -87,7 +137,8 @@ subscriptionSchema.statics.findByUser = async function (userId: Types.ObjectId) 
  */
 subscriptionSchema.statics.upsertForUser = async function (
   userId: Types.ObjectId,
-  payload: Partial<ISubscription>
+  payload: Partial<ISubscription>,
+  session?: import('mongoose').ClientSession
 ) {
   // Atomic write returning the BEFORE state (null on insert). We compute the
   // AFTER state deterministically from before+payload instead of issuing a
@@ -96,14 +147,14 @@ subscriptionSchema.statics.upsertForUser = async function (
   const before = await this.findOneAndUpdate(
     { userId },
     { $set: { ...payload, userId } },
-    { new: false, upsert: true, setDefaultsOnInsert: true }
+    { new: false, upsert: true, setDefaultsOnInsert: true, session }
   );
 
   // Insert path: refetch once to get the new _id; before-state is empty so
   // no diff race exists. Update path: simulate the merge that $set just did.
   const next: ISubscription = before
     ? Object.assign(before.toObject() as ISubscription, payload)
-    : ((await this.findOne({ userId })) as ISubscription);
+    : ((await this.findOne({ userId }).session(session || null)) as ISubscription);
 
   if (!next) {
     throw new Error('Failed to retrieve subscription after upsert');
@@ -168,7 +219,7 @@ subscriptionSchema.statics.upsertForUser = async function (
 
   for (const type of eventTypes) {
     try {
-      await SubscriptionEvent.create({
+      await SubscriptionEvent.create([{
         userId,
         subscriptionId: next._id,
         eventType: type,
@@ -182,9 +233,9 @@ subscriptionSchema.statics.upsertForUser = async function (
           next.appleLatestTransactionId ||
           next.appleOriginalTransactionId ||
           next.googleOrderId ||
-          next.googlePurchaseToken,
+          next.currentPurchaseToken,
         occurredAt: new Date(),
-      });
+      }], { session });
     } catch (err) {
       console.error('Failed to write SubscriptionEvent:', err);
     }

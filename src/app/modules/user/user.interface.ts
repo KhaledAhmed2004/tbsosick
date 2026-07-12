@@ -41,6 +41,7 @@ export type IUser = {
   isOnboardingCompleted: boolean;
   deviceTokens?: IDeviceToken[];
   about?: string;
+  firebaseUid?: string;
   googleId?: string;
   appleId?: string;
   authentication?: {

@@ -1,8 +1,11 @@
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import httpStatus from 'http-status';
 import ApiError from '../../../errors/ApiError';
+import config from '../../../config';
+import { jwtHelper } from '../../../helpers/jwtHelper';
 import QueryBuilder from '../../builder/QueryBuilder';
 import { Subscription as SubscriptionModel } from './subscription.model';
+import { IdempotencyRecord } from './idempotency-record.model';
 import {
   ISubscription,
   SUBSCRIPTION_PLAN,
@@ -229,33 +232,17 @@ export const verifyApplePurchase = async (
     );
   }
 
-  // Receipt-theft defense: when the client sets appAccountToken at purchase
-  // time, it must equal uuidv5(userId, IAP_NAMESPACE). A mismatch means the
-  // signed receipt belongs to a different account. Missing token is logged
-  // but not rejected so mobile can roll out the binding gradually.
+  // Receipt-theft defense: warning instead of strict block.
   if (decoded.appAccountToken) {
     const expected = deriveIapAccountToken(userId);
     if (decoded.appAccountToken.toLowerCase() !== expected.toLowerCase()) {
-      throw new ApiError(
-        httpStatus.CONFLICT,
-        'Apple appAccountToken does not match the authenticated user'
+      logger.warn(
+        `Apple verify: appAccountToken mismatch for user ${userId}. Expected ${expected}, got ${decoded.appAccountToken}`
       );
     }
   } else {
     logger.warn(
       `Apple verify: missing appAccountToken for user ${userId} (txn ${decoded.originalTransactionId})`
-    );
-  }
-
-  // 2. Fraud guard: reject if this transaction is already bound to a
-  //    different user account.
-  const existingByTx = await SubscriptionModel.findOne({
-    appleOriginalTransactionId: decoded.originalTransactionId,
-  });
-  if (existingByTx && existingByTx.userId.toString() !== userId) {
-    throw new ApiError(
-      httpStatus.CONFLICT,
-      'This Apple transaction is already linked to another account'
     );
   }
 
@@ -268,29 +255,134 @@ export const verifyApplePurchase = async (
     );
   }
 
-  // 4. Persist the subscription for this user.
-  const updated = await SubscriptionModel.upsertForUser(
-    new Types.ObjectId(userId),
-    {
-      plan,
-      status: SUBSCRIPTION_STATUS.ACTIVE,
-      platform: SUBSCRIPTION_PLATFORM.APPLE,
-      environment: decoded.environment,
-      productId: decoded.productId,
-      appleOriginalTransactionId: decoded.originalTransactionId,
-      appleLatestTransactionId: decoded.transactionId,
-      startedAt: new Date(decoded.purchaseDate),
-      currentPeriodEnd: decoded.expiresDate
-        ? new Date(decoded.expiresDate)
-        : null,
-      canceledAt: null,
-      gracePeriodEndsAt: null,
-      metadata: {
-        appAccountToken: decoded.appAccountToken,
-        bundleId: decoded.bundleId,
-      },
-    }
-  );
+  const session = await mongoose.startSession();
+  let updated: ISubscription;
+
+  try {
+    await session.withTransaction(async () => {
+      // 2. Fraud guard: check if this transaction is already bound to a different user account.
+      const existingByTx = await SubscriptionModel.findOne({
+        platform: SUBSCRIPTION_PLATFORM.APPLE,
+        appleOriginalTransactionId: decoded.originalTransactionId,
+      }).session(session);
+
+      let transferredFromUserId: Types.ObjectId | undefined;
+
+      if (existingByTx && existingByTx.userId.toString() !== userId) {
+        const previousUserId = existingByTx.userId;
+
+        // Atomic release with exact conditions to avoid concurrent races
+        const released = await SubscriptionModel.findOneAndUpdate(
+          {
+            _id: existingByTx._id,
+            userId: previousUserId,
+            appleOriginalTransactionId: decoded.originalTransactionId,
+          },
+          {
+            $set: {
+              plan: SUBSCRIPTION_PLAN.FREE,
+              status: SUBSCRIPTION_STATUS.INACTIVE,
+            },
+            $unset: {
+              currentPurchaseToken: '',
+              googleOrderId: '',
+              appleOriginalTransactionId: '',
+              appleLatestTransactionId: '',
+            },
+          },
+          { new: true, session }
+        );
+
+        if (!released) {
+          throw new ApiError(
+            httpStatus.CONFLICT,
+            'Ownership conflict during transfer. The entitlement was already transferred or released.'
+          );
+        }
+
+        transferredFromUserId = previousUserId;
+
+        // Log transfer audit event inside the same transaction
+        try {
+          await SubscriptionEvent.create(
+            [{
+              userId: new Types.ObjectId(userId),
+              subscriptionId: existingByTx._id,
+              eventType: 'TRANSFERRED',
+              previousPlan: existingByTx.plan,
+              nextPlan: SUBSCRIPTION_PLAN.FREE,
+              previousStatus: existingByTx.status,
+              nextStatus: SUBSCRIPTION_STATUS.INACTIVE,
+              platform: SUBSCRIPTION_PLATFORM.APPLE,
+              productId: decoded.productId,
+              externalTransactionId: decoded.originalTransactionId,
+              fromUserId: previousUserId,
+              toUserId: new Types.ObjectId(userId),
+              occurredAt: new Date(),
+            }],
+            { session }
+          );
+        } catch (err) {
+          console.error('Failed to write transfer SubscriptionEvent:', err);
+        }
+      }
+
+      // Prevent accidental overwrite of higher-tier entitlements
+      const currentUserDoc = await SubscriptionModel.findOne({
+        userId: new Types.ObjectId(userId),
+      }).session(session);
+      
+      if (
+        currentUserDoc &&
+        (currentUserDoc.platform === SUBSCRIPTION_PLATFORM.ADMIN ||
+          currentUserDoc.plan === SUBSCRIPTION_PLAN.ENTERPRISE)
+      ) {
+        if (currentUserDoc.appleOriginalTransactionId === decoded.originalTransactionId) {
+          updated = currentUserDoc;
+          return;
+        }
+        throw new ApiError(
+          httpStatus.CONFLICT,
+          'User already holds a higher priority enterprise or admin entitlement.'
+        );
+      }
+
+      // 4. Upsert the subscription for this user.
+      const payload: Partial<ISubscription> = {
+        plan,
+        status: SUBSCRIPTION_STATUS.ACTIVE,
+        platform: SUBSCRIPTION_PLATFORM.APPLE,
+        environment: decoded.environment,
+        productId: decoded.productId,
+        appleOriginalTransactionId: decoded.originalTransactionId,
+        appleLatestTransactionId: decoded.transactionId,
+        startedAt: new Date(decoded.purchaseDate),
+        currentPeriodEnd: decoded.expiresDate
+          ? new Date(decoded.expiresDate)
+          : null,
+        canceledAt: null,
+        gracePeriodEndsAt: null,
+        metadata: {
+          appAccountToken: decoded.appAccountToken,
+          bundleId: decoded.bundleId,
+        },
+        lastVerifiedAt: new Date(),
+      };
+
+      if (transferredFromUserId) {
+        payload.transferredFromUserId = transferredFromUserId;
+        payload.transferredAt = new Date();
+      }
+
+      updated = await SubscriptionModel.upsertForUser(
+        new Types.ObjectId(userId),
+        payload,
+        session
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
 
   // 5. Re-process any orphan webhooks that arrived before this verify call.
   // We don't await this so the user gets their response immediately.
@@ -300,7 +392,7 @@ export const verifyApplePurchase = async (
     }
   );
 
-  return updated;
+  return updated!;
 };
 
 export const processAppleWebhook = async (
@@ -317,14 +409,12 @@ export const verifyGooglePurchase = async (
   // 1. Pull the authoritative subscription state from Google.
   const decoded = await verifyGoogleSubscription(purchaseToken, productId);
 
-  // Receipt-theft defense: client-set obfuscatedAccountId must match
-  // uuidv5(userId, IAP_NAMESPACE). Missing is logged; mismatch is hard-rejected.
+  // Receipt-theft defense: warning instead of strict block.
   if (decoded.obfuscatedExternalAccountId) {
     const expected = deriveIapAccountToken(userId);
     if (decoded.obfuscatedExternalAccountId !== expected) {
-      throw new ApiError(
-        httpStatus.CONFLICT,
-        'Google obfuscatedAccountId does not match the authenticated user'
+      logger.warn(
+        `Google verify: obfuscatedAccountId mismatch for user ${userId}. Expected ${expected}, got ${decoded.obfuscatedExternalAccountId}`
       );
     }
   } else {
@@ -333,27 +423,6 @@ export const verifyGooglePurchase = async (
     );
   }
 
-  // 2. Fraud guard: a purchase token must not be linked to a different user.
-  // C1 Fix: Handle linkedPurchaseToken (upgrades/downgrades).
-  // If the user upgraded, the new token is in purchaseToken, and the old token
-  // is in linkedPurchaseToken. We should check both to find the existing row.
-  const existingByToken = await SubscriptionModel.findOne({
-    $or: [
-      { googlePurchaseToken: decoded.purchaseToken },
-      ...(decoded.linkedPurchaseToken
-        ? [{ googlePurchaseToken: decoded.linkedPurchaseToken }]
-        : []),
-    ],
-  });
-
-  if (existingByToken && existingByToken.userId.toString() !== userId) {
-    throw new ApiError(
-      httpStatus.CONFLICT,
-      'This Google purchase is already linked to another account'
-    );
-  }
-
-  // 3. Map productId → local plan.
   const plan = mapGoogleProductToPlan(decoded.productId);
   if (plan === SUBSCRIPTION_PLAN.FREE) {
     throw new ApiError(
@@ -362,7 +431,6 @@ export const verifyGooglePurchase = async (
     );
   }
 
-  // 4. Translate Google's subscriptionState into our local status.
   const isActiveState =
     decoded.subscriptionState === 'SUBSCRIPTION_STATE_ACTIVE' ||
     decoded.subscriptionState === 'SUBSCRIPTION_STATE_IN_GRACE_PERIOD';
@@ -377,41 +445,148 @@ export const verifyGooglePurchase = async (
       ? SUBSCRIPTION_STATUS.PAST_DUE
       : SUBSCRIPTION_STATUS.ACTIVE;
 
-  // 5. Persist for this user.
-  const updated = await SubscriptionModel.upsertForUser(
-    new Types.ObjectId(userId),
-    {
-      plan,
-      status: localStatus,
-      platform: SUBSCRIPTION_PLATFORM.GOOGLE,
-      environment: decoded.environment,
-      productId: decoded.productId,
-      autoRenewing: decoded.autoRenewing,
-      googlePurchaseToken: decoded.purchaseToken,
-      googleOrderId: decoded.orderId,
-      startedAt: decoded.startTime ? new Date(decoded.startTime) : null,
-      currentPeriodEnd: decoded.expiryTime
-        ? new Date(decoded.expiryTime)
-        : null,
-      canceledAt: null,
-      gracePeriodEndsAt:
-        localStatus === SUBSCRIPTION_STATUS.PAST_DUE && decoded.expiryTime
+  const session = await mongoose.startSession();
+  let updated: ISubscription;
+
+  try {
+    await session.withTransaction(async () => {
+      // 2. Find existing ownership strictly by purchaseToken
+      const existingByToken = await SubscriptionModel.findOne({
+        platform: SUBSCRIPTION_PLATFORM.GOOGLE,
+        currentPurchaseToken: decoded.purchaseToken,
+      }).session(session);
+
+      let transferredFromUserId: Types.ObjectId | undefined;
+
+      if (existingByToken && existingByToken.userId.toString() !== userId) {
+        const previousUserId = existingByToken.userId;
+
+        // Atomic release with exact conditions to avoid concurrent races
+        const released = await SubscriptionModel.findOneAndUpdate(
+          {
+            _id: existingByToken._id,
+            userId: previousUserId,
+            currentPurchaseToken: decoded.purchaseToken,
+          },
+          {
+            $set: {
+              plan: SUBSCRIPTION_PLAN.FREE,
+              status: SUBSCRIPTION_STATUS.INACTIVE,
+            },
+            $unset: {
+              currentPurchaseToken: '',
+              googleOrderId: '',
+              appleOriginalTransactionId: '',
+              appleLatestTransactionId: '',
+            },
+          },
+          { new: true, session }
+        );
+
+        if (!released) {
+          throw new ApiError(
+            httpStatus.CONFLICT,
+            'Ownership conflict during transfer. The entitlement was already transferred or released.'
+          );
+        }
+
+        transferredFromUserId = previousUserId;
+
+        // Log transfer audit event inside the same transaction
+        try {
+          await SubscriptionEvent.create(
+            [{
+              userId: new Types.ObjectId(userId), // new owner
+              subscriptionId: existingByToken._id, // This records the transfer action on the old doc
+              eventType: 'TRANSFERRED',
+              previousPlan: existingByToken.plan,
+              nextPlan: SUBSCRIPTION_PLAN.FREE,
+              previousStatus: existingByToken.status,
+              nextStatus: SUBSCRIPTION_STATUS.INACTIVE,
+              platform: SUBSCRIPTION_PLATFORM.GOOGLE,
+              productId: decoded.productId,
+              externalTransactionId: decoded.purchaseToken,
+              fromUserId: previousUserId,
+              toUserId: new Types.ObjectId(userId),
+              occurredAt: new Date(),
+            }],
+            { session }
+          );
+        } catch (err) {
+          console.error('Failed to write transfer SubscriptionEvent:', err);
+        }
+      }
+
+      // 3. Prevent accidental overwrite of higher-tier entitlements
+      const currentUserDoc = await SubscriptionModel.findOne({
+        userId: new Types.ObjectId(userId),
+      }).session(session);
+      
+      if (
+        currentUserDoc &&
+        (currentUserDoc.platform === SUBSCRIPTION_PLATFORM.ADMIN ||
+          currentUserDoc.plan === SUBSCRIPTION_PLAN.ENTERPRISE)
+      ) {
+        // Idempotent success if they are restoring the exact same token they already have
+        if (currentUserDoc.currentPurchaseToken === decoded.purchaseToken) {
+          updated = currentUserDoc;
+          return;
+        }
+        throw new ApiError(
+          httpStatus.CONFLICT,
+          'User already holds a higher priority enterprise or admin entitlement.'
+        );
+      }
+
+      // 4. Upsert for current user
+      const payload: Partial<ISubscription> = {
+        plan,
+        status: localStatus,
+        platform: SUBSCRIPTION_PLATFORM.GOOGLE,
+        environment: decoded.environment,
+        productId: decoded.productId,
+        autoRenewing: decoded.autoRenewing,
+        packageName: config.googlePlay.packageName,
+        currentPurchaseToken: decoded.purchaseToken,
+        googleOrderId: decoded.orderId,
+        startedAt: decoded.startTime ? new Date(decoded.startTime) : null,
+        currentPeriodEnd: decoded.expiryTime
           ? new Date(decoded.expiryTime)
           : null,
-      metadata: {
-        acknowledgementState: decoded.acknowledgementState,
-        linkedPurchaseToken: decoded.linkedPurchaseToken,
-        testPurchase: decoded.testPurchase,
-      },
-    }
-  );
+        canceledAt: null,
+        gracePeriodEndsAt:
+          localStatus === SUBSCRIPTION_STATUS.PAST_DUE && decoded.expiryTime
+            ? new Date(decoded.expiryTime)
+            : null,
+        metadata: {
+          acknowledgementState: decoded.acknowledgementState,
+          linkedPurchaseToken: decoded.linkedPurchaseToken,
+          testPurchase: decoded.testPurchase,
+        },
+        lastVerifiedAt: new Date(),
+      };
 
-  // 6. Re-process any orphan webhooks.
-  reprocessPendingWebhooks(decoded.purchaseToken, 'google').catch(err => {
+      if (transferredFromUserId) {
+        payload.transferredFromUserId = transferredFromUserId;
+        payload.transferredAt = new Date();
+      }
+
+      updated = await SubscriptionModel.upsertForUser(
+        new Types.ObjectId(userId),
+        payload,
+        session
+      );
+    });
+  } finally {
+    await session.endSession();
+  }
+
+  // 5. Re-process any orphan webhooks outside the transaction
+  reprocessPendingWebhooks(decoded.purchaseToken, 'google').catch((err) => {
     console.error('Failed to re-process pending Google webhooks:', err);
   });
 
-  return updated;
+  return updated!;
 };
 
 export const processGoogleWebhook = async (
@@ -449,6 +624,8 @@ const reprocessPendingWebhooks = async (
     }
   }
 };
+
+
 
 const SubscriptionService = {
   getMySubscription,

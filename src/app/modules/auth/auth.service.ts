@@ -2,8 +2,7 @@ import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { StatusCodes } from 'http-status-codes';
 import { JwtPayload, Secret } from 'jsonwebtoken';
-import { OAuth2Client } from 'google-auth-library';
-import appleSignin from 'apple-signin-auth';
+import { getFirebaseApp } from '../../utils/firebase';
 import config from '../../../config';
 import ApiError from '../../../errors/ApiError';
 import { sendVerificationOTP } from '../../../helpers/authHelpers';
@@ -23,16 +22,6 @@ import { ResetToken } from './resetToken/resetToken.model';
 import { User } from '../user/user.model';
 import { USER_STATUS } from '../../../enums/user';
 import { OTP_TTL_MS, RESET_TOKEN_TTL_MS } from '../../../config/auth.constants';
-
-const googleClient = new OAuth2Client();
-
-// All valid Google client IDs — iOS, Android, Web each get a separate one.
-// verifyIdToken accepts an array; token is valid if aud matches ANY of them.
-const googleAudience = [
-  config.google.clientIdIos,
-  config.google.clientIdAndroid,
-  config.google.clientIdWeb,
-].filter(Boolean);
 
 const loginUserFromDB = async (
   payload: ILoginData & { deviceToken?: string }
@@ -382,87 +371,35 @@ const appleAudience = [
 
 // Social login (Google / Apple ID token verification)
 const socialLoginToDB = async (payload: ISocialLogin) => {
-  const { provider, idToken, nonce, name: payloadName, deviceToken, platform, appVersion } = payload;
+  const { provider, idToken, name: payloadName, deviceToken, platform, appVersion } = payload;
 
-  let email: string | undefined;
-  let name: string | undefined;
-  let providerId: string;
-
-  if (provider === 'google') {
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      audience: googleAudience,
-    });
-    const tokenPayload = ticket.getPayload();
-    if (!tokenPayload || !tokenPayload.email) {
-      throw new ApiError(
-        StatusCodes.UNAUTHORIZED,
-        'Invalid Google ID token'
-      );
-    }
-
-    // Reject tokens where Google has not verified the email. Prevents an
-    // attacker from minting tokens for arbitrary unverified addresses.
-    if (!tokenPayload.email_verified) {
-      throw new ApiError(
-        StatusCodes.UNAUTHORIZED,
-        'Google account email is not verified',
-      );
-    }
-
-    // Nonce replay protection: Google echoes the raw nonce in the token
-    // when the client passes it to the SDK. Flutter's google_sign_in
-    // plugin doesn't expose nonce, so we only enforce the check if the
-    // client actually sent one.
-    if (nonce && tokenPayload.nonce !== nonce) {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
-    }
-
-    email = tokenPayload.email;
-    name = payloadName || tokenPayload.name || email.split('@')[0];
-    providerId = tokenPayload.sub;
-  } else {
-    // Apple — nonce is mandatory (Apple best practice + plugin supports it)
-    if (!nonce) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        'Nonce is required for Apple sign-in',
-      );
-    }
-
-    const applePayload = await appleSignin.verifyIdToken(idToken, {
-      audience: appleAudience,
-      ignoreExpiration: false,
-    });
-    if (!applePayload.sub) {
-      throw new ApiError(
-        StatusCodes.UNAUTHORIZED,
-        'Invalid Apple ID token'
-      );
-    }
-
-    // Apple puts SHA256(nonce) in the token — hash the client-provided
-    // raw nonce and compare.
-    const expectedHash = crypto
-      .createHash('sha256')
-      .update(nonce)
-      .digest('hex');
-    if (applePayload.nonce !== expectedHash) {
-      throw new ApiError(StatusCodes.UNAUTHORIZED, 'Nonce mismatch');
-    }
-
-    email = applePayload.email;
-    providerId = applePayload.sub;
-    name = payloadName || applePayload.name || (email ? email.split('@')[0] : 'Apple User');
+  let decodedToken;
+  try {
+    const auth = getFirebaseApp().auth();
+    decodedToken = await auth.verifyIdToken(idToken);
+  } catch (error: any) {
+    throw new ApiError(
+      StatusCodes.UNAUTHORIZED,
+      `Invalid or expired Firebase ID token: ${error.message}`
+    );
   }
 
-  // Find user strictly by provider ID. Matching on email here would let an
-  // attacker who controls a provider account with the same email address
-  // hijack a local/password account — see OWASP "Account Linking" guidance.
-  const providerField = provider === 'google' ? 'googleId' : 'appleId';
-  let user = await User.findOne({ [providerField]: providerId }).select(
-    '+tokenVersion'
-  );
+  const { uid, email, name: tokenName, picture } = decodedToken;
+
+  if (!email) {
+    throw new ApiError(
+      StatusCodes.BAD_REQUEST,
+      'Email is required to create an account. Please allow email sharing in your social account.'
+    );
+  }
+
+  // Find user by firebaseUid or email
+  let user = await User.findOne({ 
+    $or: [
+      { firebaseUid: uid },
+      { email }
+    ]
+  }).select('+tokenVersion');
 
   if (user) {
     // Status checks
@@ -478,33 +415,22 @@ const socialLoginToDB = async (payload: ISocialLogin) => {
         'Your account is restricted. Contact support.'
       );
     }
+    
+    // Update firebaseUid if it was missing (e.g. migrating existing user)
+    if (!user.firebaseUid) {
+      user.firebaseUid = uid;
+      await user.save();
+    }
   } else {
-    // No user linked to this provider identity. If the email already
-    // belongs to another account, refuse to auto-link — the user must
-    // authenticate with that account first and link the provider
-    // explicitly from a settings flow.
-    if (email) {
-      const existingByEmail = await User.findOne({ email });
-      if (existingByEmail) {
-        throw new ApiError(
-          StatusCodes.CONFLICT,
-          'An account with this email already exists. Please continue with the account provider you originally used.',
-        );
-      }
-    }
     // Create new user
-    if (!email) {
-      throw new ApiError(
-        StatusCodes.BAD_REQUEST,
-        'Email is required to create an account. Please allow email sharing.'
-      );
-    }
-
+    const name = payloadName || tokenName || email.split('@')[0];
+    
     user = await User.create({
       name,
       email,
       verified: true,
-      [providerField]: providerId,
+      firebaseUid: uid,
+      profilePicture: picture || 'https://i.ibb.co/z5YHLV9/profile.png',
     });
 
     // Re-fetch with tokenVersion

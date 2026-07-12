@@ -24,6 +24,9 @@ export const SUBSCRIPTION_EVENT_TYPES = [
   'GRACE_RESOLVED',
   'STATUS_CHANGED',
   'PLAN_CHANGED',
+  'REVOKED',
+  'GRANTED',
+  'TRANSFERRED',
 ] as const;
 
 export type SubscriptionEventType = (typeof SUBSCRIPTION_EVENT_TYPES)[number];
@@ -46,6 +49,10 @@ export type ISubscriptionEvent = {
   // External id from the store (Apple transaction, Google order, etc.) — lets
   // us correlate an event back to a webhook / verify call for replay safety.
   externalTransactionId?: string;
+
+  // Transfer related fields
+  fromUserId?: Types.ObjectId;
+  toUserId?: Types.ObjectId;
 
   metadata?: Record<string, unknown>;
   occurredAt: Date;

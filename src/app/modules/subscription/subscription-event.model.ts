@@ -31,6 +31,8 @@ const subscriptionEventSchema = new Schema<ISubscriptionEvent>(
     externalTransactionId: { type: String, index: true },
 
     metadata: { type: Schema.Types.Mixed },
+    fromUserId: { type: Schema.Types.ObjectId, ref: 'User' },
+    toUserId: { type: Schema.Types.ObjectId, ref: 'User' },
     occurredAt: { type: Date, required: true, default: () => new Date() },
   },
   { timestamps: true },

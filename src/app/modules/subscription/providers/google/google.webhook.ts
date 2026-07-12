@@ -234,9 +234,12 @@ export const handleGoogleNotification = async (
   const notificationType =
     GOOGLE_NOTIFICATION_TYPES[notificationTypeCode] || `UNKNOWN_${notificationTypeCode}`;
 
+  const packageName = rtdn.packageName || config.googlePlay.packageName;
+
   // 5. Find the subscription doc by purchase token.
   const existing = await SubscriptionModel.findOne({
-    googlePurchaseToken: purchaseToken,
+    packageName,
+    currentPurchaseToken: purchaseToken,
   });
 
   if (!existing) {
@@ -250,7 +253,8 @@ export const handleGoogleNotification = async (
 
       if (decoded.linkedPurchaseToken) {
         const linked = await SubscriptionModel.findOne({
-          googlePurchaseToken: decoded.linkedPurchaseToken,
+          packageName,
+          currentPurchaseToken: decoded.linkedPurchaseToken,
         });
         if (linked) {
           // Found it via the linked token! Continue with this record.
@@ -367,7 +371,8 @@ const processValidatedGoogleNotification = async (
 
   await SubscriptionModel.upsertForUser(existing.userId, {
     ...updates,
-    googlePurchaseToken: decoded.purchaseToken, // Migrate to latest token on upgrade
+    currentPurchaseToken: decoded.purchaseToken, // Migrate to latest token on upgrade
+    packageName: config.googlePlay.packageName,
     googleOrderId: decoded.orderId || existing.googleOrderId,
     metadata: newMetadata,
   });

@@ -36,8 +36,8 @@ const userSchema = new Schema<IUser>(
     password: {
       type: String,
       required: function (this: IUser) {
-        // Password is not required for OAuth users
-        return !this.googleId && !this.appleId;
+        // Password is not required for OAuth/Firebase users
+        return !this.googleId && !this.appleId && !this.firebaseUid;
       },
       minlength: 8,
       select: false, // hide password by default
@@ -97,6 +97,11 @@ const userSchema = new Schema<IUser>(
     },
     about: {
       type: String,
+    },
+    firebaseUid: {
+      type: String,
+      sparse: true,
+      unique: true,
     },
     googleId: {
       type: String,

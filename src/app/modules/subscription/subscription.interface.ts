@@ -47,7 +47,8 @@ export type ISubscription = {
   appleLatestTransactionId?: string;
 
   // Google-specific (populated in the next phase)
-  googlePurchaseToken?: string;
+  packageName?: string;
+  currentPurchaseToken?: string;
   googleOrderId?: string;
 
   // Lifecycle timestamps
@@ -57,6 +58,12 @@ export type ISubscription = {
   canceledAt?: Date | null;
 
   metadata?: Record<string, any>;
+  
+  // Transfer & Verification Tracking
+  transferredFromUserId?: Types.ObjectId;
+  transferredAt?: Date | null;
+  lastVerifiedAt?: Date | null;
+
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -65,6 +72,7 @@ export type SubscriptionModel = {
   findByUser(userId: Types.ObjectId): Promise<ISubscription | null>;
   upsertForUser(
     userId: Types.ObjectId,
-    payload: Partial<ISubscription>
+    payload: Partial<ISubscription>,
+    session?: import('mongoose').ClientSession
   ): Promise<ISubscription>;
 } & Model<ISubscription>;
