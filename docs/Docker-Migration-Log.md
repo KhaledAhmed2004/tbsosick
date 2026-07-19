@@ -148,4 +148,15 @@ Modified `.github/workflows/deploy-aws.yml` to replace the old `npm run build` a
 
 ---
 
-**🎉 MIGRATION 100% COMPLETE AND SUCCESSFUL! 🎉**
+## 6. Phase 5: Security & Stability Optimization (Completed ✅)
+
+To meet industry standards and the `docker-expert` guidelines, we implemented the following critical best practices in the `Dockerfile`:
+1. **Non-root User Execution:** Added `USER node` and `--chown=node:node` during the build process to prevent the container from running as `root`, significantly reducing security vulnerabilities.
+2. **Docker Healthcheck:** Installed `curl` and implemented a `HEALTHCHECK` directive. This ensures Docker can automatically restart the container if the Node.js API hangs but the process doesn't fully exit.
+3. **Optimized CMD Execution:** Replaced `CMD ["npm", "start"]` with `CMD ["node", "dist/server.js"]` to allow the Node.js process to receive OS signals (like `SIGTERM`) directly, enabling graceful shutdowns.
+
+These optimizations guarantee a robust, self-healing architecture with production-grade security.
+
+---
+
+**🎉 MIGRATION & OPTIMIZATION 100% COMPLETE AND SUCCESSFUL! 🎉**
