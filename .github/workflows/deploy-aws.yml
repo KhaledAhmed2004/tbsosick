@@ -40,7 +40,7 @@ jobs:
             echo ">>> Pruning old unused images to free up space..."
             sudo docker image prune -f
 
-            sleep 5
+            sleep 15
             echo ">>> Health check..."
             curl -sf -o /dev/null -w "Backend HTTP Status: %{http_code}\n" https://api.smrtscrub.app/ || echo "WARNING: Backend health check failed"
 
