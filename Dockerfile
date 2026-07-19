@@ -43,8 +43,9 @@ ENV NODE_ENV=production
 EXPOSE 5000
 
 # Implement Healthcheck so Docker knows if the app hangs
+# Implement Healthcheck so Docker knows if the app hangs (using dynamic port)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:5000/ || exit 1
+  CMD curl -f http://localhost:${PORT:-5000}/ || exit 1
 
 # Give the node user permission to create new folders (like winston logs) in the /app directory
 RUN chown node:node /app
