@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tbsosick:latest
+    container_name: tbsosick_api
+    network_mode: "host"
+    env_file:
+      - .env
+    environment:
+      - PORT=5003
+    restart: unless-stopped

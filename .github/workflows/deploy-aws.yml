@@ -34,15 +34,8 @@ jobs:
             echo ">>> Pulling latest code..."
             sudo git pull origin main
 
-            echo ">>> Building Docker Image..."
-            sudo docker build -t tbsosick .
-
-            echo ">>> Stopping old container if it exists..."
-            sudo docker stop tbsosick_api || true
-            sudo docker rm tbsosick_api || true
-
-            echo ">>> Starting new container..."
-            sudo docker run -d --name tbsosick_api --network host --env-file .env --restart unless-stopped -e PORT=5003 tbsosick
+            echo ">>> Deploying with Docker Compose..."
+            sudo docker compose up -d --build
 
             echo ">>> Pruning old unused images to free up space..."
             sudo docker image prune -f
