@@ -77,9 +77,9 @@ jobs:
             required_keys=(
               NODE_ENV
               PORT
-              MONGO_URI
+              DATABASE_URL
               JWT_SECRET
-              TOTP_ENCRYPTION_KEY
+              JWT_REFRESH_SECRET
             )
 
             for key in "${required_keys[@]}"; do
