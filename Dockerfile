@@ -40,15 +40,14 @@ COPY --from=builder --chown=node:node /app/scripts ./scripts
 ENV NODE_ENV=production
 
 # Expose port (adjust if your app uses a different one)
-EXPOSE 5000
+EXPOSE 5003
 
 # Implement Healthcheck so Docker knows if the app hangs
-# Implement Healthcheck so Docker knows if the app hangs (using dynamic port)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-  CMD curl -f http://localhost:${PORT:-5000}/ || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD curl --fail --silent http://localhost:${PORT:-5003}/health || exit 1
 
-# Give the node user permission to create new folders (like winston logs) in the /app directory
-RUN chown node:node /app
+# Give the node user permission to write logs by creating a dedicated directory
+RUN mkdir -p /app/logs && chown -R node:node /app/logs
 
 # Switch to non-root user for security
 USER node

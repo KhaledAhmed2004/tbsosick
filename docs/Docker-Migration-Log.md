@@ -1,6 +1,6 @@
-# 🚀 Zero-Risk Docker Migration & CI/CD Refactoring Log
+# 🚀 Low-Risk Docker Migration & CI/CD Refactoring Log
 
-This document serves as the complete technical log for migrating the `tbsosick` (SMRT SCRUB Enterprise API) project from a traditional PM2 deployment to a fully Dockerized setup on AWS EC2, implementing industry-standard practices with zero downtime.
+This document serves as the complete technical log for migrating the `tbsosick` (SMRT SCRUB Enterprise API) project from a traditional PM2 deployment to a fully Dockerized setup on AWS EC2, implementing industry-standard practices with minimal downtime during the initial cutover.
 
 ---
 
@@ -144,7 +144,7 @@ Once Docker was verified as receiving live traffic, we permanently removed the o
 
 ### ✅ Task 3: Refactor GitHub Actions CI/CD Pipeline
 Modified `.github/workflows/deploy-aws.yml` to replace the old `npm run build` and `pm2 reload` commands with an automated Docker deployment script. 
-- **Result:** Future code pushes to the `main` branch will automatically pull the latest code, build a new Docker image (`tbsosick`), stop the old container, run the new one on `--network host`, and prune unused images—guaranteeing continuous zero-downtime deployments.
+- **Result:** Future code pushes to the `main` branch will automatically pull the latest code, build a new Docker image (`tbsosick`), stop the old container, run the new one on `--network host`, and prune unused images—providing automated single-server deployments with a short container recreation window.
 
 ---
 
@@ -152,10 +152,10 @@ Modified `.github/workflows/deploy-aws.yml` to replace the old `npm run build` a
 
 To meet industry standards and the `docker-expert` guidelines, we implemented the following critical best practices in the `Dockerfile`:
 1. **Non-root User Execution:** Added `USER node` and `--chown=node:node` during the build process to prevent the container from running as `root`, significantly reducing security vulnerabilities.
-2. **Docker Healthcheck:** Installed `curl` and implemented a `HEALTHCHECK` directive. This ensures Docker can automatically restart the container if the Node.js API hangs but the process doesn't fully exit.
+2. **Docker Healthcheck:** Installed `curl` and implemented a `HEALTHCHECK` directive. This ensures application failure is observable, while the restart policy restarts the container if the main Node.js process exits.
 3. **Optimized CMD Execution:** Replaced `CMD ["npm", "start"]` with `CMD ["node", "dist/server.js"]` to allow the Node.js process to receive OS signals (like `SIGTERM`) directly, enabling graceful shutdowns.
 
-These optimizations guarantee a robust, self-healing architecture with production-grade security.
+These optimizations guarantee a robust, restart-capable, and health-observable architecture with production-grade security.
 
 ---
 
@@ -164,10 +164,10 @@ These optimizations guarantee a robust, self-healing architecture with productio
 To further elevate the deployment pipeline to a true DevOps standard, we implemented the following enhancements:
 
 1. **Docker Compose Integration:** Transitioned from raw `docker run` commands to a `docker-compose.yml` file. This centralizes container configuration (network, restart policies, environment variables) and is the industry gold standard for single-node deployments.
-2. **Dynamic `.env` Generation:** Instead of manually storing secrets on the EC2 server, we configured GitHub Actions to dynamically inject secrets via `envs` into a temporary file during deployment. 
+2. **Dynamic `.env` Generation (Single Secret Architecture):** Instead of manually storing secrets on the EC2 server or mapping dozens of individual variables, we configured GitHub Actions to inject the entire 64-line environment configuration using a single `PRODUCTION_ENV` secret. This is safely written to the server via `printenv` to avoid bash variable expansion corruption. 
 3. **Atomic File Writes:** The `.env` generation uses a secure temporary file (`mktemp`) and an atomic move (`mv`) to prevent partial secret writes and protect against deployment interruptions.
 4. **Resilient Health Checks:** Replaced static `sleep` timeouts with a robust `curl --retry 6` command. This ensures the pipeline waits intelligently for the Node.js process to fully bind to the port before marking the deployment as successful.
-5. **Post-Deployment Pruning:** Moved the `docker image prune` step to *after* the health check passes, ensuring the previous working image is preserved for quick rollbacks if a deployment fails.
+5. **Post-Deployment Pruning:** Moved the `docker image prune` step to *after* the health check passes. This delays image pruning until health verification, reducing immediate image-loss risk (note: versioned rollback is not yet implemented).
 
 ---
 

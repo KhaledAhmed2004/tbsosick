@@ -159,6 +159,11 @@ if (fs.existsSync(swaggerPath)) {
 // API routes
 app.use('/api/v1', router);
 
+// Dedicated health check endpoint (Docker / Nginx)
+app.get('/health', (req: Request, res: Response) => {
+  res.status(StatusCodes.OK).json({ status: 'ok' });
+});
+
 // Live response
 app.get('/', (req: Request, res: Response) => {
   res.sendFile(path.join(__dirname, '../public/serverLiveWallpaper.html'));
