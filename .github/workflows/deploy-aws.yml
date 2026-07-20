@@ -2,7 +2,11 @@ name: Deploy Backend to EC2
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
+permissions:
+  contents: read
 
 concurrency:
   group: backend-deploy
@@ -12,36 +16,109 @@ jobs:
   deploy:
     name: Deploy Backend
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+
+    environment: production
 
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
+        uses: appleboy/ssh-action@v1.2.5
+
+        env:
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          script_stop: true
           command_timeout: 30m
+
+          envs: PRODUCTION_ENV
+
           script: |
-            set -e
+            set -Eeuo pipefail
+            set +x
 
-            echo "=== Backend deployment started at $(date) ==="
+            APP_DIR="/var/www/backend2"
+            ENV_FILE="$APP_DIR/.env"
+            HEALTH_URL="https://api.smrtscrub.app/"
 
-            cd /var/www/backend2
+            cleanup() {
+              if [ -n "${ENV_TMP:-}" ]; then
+                sudo rm -f "$ENV_TMP"
+              fi
+            }
+
+            trap cleanup EXIT HUP INT TERM
+
+            echo "=== Backend deployment started at $(date --iso-8601=seconds) ==="
+
+            echo ">>> Validating required secrets..."
+
+            if [ -z "${PRODUCTION_ENV:-}" ]; then
+              echo "ERROR: Required secret 'PRODUCTION_ENV' is empty or missing in GitHub Secrets." >&2
+              exit 1
+            fi
+
+            cd "$APP_DIR"
 
             echo ">>> Pulling latest code..."
             sudo git pull origin main
 
-            echo ">>> Deploying with Docker Compose..."
-            sudo docker compose up -d --build
+            echo ">>> Generating production .env..."
 
-            echo ">>> Pruning old unused images to free up space..."
+            umask 077
+            ENV_TMP="$(sudo mktemp "$APP_DIR/.env.tmp.XXXXXX")"
+
+            printenv PRODUCTION_ENV | sudo tee "$ENV_TMP" > /dev/null
+
+            test -s "$ENV_TMP"
+            sudo chmod 600 "$ENV_TMP"
+
+            sudo mv -f "$ENV_TMP" "$ENV_FILE"
+            sudo chmod 600 "$ENV_FILE"
+
+            ENV_TMP=""
+            trap - EXIT HUP INT TERM
+
+            echo ">>> Validating Docker Compose configuration..."
+            sudo docker compose config --quiet
+
+            echo ">>> Building and starting containers..."
+            sudo docker compose up -d --build --remove-orphans
+
+            echo ">>> Running backend health check..."
+
+            if ! curl \
+              --fail \
+              --silent \
+              --show-error \
+              --location \
+              --retry 6 \
+              --retry-delay 5 \
+              --retry-all-errors \
+              --connect-timeout 10 \
+              --max-time 20 \
+              "$HEALTH_URL" > /dev/null
+            then
+              echo "ERROR: Backend health check failed." >&2
+
+              echo ">>> Container status:"
+              sudo docker compose ps
+
+              echo ">>> Recent logs:"
+              sudo docker compose logs --tail=100
+
+              exit 1
+            fi
+
+            echo ">>> Backend health check passed."
+
+            echo ">>> Container status:"
+            sudo docker compose ps
+
+            echo ">>> Pruning unused Docker images..."
             sudo docker image prune -f
 
-            sleep 15
-            echo ">>> Health check..."
-            curl -sf -o /dev/null -w "Backend HTTP Status: %{http_code}\n" https://api.smrtscrub.app/ || echo "WARNING: Backend health check failed"
-
-            echo "=== Backend deployment completed at $(date) ==="
+            echo "=== Backend deployment completed at $(date --iso-8601=seconds) ==="

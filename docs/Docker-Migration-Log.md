@@ -159,4 +159,16 @@ These optimizations guarantee a robust, self-healing architecture with productio
 
 ---
 
+## 7. Phase 6: Enterprise CI/CD Hardening & Secrets Management (Completed ✅)
+
+To further elevate the deployment pipeline to a true DevOps standard, we implemented the following enhancements:
+
+1. **Docker Compose Integration:** Transitioned from raw `docker run` commands to a `docker-compose.yml` file. This centralizes container configuration (network, restart policies, environment variables) and is the industry gold standard for single-node deployments.
+2. **Dynamic `.env` Generation:** Instead of manually storing secrets on the EC2 server, we configured GitHub Actions to dynamically inject secrets via `envs` into a temporary file during deployment. 
+3. **Atomic File Writes:** The `.env` generation uses a secure temporary file (`mktemp`) and an atomic move (`mv`) to prevent partial secret writes and protect against deployment interruptions.
+4. **Resilient Health Checks:** Replaced static `sleep` timeouts with a robust `curl --retry 6` command. This ensures the pipeline waits intelligently for the Node.js process to fully bind to the port before marking the deployment as successful.
+5. **Post-Deployment Pruning:** Moved the `docker image prune` step to *after* the health check passes, ensuring the previous working image is preserved for quick rollbacks if a deployment fails.
+
+---
+
 **🎉 MIGRATION & OPTIMIZATION 100% COMPLETE AND SUCCESSFUL! 🎉**
