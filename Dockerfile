@@ -46,8 +46,8 @@ EXPOSE 5003
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD curl --fail --silent http://localhost:${PORT:-5003}/health || exit 1
 
-# Give the node user permission to write logs by creating a dedicated directory
-RUN mkdir -p /app/logs && chown -R node:node /app/logs
+# Give the node user permission to write logs and uploads
+RUN mkdir -p /app/winston /app/uploads && chown -R node:node /app/winston /app/uploads
 
 # Switch to non-root user for security
 USER node
