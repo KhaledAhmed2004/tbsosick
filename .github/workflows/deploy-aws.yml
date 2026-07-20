@@ -40,7 +40,7 @@ jobs:
             set -Eeuo pipefail
             set +x
 
-            APP_DIR="/var/www/backend2"
+            APP_DIR="/var/www/backend"
             ENV_FILE="$APP_DIR/.env"
             HEALTH_URL="https://api.smrtscrub.app/health"
 
