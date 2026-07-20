@@ -30,18 +30,40 @@ export const getAndroidPublisher = (): androidpublisher_v3.Androidpublisher => {
     );
   }
 
-  const keyFile = resolveServiceAccountPath();
-  if (!fs.existsSync(keyFile)) {
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      `Google Play service account key file not found: ${keyFile}. Download the JSON key from Google Cloud Console and place it at this path.`
-    );
-  }
+  let auth;
 
-  const auth = new google.auth.GoogleAuth({
-    keyFile,
-    scopes: ['https://www.googleapis.com/auth/androidpublisher'],
-  });
+  if (config.googlePlay.credentialsBase64) {
+    try {
+      const credentialsJson = Buffer.from(
+        config.googlePlay.credentialsBase64,
+        'base64'
+      ).toString('utf-8');
+      const credentials = JSON.parse(credentialsJson);
+
+      auth = new google.auth.GoogleAuth({
+        credentials,
+        scopes: ['https://www.googleapis.com/auth/androidpublisher'],
+      });
+    } catch (error) {
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        'Failed to parse GOOGLE_SERVICE_ACCOUNT_BASE64. Ensure it is a valid base64-encoded JSON string.'
+      );
+    }
+  } else {
+    const keyFile = resolveServiceAccountPath();
+    if (!fs.existsSync(keyFile)) {
+      throw new ApiError(
+        httpStatus.INTERNAL_SERVER_ERROR,
+        `Google Play service account key file not found: ${keyFile}. Download the JSON key from Google Cloud Console and place it at this path, or provide GOOGLE_SERVICE_ACCOUNT_BASE64 in the environment.`
+      );
+    }
+
+    auth = new google.auth.GoogleAuth({
+      keyFile,
+      scopes: ['https://www.googleapis.com/auth/androidpublisher'],
+    });
+  }
 
   cachedAndroidPublisher = google.androidpublisher({ version: 'v3', auth });
   return cachedAndroidPublisher;

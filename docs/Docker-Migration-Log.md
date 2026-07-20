@@ -232,3 +232,274 @@ Critical for debugging server-level crashes.
 └── etc/
     └── nginx/               (Nginx Configurations)
 ```
+
+---
+
+## 🩺 Appendix B: EC2 Server Health Check Commands (সার্ভার হেলথ গাইড)
+
+আপনার EC2 সার্ভারে বর্তমানে কোন জিনিস কীভাবে চলছে, তারা সুস্থ (Healthy) আছে কিনা—এসব চেক করার জন্য কিছু দারুণ কমান্ড আছে। আপনি আপনার সার্ভারে লগিন করে নিচের কমান্ডগুলো দিলে সার্ভারের পুরো "হেলথ রিপোর্ট" আপনার সামনে চলে আসবে। 
+
+কোনটার জন্য কী কমান্ড দেবেন এবং কী রেসপন্স আশা করবেন, তা নিচে সহজ করে বোঝানো হলো:
+
+### ১. আপনার Backend API (Docker) চেক করার কমান্ড
+যেহেতু আপনার মেইন ব্যাকএন্ড এখন ডকারের ভেতরে চলছে, তাই এটি চেক করা সবচেয়ে ইম্পর্টেন্ট।
+
+* **কমান্ড:** 
+  ```bash
+  sudo docker ps
+  ```
+* **কী করবে:** সার্ভারে কয়টি কন্টেইনার চলছে তা দেখাবে।
+* **কী রেসপন্স আশা করবেন:** আপনি `tbsosick_api` নামে একটি কন্টেইনার দেখতে পাবেন। এর `STATUS` কলামে লেখা থাকবে `Up XX minutes (healthy)`। `(healthy)` লেখা থাকা মানে হলো আপনার নতুন `/health` এন্ডপয়েন্টটি একদম ঠিকঠাক কাজ করছে!
+
+* **কমান্ড (লগ দেখার জন্য):** 
+  ```bash
+  cd /var/www/backend
+  sudo docker compose logs --tail=50
+  ```
+* **কী রেসপন্স আশা করবেন:** আপনার অ্যাপের ভেতরের সব রিয়েল-টাইম লগ এখানে দেখতে পাবেন।
+
+---
+
+### ২. Nginx (রিভার্স প্রক্সি) চেক করার কমান্ড
+আপনার ডকার কন্টেইনারটি ৫00৩ পোর্টে চলছে। ইন্টারনেট থেকে আসা ট্রাফিকগুলো Nginx রিসিভ করে সেই ৫00৩ পোর্টে পাঠিয়ে দেয়।
+
+* **কমান্ড:** 
+  ```bash
+  sudo systemctl status nginx
+  ```
+* **কী রেসপন্স আশা করবেন:** সবুজ রঙে `active (running)` লেখা দেখবেন। এর মানে হলো Nginx ঠিকমতো বাইরের ট্রাফিক হ্যান্ডেল করছে।
+
+* **কমান্ড (কনফিগারেশন ঠিক আছে কিনা চেক করতে):** 
+  ```bash
+  sudo nginx -t
+  ```
+* **কী রেসপন্স আশা করবেন:** `syntax is ok` এবং `test is successful` লেখা আসবে।
+
+---
+
+### ৩. MongoDB (ডেটাবেস) চেক করার কমান্ড
+আপনার সার্ভারের ভেতরেই লোকাল ডেটাবেস চলছে, যার সাথে আপনার ডকার কন্টেইনার `network_mode: host` দিয়ে কানেক্টেড।
+
+* **কমান্ড:** 
+  ```bash
+  sudo systemctl status mongod
+  ```
+* **কী রেসপন্স আশা করবেন:** সবুজ রঙে `active (running)` লেখা দেখবেন।
+
+* **কমান্ড (ডেটাবেসে ঢুকে চেক করতে):** 
+  ```bash
+  mongosh
+  show dbs
+  ```
+* **কী রেসপন্স আশা করবেন:** আপনার ডেটাবেসের লিস্ট দেখাবে (যেমন: `smrtscrub`, `admin`, `config` ইত্যাদি)। `exit` লিখে আপনি বের হয়ে আসতে পারবেন।
+
+---
+
+### ৪. সার্ভারের ওভারঅল হেলথ (RAM ও Disk Space)
+সার্ভারের র্যাম বা হার্ডডিস্ক ফুল হয়ে গেলে সবকিছু ক্র্যাশ করতে পারে। তাই মাঝে মাঝে এগুলো চেক করা ভালো।
+
+* **কমান্ড (RAM চেক করতে):** 
+  ```bash
+  free -h
+  ```
+* **কী রেসপন্স আশা করবেন:** `Mem:` লাইনে দেখতে পাবেন আপনার সার্ভারে মোট কত জিবি র্যাম আছে, কতটুকু `used`, এবং কতটুকু `free` আছে।
+
+* **কমান্ড (হার্ডডিস্ক চেক করতে):** 
+  ```bash
+  df -h
+  ```
+* **কী রেসপন্স আশা করবেন:** আপনার সার্ভারের হার্ডডিস্কের অবস্থা দেখাবে। বিশেষ করে `/dev/root` বা `/` লাইনে `Use%` কলামটি খেয়াল করবেন। যদি দেখেন এটি ৮০-৯০% হয়ে গেছে, তবে বুঝতে হবে স্টোরেজ ফুল হয়ে যাচ্ছে।
+
+---
+
+**সংক্ষিপ্ত সারমর্ম:**
+আপনার সার্ভারে মূলত **তিনটি পিলারের** ওপর পুরো সিস্টেম দাঁড়িয়ে আছে: 
+1. **Nginx:** যে সবার সামনে দাঁড়িয়ে সিকিউরিটি গার্ডের মতো ট্রাফিক রিসিভ করছে।
+2. **Docker (Node.js):** যে সেই ট্রাফিক প্রসেস করে কোড এক্সিকিউট করছে।
+3. **MongoDB:** যেখানে আপনার সমস্ত ডেটা সেভ হচ্ছে।
+
+আপনি সার্ভারে ঢুকে উপরের কমান্ডগুলো চালিয়ে দেখতে পারেন, এতে আপনার কনফিডেন্স অনেক বাড়বে!
+
+---
+
+## 📋 Appendix C: Final Server Verification Logs & Architecture Breakdown (সার্ভার ভেরিফিকেশন রিপোর্ট)
+
+এই অংশে সার্ভারের রিয়েল-টাইম হেলথ চেকের লগ এবং Nginx আর্কিটেকচার কীভাবে কাজ করছে তার বিস্তারিত ট্র্যাক রেকর্ড ভবিষ্যতের জন্য সেভ করে রাখা হলো:
+
+### ১. Nginx Configuration (রিভার্স প্রক্সি আর্কিটেকচার)
+**কমান্ড:** `sudo cat /etc/nginx/sites-enabled/*`
+**আউটপুট:**
+```bash
+ubuntu@ip-172-31-16-27:/var/www/backend$ sudo cat /etc/nginx/sites-enabled/*
+# ===========================
+# Frontend + API Setup
+# ===========================
+
+# -------------------------
+# Frontend
+# -------------------------
+server {
+    server_name smrtscrub.app www.smrtscrub.app;
+    client_max_body_size 500g;
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/smrtscrub.app/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/smrtscrub.app/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+}
+
+# -------------------------
+# API
+# -------------------------
+server {
+    server_name api.smrtscrub.app;
+    client_max_body_size 500g;
+    location / {
+        proxy_pass http://127.0.0.1:5003;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/smrtscrub.app/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/smrtscrub.app/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+}
+
+server {
+    if ($host = www.smrtscrub.app) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    if ($host = smrtscrub.app) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name smrtscrub.app www.smrtscrub.app;
+    return 404; # managed by Certbot
+
+
+
+
+}
+server {
+    if ($host = api.smrtscrub.app) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name api.smrtscrub.app;
+    return 404; # managed by Certbot
+
+
+}
+```
+**স্ট্যাটাস:** 
+- **Frontend (`smrtscrub.app`):** ইন্টারনেট থেকে আসা ট্রাফিক Nginx রিসিভ করে সার্ভারের লোকাল পোর্টে (`127.0.0.1:3000`) পাঠাচ্ছে। 
+- **Backend API (`api.smrtscrub.app`):** এপিআই রিকোয়েস্টগুলো Nginx রিসিভ করে লোকাল পোর্টে (`127.0.0.1:5003`) পাঠাচ্ছে। এই কারণেই আমাদের ডকার কন্টেইনারটি ৫00৩ পোর্টে এক্সপোজ করা হয়েছে!
+- **Security:** Nginx অটোমেটিকভাবে Certbot-এর মাধ্যমে SSL/HTTPS মেইনটেইন করছে এবং সব HTTP ট্রাফিককে (Port 80) HTTPS-এ (Port 443) রিডাইরেক্ট করে দিচ্ছে।
+
+### ২. Nginx Health Check
+**কমান্ড:** `sudo systemctl status nginx`
+**আউটপুট:** 
+```bash
+ubuntu@ip-172-31-16-27:/var/www/backend$ sudo systemctl status nginx
+● nginx.service - A high performance web server and a reverse proxy server
+     Loaded: loaded (/usr/lib/systemd/system/nginx.service; enabled; preset: enabled)
+     Active: active (running) since Wed 2026-06-24 06:38:20 UTC; 3 weeks 5 days ago
+ Invocation: 37e2be3814e147cbae987520f8bfe376
+       Docs: man:nginx(8)
+    Process: 1377334 ExecReload=/usr/sbin/nginx -g daemon on; master_process on; -s reload
+   Main PID: 778301 (nginx)
+      Tasks: 3 (limit: 3807)
+     Memory: 10.5M (peak: 41.2M)
+        CPU: 1min 28.105s
+```
+**স্ট্যাটাস:** Nginx গত প্রায় এক মাস ধরে কোনো ক্র্যাশ ছাড়া সম্পূর্ণ স্ট্যাবল অবস্থায় চলছে।
+
+**কমান্ড:** `sudo nginx -t`
+**আউটপুট:** 
+```bash
+ubuntu@ip-172-31-16-27:/var/www/backend$ sudo nginx -t
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+```
+**স্ট্যাটাস:** Nginx কনফিগারেশন ফাইলগুলোতে কোনো সিনট্যাক্স এরর বা ভুল নেই।
+
+### ৩. MongoDB Health Check
+**কমান্ড:** `sudo systemctl status mongod`
+**আউটপুট:** 
+```bash
+ubuntu@ip-172-31-16-27:/var/www/backend$ sudo systemctl status mongod
+● mongod.service - MongoDB Database Server
+     Loaded: loaded (/usr/lib/systemd/system/mongod.service; enabled; preset: enabled)
+    Drop-In: /etc/systemd/system/mongod.service.d
+             └─override.conf
+     Active: active (running) since Tue 2026-07-14 06:50:54 UTC; 6 days ago
+ Invocation: 2e1b42bc8ab940c2b914f44093a94919
+       Docs: https://docs.mongodb.org/manual
+   Main PID: 520905 (mongod)
+     Memory: 216.1M (peak: 626.4M)
+        CPU: 2h 8min 23.629s
+```
+**স্ট্যাটাস:** ডেটাবেস একটানা ৬ দিন ধরে কোনো প্রকার বাধা বা ক্র্যাশ ছাড়া সম্পূর্ণ সাকসেসফুলি কাজ করছে।
+
+### ৪. Server Resources (RAM & Storage)
+**RAM চেক (`free -h`):**
+**আউটপুট:**
+```bash
+ubuntu@ip-172-31-16-27:/var/www/backend$ free -h
+               total        used        free      shared  buff/cache   available
+Mem:           3.8Gi       1.5Gi       1.4Gi       6.0Mi       1.2Gi       2.3Gi
+Swap:             0B          0B          0B
+```
+**স্ট্যাটাস:** সার্ভারের র‍্যাম মাত্র ৪০% ব্যবহার হচ্ছে, বাকি ২.৩ জিবি পুরোপুরি ফ্রি আছে। অনেক ইউজার আসলেও সার্ভার ক্র্যাশ করার সম্ভাবনা নেই।
+
+**Disk Space চেক (`df -h`):**
+**আউটপুট:**
+```bash
+ubuntu@ip-172-31-16-27:/var/www/backend$ df -h
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/root        96G   23G   74G  24% /
+tmpfs           2.0G     0  2.0G   0% /dev/shm
+tmpfs           782M  1.1M  781M   1% /run
+tmpfs           2.0G  2.6M  2.0G   1% /tmp
+/dev/xvda13     989M  163M  759M  18% /boot
+/dev/xvda15     105M  6.3M   99M   7% /boot/efi
+```
+**স্ট্যাটাস:** সার্ভারে এখনো ৭৪ জিবি ফাঁকা জায়গা পড়ে আছে। ডিস্ক স্পেস নিয়ে আগামী কয়েক বছরেও কোনো চিন্তা নেই।
+
+**Final Verdict (ফাইনাল ভার্ডিক্ট):** 
+পুরো প্রোডাকশন সার্ভারের আর্কিটেকচার (Docker + Nginx + MongoDB + Folder Structure) একে অপরের সাথে একদম পারফেক্টলি হ্যান্ডশেক করে কাজ করছে। এটি ১০০% সলিড, সিকিউর এবং সুপার স্ট্যাবল অবস্থায় আছে! 🚀

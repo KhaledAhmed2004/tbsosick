@@ -91,6 +91,7 @@ export default {
     serviceAccountPath:
       process.env.GOOGLE_PLAY_SERVICE_ACCOUNT_PATH ||
       './secrets/google-service-account.json',
+    credentialsBase64: process.env.GOOGLE_SERVICE_ACCOUNT_BASE64,
     // Audience used to verify Pub/Sub push JWTs (set to your webhook URL).
     // If empty, JWT verification is skipped — only do that in dev.
     pubsubAudience: process.env.GOOGLE_PLAY_PUBSUB_AUDIENCE || '',
