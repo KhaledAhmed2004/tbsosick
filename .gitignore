@@ -5,5 +5,7 @@ node_modules
 /uploads
 .code-review-graph/
 
-secrets/
-*.json
+/secrets/**
+!/secrets/README.md
+!/secrets/apple-root-certs/
+!/secrets/apple-root-certs/*.cer

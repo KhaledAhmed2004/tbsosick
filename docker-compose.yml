@@ -10,6 +10,11 @@ services:
       - .env
     environment:
       PORT: "5003"
+    volumes:
+      - type: bind
+        source: ./secrets
+        target: /app/secrets
+        read_only: true
     init: true
     restart: unless-stopped
     stop_grace_period: 30s

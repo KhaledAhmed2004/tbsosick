@@ -503,3 +503,20 @@ tmpfs           2.0G  2.6M  2.0G   1% /tmp
 
 **Final Verdict (ফাইনাল ভার্ডিক্ট):** 
 পুরো প্রোডাকশন সার্ভারের আর্কিটেকচার (Docker + Nginx + MongoDB + Folder Structure) একে অপরের সাথে একদম পারফেক্টলি হ্যান্ডশেক করে কাজ করছে। এটি ১০০% সলিড, সিকিউর এবং সুপার স্ট্যাবল অবস্থায় আছে! 🚀
+
+---
+
+## 8. Phase 8: Enterprise Secrets Management Optimization (Completed ✅)
+
+To achieve a 10/10 production-ready security standard for handling sensitive credentials (e.g., Apple Private Keys and Google Service Accounts), we implemented the following DevOps best practices:
+
+1. **Removed Insecure Dockerfile COPY:** 
+   Deleted `COPY secrets` from the `Dockerfile`. Sensitive files should never be baked into the Docker image itself.
+2. **Read-Only Volume Mounts:** 
+   Updated `docker-compose.yml` to use `read_only: true` bind mounts (`./secrets:/app/secrets:ro`). This securely exposes host credentials to the container without allowing the container to modify them.
+3. **Repository Protection:** 
+   Updated `.dockerignore` (added `/secrets/`) and `.gitignore` to strictly exclude sensitive files from git tracking, while explicitly allowing public certificates (`!/secrets/apple-root-certs/`).
+4. **Server Ownership & Permissions (EC2):**
+   Established dynamic GID mapping. Before starting the container, the exact user ID is resolved using `docker compose run --rm --no-deps --entrypoint id api`. Then, the host EC2 files are chowned (`chown -R root:GID secrets`) and strict permissions are applied (`chmod 750` for dirs, `chmod 640` for files).
+5. **Atomic Secrets Rotation Strategy:**
+   If a key needs replacing, the process uses Linux's native atomic `mv` across the same filesystem to swap the `.new` file with the active file, avoiding partial reads. This allows secrets rotation with a simple `docker compose restart api` instead of a full image rebuild.

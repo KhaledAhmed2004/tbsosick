@@ -13,3 +13,4 @@ docs
 uploads
 *.md
 coverage
+/secrets/

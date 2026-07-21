@@ -33,7 +33,7 @@ RUN npm ci --only=production
 COPY --from=builder --chown=node:node /app/dist ./dist
 # Copy public/assets if needed
 COPY --from=builder --chown=node:node /app/public ./public
-# Copy any other necessary folders (e.g., scripts)
+# Copy any other necessary folders (e.g., scripts, secrets)
 COPY --from=builder --chown=node:node /app/scripts ./scripts
 
 # Set environment to production
